@@ -67,7 +67,7 @@ int main(void) {
   MX_ADC2_Init();
   UART_Init();
 
-  volatile uint16_t ee_tmp = ee_init();
+  ee_init();
   CfgInit();
 
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);

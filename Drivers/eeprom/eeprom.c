@@ -493,7 +493,7 @@ uint16_t ee_erases(uint16_t *Erases)
   *           - EEPROM_BAD_ADDRESS: if the variable was not found
   *           - EEPROM_NO_VALID_PAGE: if no valid page was found.
   */
-uint16_t ee_read(uint16_t Address, uint16_t *Data)
+uint16_t ee_read(uint16_t Address, volatile uint16_t *Data)
 {
 	uint32_t pageBase, pageEnd;
 
