@@ -21,8 +21,11 @@ Lastly the connectors are a bit different from other versions of the hoverboard 
 These boards see a lot of small changes over the years to make them cheaper or to implement certain functions. Your board
 might not be quite the same as the board shown here.
 
-The reverse-engineered schematics of the mainboard can be found here:
+The reverse-engineered schematics of the STM32 mainboard can be found here:
 http://vocke.tv/lib/exe/fetch.php?media=20150722_hoverboard_sch.pdf
+
+The reverse-engineered schematics of the AT32 mainboard can be found here:
+http://vocke.tv/lib/exe/fetch.php?media=20190620_at32_hover_sch.pdf
 
 ---
 
