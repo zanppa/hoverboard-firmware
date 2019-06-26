@@ -1,8 +1,9 @@
 /*
-* This file is part of the stmbl project.
+* This file is part of the hoverboard-firmware-hack project.
 *
-* Copyright (C) 2013-2018 Rene Hopf <renehopf@mac.com>
-* Copyright (C) 2013-2018 Nico Stute <crinq@crinq.de>
+* Copyright (C) 2017-2018 Rene Hopf <renehopf@mac.com>
+* Copyright (C) 2017-2018 Nico Stute <crinq@crinq.de>
+* Copyright (C) 2017-2018 Niklas Fauth <niklas.fauth@kit.fail>
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -21,11 +22,22 @@
 #pragma once
 
 #include "stm32f1xx_hal.h"
+#include "config.h"
 
 void MX_GPIO_Init(void);
 void MX_TIM_Init(void);
 void MX_ADC1_Init(void);
 void MX_ADC2_Init(void);
-void control_timer_init(void);
+void UART_Init(void);
 
-extern volatile adc_buf_t adc_buffer;
+#ifdef CONTROL_PPM
+void PPM_Init();
+void PPM_ISR_Callback();
+void PPM_SysTick_Callback();
+#endif
+
+void Nunchuck_Init();
+void Nunchuck_Read();
+void consoleScope();
+void consoleLog(char *message);
+void setScopeChannel(uint8_t ch, int16_t val);

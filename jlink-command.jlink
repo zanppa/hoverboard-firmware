@@ -1,0 +1,9 @@
+device AT32F403Rx_HD
+r
+h
+IsHalted
+erase
+loadfile build/hover.hex
+r
+g
+qc

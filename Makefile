@@ -19,35 +19,37 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.c \
-Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c \
-Drivers/eeprom/eeprom.c \
-Drivers/eeprom/flash_stm32.c \
-Src/system_stm32f1xx.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_flash.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_rcc.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_tim.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_cortex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_gpio.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_pwr.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_adc.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_uart.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_i2c.c \
+Drivers/Modified_HAL_Driver/Src/stm32f1xx_hal_dma.c \
+Src/system_at32f4xx.c \
 Src/setup.c \
-Src/uart.c \
+Src/control.c \
 Src/main.c \
 Src/bldc.c \
-Src/cfgbus.c \
-Src/control.c \
-Src/modbus.c \
+Src/comms.c \
 Src/stm32f1xx_it.c \
+Src/BLDC_controller_data.c \
+Src/BLDC_controller.c
+
+
 
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32f103xe.s
+startup_at32f403xe.s
 
 #######################################
 # binaries
@@ -65,13 +67,13 @@ BIN = $(CP) -O binary -S
 # CFLAGS
 #######################################
 # cpu
-CPU = -mcpu=cortex-m3
+CPU = -mcpu=cortex-m4
 
 # fpu
 # NONE for Cortex-M0/M0+/M3
-
+FPU=-mfpu=fpv4-sp-d16
 # float-abi
-
+FLOAT-ABI=-mfloat-abi=softfp
 
 # mcu
 MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
@@ -83,7 +85,7 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32F103xE
+-DAT32F403Rx_HD
 
 
 # AS includes
@@ -92,12 +94,11 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IInc \
--IDrivers/STM32F1xx_HAL_Driver/Inc \
--IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy \
--IDrivers/CMSIS/Device/ST/STM32F1xx/Include \
--IDrivers/CMSIS/Include \
--IDrivers/eeprom
+-IDrivers/Modified_HAL_Driver/Inc \
+-IDrivers/CMSIS/CM4/DeviceSupport \
+-IDrivers/CMSIS/CM4/CoreSupport \
 
+#-IDrivers/stm32f1xx_StdPeriph_Driver/Inc \
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -117,7 +118,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = STM32F103RCTx_FLASH.ld
+LDSCRIPT = AT32F403RCTx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys
@@ -138,10 +139,10 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
-	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+$(BUILD_DIR)/%.o: %.c Inc/config.h Makefile | $(BUILD_DIR)
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@ -include Inc/stm32f1xx_conf.h
 
-$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.s Inc/config.h Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
@@ -155,7 +156,7 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@
 
 $(BUILD_DIR):
-	mkdir $@
+	mkdir -p $@
 
 format:
 	find Src/ Inc/ -iname '*.h' -o -iname '*.c' | xargs clang-format -i
@@ -164,6 +165,15 @@ format:
 #######################################
 clean:
 	-rm -fR .dep $(BUILD_DIR)
+
+flash:
+	st-flash --reset write $(BUILD_DIR)/$(TARGET).bin 0x8000000
+
+flash-jlink:
+	 JLinkExe -if swd -device Cortex-M4 -speed 4000 -SettingsFile .\JLinkSettings.ini -CommanderScript jlink-command.jlink
+
+unlock:
+	openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c init -c "reset halt" -c "stm32f1x unlock 0"
 
 #######################################
 # dependencies
