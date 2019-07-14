@@ -105,6 +105,11 @@
 // #define DCLINK_PULLUP 30000
 // #define DCLINK_PULLDOWN 1000
 
+#define DBG0_PORT GPIOC
+#define DBG0_PIN  GPIO_PIN_9
+#define DBG1_PORT GPIOB
+#define DBG1_PIN  GPIO_PIN_2
+
 #define LED_PIN GPIO_PIN_2
 #define LED_PORT GPIOB
 

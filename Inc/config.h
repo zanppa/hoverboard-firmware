@@ -6,8 +6,68 @@
 #define PWM_FREQ         16000      // PWM frequency in Hz
 #define DEAD_TIME        32         // PWM deadtime
 
-#define DELAY_IN_MAIN_LOOP 5        // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
+//Set the confifured ADC clock frequency here
+#define ADC_CLOCK_HZ            (8000000U)   // ADC Peripheral CLock Frequency in Hz
 
+//cannot compare ADC_SAMPLETIME_7CYCLES_5 at compile time, due to typecast
+#define ADC_CONV_TIME_1C5       (14)  //Total ADC clock cycles / conversion = (  1.5+12.5)
+#define ADC_CONV_TIME_7C5       (20)  //Total ADC clock cycles / conversion = (  7.5+12.5)
+#define ADC_CONV_TIME_13C5      (26)  //Total ADC clock cycles / conversion = ( 13.5+12.5)
+#define ADC_CONV_TIME_28C5      (41)  //Total ADC clock cycles / conversion = ( 28.5+12.5)
+#define ADC_CONV_TIME_41C5      (54)  //Total ADC clock cycles / conversion = ( 41.5+12.5)
+#define ADC_CONV_TIME_55C5      (68)  //Total ADC clock cycles / conversion = ( 55.5+12.5)
+#define ADC_CONV_TIME_71C5      (84)  //Total ADC clock cycles / conversion = ( 71.5+12.5)
+#define ADC_CONV_TIME_239C5     (252) //Total ADC clock cycles / conversion = (239.5+12.5)
+
+//This settings influences the actual sample-time. Only use definitions above
+#define ADC_CONV_CLOCK_CYCLES   (ADC_CONV_TIME_7C5)
+
+
+// ############################### DO NOT CHANGE! ###############################
+#define ADC_TOTAL_CONV_TIME     ((SystemCoreClock / ADC_CLOCK_HZ) * ADC_CONV_CLOCK_CYCLES)
+#define ADC_CPU_EQ_SAMPLE_TIME  ((SystemCoreClock / ADC_CLOCK_HZ / 2) * ((ADC_CONV_CLOCK_CYCLES *2)-25))
+// ##############################################################################
+
+
+//Use this to adjust the relative offset of the ADC sample point compared
+//to the PWM LO cycle center. Values are in CPU clock cycles.
+#define ADC_SAMPLE_POINT_OFFSET     (ADC_CPU_EQ_SAMPLE_TIME/2)
+#define ADC_SAMPLE_OFFSET_DIR 		(0) //1 == forward in time, 0 == backward in time
+
+
+// ############################### DO NOT CHANGE! ###############################
+#if   ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_1C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_1CYCLE_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_7C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_7CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_13C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_13CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_28C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_28CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_41C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_41CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_55C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_55CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_71C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_71CYCLES_5)
+#elif ADC_CONV_CLOCK_CYCLES == ADC_CONV_TIME_239C5
+	#define ADC_MOTOR_SAMPLE_TIME   (ADC_SAMPLETIME_239CYCLES_5)
+#else
+	#error Invalid value for ADC_CONV_CLOCK_CYCLES
+#endif
+
+
+#if ADC_SAMPLE_OFFSET_DIR == 1
+	#define ADC_CENTER_ALIGN_MODE (TIM_COUNTERMODE_CENTERALIGNED1)
+	#define ADC_OCCR4_MODE	      (TIM_OCMODE_PWM1)
+#else
+	#define ADC_CENTER_ALIGN_MODE (TIM_COUNTERMODE_CENTERALIGNED2)
+	#define ADC_OCCR4_MODE	      (TIM_OCMODE_PWM2)
+#endif
+// ##############################################################################
+
+
+#define DELAY_IN_MAIN_LOOP 5    // in ms. default 5. it is independent of all the timing critical stuff. do not touch if you do not know what you are doing.
 #define TIMEOUT          5          // number of wrong / missing input commands before emergency off
 
 // ############################### GENERAL ###############################

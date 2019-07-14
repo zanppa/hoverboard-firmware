@@ -355,6 +355,11 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = OFF_PIN;
   HAL_GPIO_Init(OFF_PORT, &GPIO_InitStruct);
 
+  GPIO_InitStruct.Pin = DBG0_PIN;
+  HAL_GPIO_Init(DBG0_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = DBG1_PIN;
+  HAL_GPIO_Init(DBG1_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
 
@@ -435,7 +440,7 @@ void MX_TIM_Init(void) {
 
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
-  htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  htim_right.Init.CounterMode       = ADC_CENTER_ALIGN_MODE;
   htim_right.Init.Period            = SystemCoreClock / 2 / PWM_FREQ;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
@@ -468,20 +473,25 @@ void MX_TIM_Init(void) {
 
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
-  htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  htim_left.Init.CounterMode       = ADC_CENTER_ALIGN_MODE;
   htim_left.Init.Period            = SystemCoreClock / 2 / PWM_FREQ;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
   htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_left);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC4REF;
   sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_ENABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_left, &sMasterConfig);
 
   sTimConfig.InputTrigger = TIM_TS_ITR0;
   sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
   HAL_TIM_SlaveConfigSynchronization(&htim_left, &sTimConfig);
+
+  //Start counting >0 to effectively offset timers by the time it takes for
+  //one ADC conversion to complete. This allows the ADC's to sample in the middle
+  //of the LOW-FET on cycles for both motors.
+  LEFT_TIM->CNT 		  = ADC_TOTAL_CONV_TIME;
 
   sConfigOC.OCMode       = TIM_OCMODE_PWM1;
   sConfigOC.Pulse        = 0;
@@ -493,6 +503,9 @@ void MX_TIM_Init(void) {
   HAL_TIM_PWM_ConfigChannel(&htim_left, &sConfigOC, TIM_CHANNEL_1);
   HAL_TIM_PWM_ConfigChannel(&htim_left, &sConfigOC, TIM_CHANNEL_2);
   HAL_TIM_PWM_ConfigChannel(&htim_left, &sConfigOC, TIM_CHANNEL_3);
+  sConfigOC.OCMode       = ADC_OCCR4_MODE;
+  HAL_TIM_PWM_ConfigChannel(&htim_left, &sConfigOC, TIM_CHANNEL_4);
+
 
   sBreakDeadTimeConfig.OffStateRunMode  = TIM_OSSR_ENABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
@@ -506,22 +519,34 @@ void MX_TIM_Init(void) {
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_3);
+  /* Enable the Capture compare channels for left timer*/
+  uint32_t cce_bits = ( TIM_CCER_CC1E | TIM_CCER_CC1NE |
+						TIM_CCER_CC2E | TIM_CCER_CC2NE |
+						TIM_CCER_CC3E | TIM_CCER_CC3NE );
 
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_3);
+  /* Enable the Capture-Compare channels for both timers*/
+  htim_left.Instance->CCER &= ~(cce_bits);
+  htim_left.Instance->CCER |= (cce_bits);
+  htim_right.Instance->CCER &= ~cce_bits;
+  htim_right.Instance->CCER |= cce_bits;
 
+  /* Enable timer main outputs */
+  __HAL_TIM_MOE_ENABLE(&htim_left);
+  __HAL_TIM_MOE_ENABLE(&htim_right);
+
+  /* Setup TIM8 Update Interrupt Handler (==start of ADC conversion) */
+  htim_left.Instance->DIER |= TIM_DIER_CC4IE;
+  HAL_NVIC_SetPriority(TMR8_CC_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TMR8_CC_IRQn);
+
+  /* Setup repetition counter so that only 1 update event is generated */
   htim_left.Instance->RCR = 1;
 
+  /* set output compare register to start sampling just before center */
+  LEFT_TIM->CCR4 = htim_left.Init.Period - ADC_SAMPLE_POINT_OFFSET;
+
+  /* Start the timers (left-timer first) */
+  __HAL_TIM_ENABLE(&htim_left);
   __HAL_TIM_ENABLE(&htim_right);
 }
 
@@ -549,7 +574,7 @@ void MX_ADC1_Init(void) {
   multimode.Mode = ADC_DUALMODE_REGSIMULT;
   HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  sConfig.SamplingTime = ADC_MOTOR_SAMPLE_TIME;
 
   sConfig.Channel = ADC_CHANNEL_14;  // pc4 left b
   sConfig.Rank    = 1;
@@ -589,7 +614,7 @@ void MX_ADC1_Init(void) {
   DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE;
   DMA1_Channel1->CCR |= DMA_CCR_EN;
 
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 1);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
@@ -612,7 +637,7 @@ void MX_ADC2_Init(void) {
   hadc2.Init.NbrOfConversion       = 5;
   HAL_ADC_Init(&hadc2);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  sConfig.SamplingTime = ADC_MOTOR_SAMPLE_TIME;
 
   sConfig.Channel = ADC_CHANNEL_15;  // pc5 left c
   sConfig.Rank    = 1;

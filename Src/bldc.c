@@ -86,7 +86,7 @@ static uint32_t buzzerTimer = 0;
 
 uint8_t enable          = 0;
 
-static const uint16_t pwm_res       = 64000000 / 2 / PWM_FREQ; // = 2000
+static const uint16_t pwm_res       = 72000000 / 2 / PWM_FREQ; // = 2000
 
 static int offsetcount = 0;
 static int offsetrl1   = 2000;
@@ -98,12 +98,26 @@ static int offsetdcr   = 2000;
 
 float batteryVoltage = BAT_NUMBER_OF_CELLS * 4.0;
 
+void TMR8_CC_IRQHandler(void){
+
+	//clear update interrupt flag
+	TIM8->SR &= ~(TIM_SR_CC4IF);
+
+	//Start of conversion
+	HAL_GPIO_WritePin(DBG1_PORT, DBG1_PIN, 1);
+}
+
 //scan 8 channels with 2ADCs @ 20 clk cycles per sample
 //meaning ~80 ADC clock cycles @ 8MHz until new DMA interrupt =~ 100KHz
 //=640 cpu cycles
 void DMA1_Channel1_IRQHandler(void) {
 
   DMA1->IFCR = DMA_IFCR_CTCIF1;
+
+  //End of conversion
+  HAL_GPIO_WritePin(DBG1_PORT, DBG1_PIN, 0);
+  //Start of BLDC
+  HAL_GPIO_WritePin(DBG0_PORT, DBG0_PIN, 1);
   // HAL_GPIO_WritePin(LED_PORT, LED_PIN, 1);
   // HAL_GPIO_TogglePin(LED_PORT, LED_PIN);
 
@@ -217,6 +231,9 @@ void DMA1_Channel1_IRQHandler(void) {
 
   /* Indicate task complete */
   OverrunFlag = false;
+
+  //End of BLDC
+  HAL_GPIO_WritePin(DBG0_PORT, DBG0_PIN, 0);
  
  // ###############################################################################
 
