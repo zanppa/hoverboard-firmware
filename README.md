@@ -2,6 +2,26 @@
 
 This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of NiklasFauth's hoverboard-firmware-hack.
 
+## Roadmap
+ - [ ] Add documentation
+      - [ ] Pinouts
+      - [ ] Flashing
+      - [ ] General documentation
+      - [ ] Modulator documentation
+      - [ ] Current measurement
+      - [ ] Control loops
+ - [ ] Add configs for Raspberry PI Zero W wireless flashing with openocd
+ - [ ] Re-organize code
+ - [ ] Implement mandatory features
+      - [ ] Space vector modulation
+      - [ ] U/f control with IR compensation
+      - [ ] Better current measurement
+      - [ ] FOC
+ - [ ] Additional features
+      - [ ] Field weakening
+      - [ ] Current limiting
+      - [ ] Overvoltage and undervoltage limits
+
 
 ## TomTinkering's changes
 The goal is to make the board more configurable without requiring reprogramming for every setting, 
