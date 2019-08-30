@@ -2,30 +2,30 @@
 
 This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of NiklasFauth's hoverboard-firmware-hack.
 
+
+## TomTinkering's changes
 The goal is to make the board more configurable without requiring reprogramming for every setting, 
 and to allow controller the board over different interfaces.
 
 Current state:
- - implemented dma/interrupt based UART2/3 RX/TX (see uart.h/c)
- - implemented simple modbus slave (supports commands 0x3(read) and ox10(write). Works with open-source QtModMaster tool
- - implemented modbus wrapper to allow user-defined variables to be accessed in code and over modbus. 
- - Built GUI to talk to modbus-wrapper and allow plotting/changing and storing device settings
- - Added Tacho/Speed signals for both motors
- - cleaned code from some hacks/features. Some will be re-added later
-      - removed I2C/ADC/PWM control. This will be re-integrated soon
-      - clean up BLDC ADC handler, now more efficient, and only dealing with motors
-      - no more delays in code, but rather non-blocking Tick() based updates
-      - disabled buzzer, man I hate buzzers
- - implement flash-eeprom emulation to store settings in bvm memory
+ - [x] implemented dma/interrupt based UART2/3 RX/TX (see uart.h/c)
+ - [x] implemented simple modbus slave (supports commands 0x3(read) and ox10(write). Works with open-source QtModMaster tool
+ - [x] implemented modbus wrapper to allow user-defined variables to be accessed in code and over modbus. 
+ - [x] Built GUI to talk to modbus-wrapper and allow plotting/changing and storing device settings
+ - [x] Added Tacho/Speed signals for both motors
+ - [x] cleaned code from some hacks/features. Some will be re-added later
+      - [x] removed I2C/ADC/PWM control. This will be re-integrated soon
+      - [x] clean up BLDC ADC handler, now more efficient, and only dealing with motors
+      - [x] no more delays in code, but rather non-blocking Tick() based updates
+      - [x] disabled buzzer, man I hate buzzers
+ - [x] implement flash-eeprom emulation to store settings in bvm memory
       
       
 Coming soon:
-  - selectable control method. (Uart,I2C,ADC,PPM)
+  - [ ] selectable control method. (Uart,I2C,ADC,PPM)
   
 
-![](https://raw.githubusercontent.com/NiklasFauth/hoverboard-firmware-hack/master/docs/pictures/armchair.gif)   ![](https://raw.githubusercontent.com/NiklasFauth/hoverboard-firmware-hack/master/docs/pictures/bobbycar.gif)
-![](https://raw.githubusercontent.com/NiklasFauth/hoverboard-firmware-hack/master/docs/pictures/transpotter.gif)   ![](https://raw.githubusercontent.com/NiklasFauth/hoverboard-firmware-hack/master/docs/pictures/chair.gif)
-
+## NiklasFauth's comments
 
 This repo contains open source firmware for generic Hoverboard Mainboards.
 The firmware you can find here allows you to use your Hoverboard Hardware (like the Mainboard, Motors and Battery) for cool projects like driving armchairs, person-tracking transportation robots and every other application you can imagine that requires controlling the Motors.
@@ -36,16 +36,12 @@ https://media.ccc.de/v/gpn18-95-howto-moving-objects
 ---
 
 ## Build Instructions
-
 Here are detailed build instructions for some finished projects.
-If possible, a prebuild firmware release is available for these usecases, so you don't need to compile the firmware yourself
-
-TranspOtter: https://github.com/NiklasFauth/hoverboard-firmware-hack/wiki/Build-Instruction:-TranspOtter
 
 ---
 
-## Hardware
-![otter](https://raw.githubusercontent.com/NiklasFauth/hoverboard-firmware-hack/master/pinout.png)
+### Hardware
+![otter](https://raw.githubusercontent.com/zanppa/hoverboard-firmware/master/pinout.png)
 
 The original Hardware supports two 4-pin cables that originally were connected to the two sensor boards. They break out GND, 12/15V and USART2&3 of the Hoverboard mainboard.
 Both USART2 & 3 can be used for UART and I2C, PA2&3 can be used as 12bit ADCs.
@@ -55,8 +51,20 @@ http://vocke.tv/lib/exe/fetch.php?media=20150722_hoverboard_sch.pdf
 
 ---
 
-## Flashing
-To build the firmware, just type "make". Make sure you have specified your gcc-arm-none-eabi binary location in the Makefile ("PREFIX = ...") (version 7 works, there is a version that does not!) (if the ons in linux repos do not work, use the official version: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads). Right to the STM32, there is a debugging header with GND, 3V3, SWDIO and SWCLK. Connect GND, SWDIO and SWCLK to your SWD programmer, like the ST-Link found on many STM devboards.
+### Flashing
+Build requirements (package names as in debian/devuan)
+```
+gcc-arm-none-eabi >= 7
+libnewlib-arm-none-eabi >= 3.1.0
+```
+
+To build the firmware, type
+```
+make
+``` 
+Make sure you have specified your gcc-arm-none-eabi binary location in the Makefile ("PREFIX = ...") Official gnu toolchain with latest version: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads.
+
+Right next to the STM32, there is a debugging header with GND, 3V3, SWDIO and SWCLK. Connect GND, SWDIO and SWCLK to your SWD programmer, like the ST-Link found on many STM devboards.
 
 Do not power the mainboard from the 3.3V of your programmer! This has already killed multiple mainboards.
 
