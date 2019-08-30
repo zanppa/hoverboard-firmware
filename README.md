@@ -12,7 +12,7 @@ This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of Ni
       - [ ] Control loops
  - [ ] Add configs for Raspberry PI Zero W wireless flashing with openocd
  - [ ] Re-organize code
- - [ ] Implement mandatory features
+ - [ ] Implement mandatory features
       - [ ] Space vector modulation
       - [ ] U/f control with IR compensation
       - [ ] Better current measurement
@@ -61,7 +61,7 @@ Here are detailed build instructions for some finished projects.
 ---
 
 ### Hardware
-![otter](https://raw.githubusercontent.com/zanppa/hoverboard-firmware/master/pinout.png)
+![Pinout](https://raw.githubusercontent.com/zanppa/hoverboard-firmware/master/Docs/pinout.png)
 
 The original Hardware supports two 4-pin cables that originally were connected to the two sensor boards. They break out GND, 12/15V and USART2&3 of the Hoverboard mainboard.
 Both USART2 & 3 can be used for UART and I2C, PA2&3 can be used as 12bit ADCs.
