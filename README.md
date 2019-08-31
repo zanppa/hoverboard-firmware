@@ -10,7 +10,7 @@ This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of Ni
       - [x] [Modulator documentation](Docs/modulation.md)
       - [x] [Current measurement](Docs/current_meas.md)
       - [ ] Control loops
- - [ ] Add configs for Raspberry PI Zero W wireless flashing with openocd
+ - [x] Add configs for Raspberry PI Zero W wireless flashing with openocd
  - [ ] Re-organize code
  - [ ] Implement mandatory features
       - [ ] Space vector modulation
