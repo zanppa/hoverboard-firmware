@@ -172,6 +172,10 @@ void control_timer_init(void)
 }
 
 
+/*
+ * Initialize timers for left and right side motors
+ */
+
 void MX_TIM_Init(void) {
   __HAL_RCC_TIM1_CLK_ENABLE();
   __HAL_RCC_TIM8_CLK_ENABLE();
@@ -181,13 +185,18 @@ void MX_TIM_Init(void) {
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
   TIM_SlaveConfigTypeDef sTimConfig;
 
+  // Initialize timer as center-aligned mode
+  // Timer counts from 0 to "period"-1, creates overflow event, then counts
+  // down to 1 and creates underflow event. Then it restarts.
+  // pre-scaler = 0 and divier = 1 i.e.
+  // the timer runs at crystal(?) frequency
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_right.Init.Period            = 64000000 / 2 / PWM_FREQ;
+  htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
-  htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   HAL_TIM_PWM_Init(&htim_right);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
@@ -217,10 +226,10 @@ void MX_TIM_Init(void) {
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_left.Init.Period            = 64000000 / 2 / PWM_FREQ;
+  htim_left.Init.Period            = PWM_PERIOD;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
-  htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   HAL_TIM_PWM_Init(&htim_left);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
@@ -251,9 +260,15 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_left, &sBreakDeadTimeConfig);
 
+  // Enable update interrupts
+  LEFT_TIM->DIER |= TIM_DIER_UIE;
+  RIGHT_TIM->DIER |= TIM_DIER_UIE;
+
+  // Disable outputs
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
+  // Start the timers
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);

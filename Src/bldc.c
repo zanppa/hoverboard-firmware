@@ -5,6 +5,9 @@
 #include "setup.h"
 #include "config.h"
 #include "cfgbus.h"
+#include "bldc.h"
+
+#include "control.h" // Debug
 
 uint8_t enable = 0;
 
@@ -62,9 +65,50 @@ inline void blockPWM(int pwm, int pos, int *u, int *v, int *w) {
       break;
     default:
       *u = 0;
-      *v = 0;
-      *w = 0;
+      *v = pwm;	// DEBUG, was 0
+      *w = -pwm;	// DEBUG, was 0
   }
+}
+
+
+// Right motor timer update event handler
+void TIM1_UP_IRQHandler() {
+
+  // Debug: blink the led here
+  led_update();
+}
+
+// Left motor timer update event handler
+void TIM8_UP_IRQHandler() {
+  // Do nothing, timer 1 handles the synchronization
+  // And both timers should run at the same rate
+}
+
+// Calculate the timer values given the desired voltage vector
+// length and angle
+void calculate_modulator(uint16_t midx, uint16_t angle) {
+  uint16_t ta1;
+  uint16_t ta2;
+  uint16_t t0;
+  uint32_t temp;
+
+  // Clamp modulation index to 1.0
+  if(midx > 4096) midx = 4096;
+
+  // Calculate the vector times
+  temp = midx * array_sin(angle);
+  temp >>= 12;
+  temp *= PWM_PERIOD;
+  temp >>= 12;
+  ta1 = temp & 0xFFFF;
+
+  temp = midx * array_sin(683 - angle);
+  temp >>= 12;
+  temp *= PWM_PERIOD;
+  temp >>= 12;
+  ta2 = temp & 0xFFFF;
+
+  t0 = (PWM_PERIOD - ta1 - ta2) / 2;
 }
 
 

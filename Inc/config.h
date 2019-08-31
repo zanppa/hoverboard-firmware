@@ -1,8 +1,12 @@
 #pragma once
 #include "stm32f1xx_hal.h"
 
+// Modulation parameters
 #define PWM_FREQ         16000     // PWM frequency in Hz
+#define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
 #define DEAD_TIME        32        // PWM deadtime
+
+
 #define DC_CUR_LIMIT     1         // Motor DC current limit in amps
 #define PPM_NUM_CHANNELS 6         // number of PPM channels to receive
 #define VBAT_ADC_TO_UV (25532)  //25532 uV per ADC count

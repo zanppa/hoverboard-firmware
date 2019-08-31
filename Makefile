@@ -44,6 +44,8 @@ Src/cfgbus.c \
 Src/control.c \
 Src/modbus.c \
 Src/stm32f1xx_it.c \
+Src/math.c \
+Src/arrays.c \
 
 # ASM sources
 ASM_SOURCES =  \
