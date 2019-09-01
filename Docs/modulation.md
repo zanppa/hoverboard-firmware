@@ -20,7 +20,7 @@ to following table.
 | 2      | 0      | 1      | 1      | -        | 0        | +        |
 | 3      | 0      | 0      | 1      | 0        | -        | +        |
 | 4      | 1      | 0      | 1      | +        | -        | 0        |
-| 6      | 1      | 0      | 0      | +        | 0        | -        |
+| 5      | 1      | 0      | 0      | +        | 0        | -        |
 
 The PWM duty cycle is set directly by the given (and low-pass filtered) speed reference.
 
