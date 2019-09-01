@@ -80,5 +80,7 @@ into account in the sampling position, i.e. `Tsample = Tdead + Tsettling`, which
 needs to wait some time before sampling. Easiest method to do this is to sample some other channel(s) 
 first with long sampling time, and then sample the current.
 
+![Current measurement method](current_sampling.png)
+
 
  
