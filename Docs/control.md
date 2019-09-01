@@ -14,3 +14,5 @@ at low speeds, but the voltage must decrease slower when approaching zero. This 
 called IR compensation (current*resistance). Easiest way to achieve this is to keep the 
 applied voltage at a constant level below some pre-defined frequency.
 
+![V/f control with IR compensation](vf_control_with_ir.png)
+
