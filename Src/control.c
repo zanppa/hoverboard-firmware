@@ -48,7 +48,7 @@ void update_controls(void)
 }
 
 
-//called 64000000/65535 = 976.58 times per second
+//called 64000000/64000 = 1000 times per second
 void TIM3_IRQHandler(void)
 {
   CTRL_TIM->SR = 0;
