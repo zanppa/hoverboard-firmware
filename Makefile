@@ -40,6 +40,7 @@ Src/setup.c \
 Src/uart.c \
 Src/main.c \
 Src/bldc.c \
+Src/svm.c \
 Src/cfgbus.c \
 Src/control.c \
 Src/modbus.c \
