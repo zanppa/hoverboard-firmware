@@ -2,10 +2,32 @@
 // Copyright (C) 2019 Lauri Peltonen
 
 #include <stdint.h>
+#include "math.h"
+
+// Fixed point arithmetic
+
+// Multiply two unsigned fixed points together
+uint16_t fx_mulu(uint16_t a, uint16_t b) {
+  uint32_t res = a * b;	// STM32 has hardware mul from 16-bits to 32 bits
+  res >>= FIXED_SHIFT;
+  return res & 0xFFFF;
+}
+
+// Multiply two signed fixed points together
+int16_t fx_mul(int16_t a, int16_t b) {
+  int32_t res = a * b;
+  res /= FIXED_ONE;
+  return (int16_t)res;
+}
+
+
+
+
+// Trigonometric functions
 
 extern uint16_t sine_array[512];
 
-uint16_t array_sin(uint16_t angle) {
+int16_t array_sin(uint16_t angle) {
   uint8_t modulo;
   uint16_t sine;
   uint16_t inv_sine;
