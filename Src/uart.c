@@ -30,36 +30,40 @@ uint32_t pTxUart3 = 0;
 uint32_t uart2_tx_size = 0;
 uint32_t uart3_tx_size = 0;
 
-void UART_Init()
+// Initialize UARTs, parameters are true if that UART is to be enabled
+void UART_Init(uint8_t uart2, uint8_t uart3)
 {
-
-  __HAL_RCC_USART2_CLK_ENABLE();
-  __HAL_RCC_USART3_CLK_ENABLE();
+  if(uart2)  __HAL_RCC_USART2_CLK_ENABLE();
+  if(uart3) __HAL_RCC_USART3_CLK_ENABLE();
   __HAL_RCC_DMA1_CLK_ENABLE();
 
-  huart2.Instance          = USART2;
-  huart2.Init.BaudRate     = UART2_BAUD;
-  huart2.Init.WordLength   = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits     = UART_STOPBITS_1;
-  huart2.Init.Parity       = UART_PARITY_NONE;
-  huart2.Init.Mode         = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart2);
+  if(uart2) {
+    huart2.Instance          = USART2;
+    huart2.Init.BaudRate     = UART2_BAUD;
+    huart2.Init.WordLength   = UART_WORDLENGTH_8B;
+    huart2.Init.StopBits     = UART_STOPBITS_1;
+    huart2.Init.Parity       = UART_PARITY_NONE;
+    huart2.Init.Mode         = UART_MODE_TX_RX;
+    huart2.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_UART_Init(&huart2);
+  }
 
-  huart3.Instance          = USART3;
-  huart3.Init.BaudRate     = UART3_BAUD;
-  huart3.Init.WordLength   = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits     = UART_STOPBITS_1;
-  huart3.Init.Parity       = UART_PARITY_NONE;
-  huart3.Init.Mode         = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init(&huart3);
+  if(uart3) {
+    huart3.Instance          = USART3;
+    huart3.Init.BaudRate     = UART3_BAUD;
+    huart3.Init.WordLength   = UART_WORDLENGTH_8B;
+    huart3.Init.StopBits     = UART_STOPBITS_1;
+    huart3.Init.Parity       = UART_PARITY_NONE;
+    huart3.Init.Mode         = UART_MODE_TX_RX;
+    huart3.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_UART_Init(&huart3);
+  }
 
   //enable DMA tx/rx for both UART channels
-  USART2->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR;
-  USART3->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR;
+  if(uart2) USART2->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR;
+  if(uart3) USART3->CR3 |= USART_CR3_DMAT | USART_CR3_DMAR;
 
   //USART2 GPIO Configuration PA2=TX, PA3=RX
   //USART3 GPIO Configuration PB10=TX, PB11=RX
@@ -68,73 +72,98 @@ void UART_Init()
   //Init TX GPIO's
   GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Pin   = GPIO_PIN_2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  GPIO_InitStruct.Pin   = GPIO_PIN_10;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  if(uart2) {
+    GPIO_InitStruct.Pin   = GPIO_PIN_2;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  }
+  if(uart3) {
+    GPIO_InitStruct.Pin   = GPIO_PIN_10;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  }
 
   //Init RX GPIO's
   GPIO_InitStruct.Mode  = GPIO_MODE_AF_INPUT;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Pin   = GPIO_PIN_3;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-  GPIO_InitStruct.Pin   = GPIO_PIN_11;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  if(uart2) {
+   GPIO_InitStruct.Pin   = GPIO_PIN_3;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  }
+  if(uart3) {
+    GPIO_InitStruct.Pin   = GPIO_PIN_11;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  }
 
   //Setup UART2/UART3 RX DMA as follows:
     //Mem size 8-bit, Peripheral size 8-bit, Increment memory address,
     //Circular operation, Peripheral-to-memory, Transfer complete interrupt
     //Priority level medium
-  UART2_RX_DMA->CCR   = 0;
-  UART2_RX_DMA->CNDTR = UART2_RX_FIFO_SIZE;
-  UART2_RX_DMA->CPAR  = (uint32_t)&(USART2->DR);
-  UART2_RX_DMA->CMAR  = (uint32_t)uart2_rx;
-  UART2_RX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_0;
-  DMA1->IFCR          = DMA_IFCR_CTCIF2 | DMA_IFCR_CHTIF2 | DMA_IFCR_CGIF2;
+  if(uart2) {
+    UART2_RX_DMA->CCR   = 0;
+    UART2_RX_DMA->CNDTR = UART2_RX_FIFO_SIZE;
+    UART2_RX_DMA->CPAR  = (uint32_t)&(USART2->DR);
+    UART2_RX_DMA->CMAR  = (uint32_t)uart2_rx;
+    UART2_RX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_0;
+    DMA1->IFCR          = DMA_IFCR_CTCIF2 | DMA_IFCR_CHTIF2 | DMA_IFCR_CGIF2;
+  }
 
-  UART3_RX_DMA->CCR   = 0;
-  UART3_RX_DMA->CNDTR = UART3_RX_FIFO_SIZE;
-  UART3_RX_DMA->CPAR  = (uint32_t)&(USART3->DR);
-  UART3_RX_DMA->CMAR  = (uint32_t)uart3_rx;
-  UART3_RX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_0;
-  DMA1->IFCR          = DMA_IFCR_CTCIF3 | DMA_IFCR_CHTIF3 | DMA_IFCR_CGIF3;
+  if(uart3) {
+    UART3_RX_DMA->CCR   = 0;
+    UART3_RX_DMA->CNDTR = UART3_RX_FIFO_SIZE;
+    UART3_RX_DMA->CPAR  = (uint32_t)&(USART3->DR);
+    UART3_RX_DMA->CMAR  = (uint32_t)uart3_rx;
+    UART3_RX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_0;
+    DMA1->IFCR          = DMA_IFCR_CTCIF3 | DMA_IFCR_CHTIF3 | DMA_IFCR_CGIF3;
+  }
 
   //clear pending DMA interrupt flags
   DMA1->IFCR = DMA_IFCR_CGIF6;
   DMA1->IFCR = DMA_IFCR_CGIF3;
 
-  HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 5);
-  HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
-  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 5, 5);
-  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  // TODO: Check which one is which!
+  if(uart2) {
+    HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 5);
+    HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+  }
+  if(uart3) {
+    HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 5, 5);
+    HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  }
 
   //Setup UART2/UART3 TX DMA as follows:
     //Mem size 8-bit, Peripheral size 8-bit, Increment memory address,
     //Non-circular operation, Memory-to-peripheral, transfer complete interrupt
     //Priority level low
-  UART2_TX_DMA->CCR   = 0;
-  UART2_TX_DMA->CNDTR = 0;
-  UART2_TX_DMA->CPAR  = (uint32_t)&(USART2->DR);
-  UART2_TX_DMA->CMAR  = (uint32_t)uart2_tx;
-  UART2_TX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE;
-  DMA1->IFCR          = DMA_IFCR_CTCIF4 | DMA_IFCR_CHTIF4 | DMA_IFCR_CGIF4;
+  if(uart2) {
+    UART2_TX_DMA->CCR   = 0;
+    UART2_TX_DMA->CNDTR = 0;
+    UART2_TX_DMA->CPAR  = (uint32_t)&(USART2->DR);
+    UART2_TX_DMA->CMAR  = (uint32_t)uart2_tx;
+    UART2_TX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE;
+    DMA1->IFCR          = DMA_IFCR_CTCIF4 | DMA_IFCR_CHTIF4 | DMA_IFCR_CGIF4;
+  }
 
-  UART3_TX_DMA->CCR   = 0;
-  UART3_TX_DMA->CNDTR = 0;
-  UART3_TX_DMA->CPAR  = (uint32_t)&(USART3->DR);
-  UART3_TX_DMA->CMAR  = (uint32_t)uart3_tx;
-  UART3_TX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE;
-  DMA1->IFCR          = DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5 | DMA_IFCR_CGIF5;
+  if(uart3) {
+    UART3_TX_DMA->CCR   = 0;
+    UART3_TX_DMA->CNDTR = 0;
+    UART3_TX_DMA->CPAR  = (uint32_t)&(USART3->DR);
+    UART3_TX_DMA->CMAR  = (uint32_t)uart3_tx;
+    UART3_TX_DMA->CCR   = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE;
+    DMA1->IFCR          = DMA_IFCR_CTCIF5 | DMA_IFCR_CHTIF5 | DMA_IFCR_CGIF5;
+  }
 
   //clear pending DMA interrupt flags
   DMA1->IFCR = DMA_IFCR_CGIF7;
   DMA1->IFCR = DMA_IFCR_CGIF2;
 
-  HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 6, 6);
-  HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
-  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 6, 6);
-  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-
+  // TODO: Check which channel is which
+  if(uart2) {
+    HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 6, 6);
+    HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+  }
+  if(uart3) {
+    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 6, 6);
+    HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  }
 }
 
 void UARTRxEnable(UART_ch_t uartCh, uint8_t enable)

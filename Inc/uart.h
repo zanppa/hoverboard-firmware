@@ -25,7 +25,7 @@ typedef enum
 } UART_ch_t;
 
 
-void UART_Init();
+void UART_Init(uint8_t uart2, uint8_t uart3);
 void UARTRxEnable(UART_ch_t uartCh, uint8_t enable);
 void UARTTxEnable(UART_ch_t uartCh, uint8_t enable);
 uint32_t UARTRxAvailable(UART_ch_t uartCh);

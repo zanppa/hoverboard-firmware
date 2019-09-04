@@ -65,7 +65,7 @@ int main(void) {
   MX_TIM_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
-  UART_Init();
+  UART_Init(1, 1);
 
   ee_init();
   CfgInit();
