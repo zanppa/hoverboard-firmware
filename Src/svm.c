@@ -28,7 +28,8 @@ static const uint8_t svm_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
 };
 
-// Right motor timer update event handler
+
+// Left motor timer update event handler
 void TIM1_UP_IRQHandler() {
   // Read HALL sensors to detect rotor position
   uint8_t sector_l = (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
@@ -38,14 +39,15 @@ void TIM1_UP_IRQHandler() {
   sector_r = hall_to_sector[sector_r];
 
   // Debug: blink the led here
-  led_update();
+  //led_update();
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   // Update modbus variables (globals)
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
 }
 
-// Left motor timer update event handler
+// Right motor timer update event handler
 void TIM8_UP_IRQHandler() {
   // Do nothing, timer 1 handles the calculations
   // And both timers should run at the same rate

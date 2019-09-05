@@ -269,12 +269,13 @@ void MX_TIM_Init(void) {
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
   // Start the timers
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_3);
+  // Start the left timer in interrupt mode (for svm)
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_3);
 
   HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_2);
