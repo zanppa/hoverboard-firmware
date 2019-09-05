@@ -2,6 +2,8 @@
 
 This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of NiklasFauth's hoverboard-firmware-hack.
 
+Note that compared to that version, I have changed left/right sides because they didn't match my board's markings.
+
 ## Roadmap
  - [ ] Add documentation
       - [ ] Pinouts

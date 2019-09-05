@@ -1,6 +1,4 @@
-Phase control pins are accordign to following table. There seems to be some 
-confusion between the available schematic and the current firmware, I need to 
-check which notation is correct (which matches the markings on the PCB). Bold 
+Phase control pins are according to following table. Bold 
 means the function used in the firmware.
 
 | Function           | Pin | Pin function                                   |
