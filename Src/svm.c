@@ -6,8 +6,9 @@
 #include "cfgbus.h"
 #include "bldc.h"
 
-#include "control.h" // Debug
+//#include "control.h" // Debug
 #include "math.h"
+#include "svm.h"
 
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
@@ -31,6 +32,15 @@ static const uint8_t svm_mod_pattern[6][3] = {
 
 // Left motor timer update event handler
 void TIM1_UP_IRQHandler() {
+  uint16_t t0, t1, t2;
+  uint16_t midx = 3000;	// DEBUG: Use fixed value
+  uint16_t angle = 300; // DEBUG: Use fixed value
+
+  // Debug: blink the led here
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //led_update();
+
+
   // Read HALL sensors to detect rotor position
   uint8_t sector_l = (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
   sector_l = hall_to_sector[sector_l];
@@ -38,9 +48,19 @@ void TIM1_UP_IRQHandler() {
   uint8_t sector_r = (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
   sector_r = hall_to_sector[sector_r];
 
-  // Debug: blink the led here
-  //led_update();
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  // Get the vector times from the modulator
+  calculate_modulator(midx, angle, &t0, &t1, &t2);
+
+  // Set the timer values
+  // Debug: just test something, do not connect motor!
+  LEFT_TIM->LEFT_TIM_U = 200;
+  LEFT_TIM->LEFT_TIM_V = 1000;
+  LEFT_TIM->LEFT_TIM_W = 1500;
+
+  // TODO: Enable this later
+  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][0])) = t0;
+  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][1])) = t1;
+  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][2])) = t2;
 
   // Update modbus variables (globals)
   cfg.vars.pos_l = sector_l;
@@ -54,8 +74,10 @@ void TIM8_UP_IRQHandler() {
 }
 
 // Calculate the timer values given the desired voltage vector
-// length and angle
-void calculate_modulator(uint16_t midx, uint16_t angle) {
+// length (modulation index) and angle in fixed point, return
+// vector change times relative to the PWM period in t0, t1 and t2
+// (t0 is half of the total zero vector length)
+void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
   uint16_t t0;
@@ -63,12 +85,18 @@ void calculate_modulator(uint16_t midx, uint16_t angle) {
   // Clamp modulation index to 1.0
   if(midx > 4096) midx = 4096;
 
+  // Clamp angle to 0...60 degrees
+  // angle &= FIXED_MASK;	// 0...360 degrees
+  angle = angle % FIXED_60DEG;
+
   // Calculate the vector times
   ta1 = fx_mulu(midx, array_sin(angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mulu(midx,  array_sin(683 - angle));
+  ta2 = fx_mulu(midx,  array_sin(FIXED_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
-  t0 = (PWM_PERIOD - ta1 - ta2) / 2;
+  *t0 = (PWM_PERIOD - ta1 - ta2) / 2;
+  *t1 = ta1;
+  *t2 = ta2;
 }
