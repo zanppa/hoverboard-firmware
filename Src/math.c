@@ -32,18 +32,14 @@ int16_t array_sin(uint16_t angle) {
   uint16_t sine;
   uint16_t inv_sine;
 
-  angle &= 0x0FFF;	// Clamp to 0...4096 (0...360 degrees)
-  modulo = angle & 0x01FF; // 0...45 degrees
+  angle &= FIXED_MASK;	// Clamp to 0...4096 (0...360 degrees)
+  modulo = (angle & 0x03FF) >> 2; // 0...90 degrees (0...1024) scaled to array (256=90 deg)
 
   sine = sine_array[modulo];
   inv_sine = sine_array[255-modulo];
 
-  if(angle < 0x200) return sine;
-  else if(angle < 0x400) return 4096-inv_sine;
-  else if(angle < 0x600) return 4096-sine;
+  if(angle < 0x400) return sine;
   else if(angle < 0x800) return inv_sine;
-  else if(angle < 0xA00) return -sine;
-  else if(angle < 0xD00) return inv_sine-4096;
-  else if(angle < 0xE00) return sine-4096;
+  else if(angle < 0xC00) return -sine;
   else return -inv_sine;
 }
