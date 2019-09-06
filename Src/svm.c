@@ -29,6 +29,17 @@ static const uint8_t svm_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
 };
 
+// Convert fixed point angle into sector number
+static inline uint8_t angle_to_sector(uint16_t angle) {
+  angle &= FIXED_MASK;
+  if(angle < FIXED_60DEG) return 5;
+  else if(angle < 2*FIXED_60DEG) return 0;
+  else if(angle < 3*FIXED_60DEG) return 1;
+  else if(angle < 4*FIXED_60DEG) return 2;
+  else if(angle < 5*FIXED_60DEG) return 3;
+  else return 4;
+}
+
 
 // Left motor timer update event handler
 void TIM1_UP_IRQHandler() {
@@ -42,11 +53,14 @@ void TIM1_UP_IRQHandler() {
 
 
   // Read HALL sensors to detect rotor position
-  uint8_t sector_l = (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  sector_l = hall_to_sector[sector_l];
+  //uint8_t sector_l = (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
+  //sector_l = hall_to_sector[sector_l];
 
-  uint8_t sector_r = (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  sector_r = hall_to_sector[sector_r];
+  //uint8_t sector_r = (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+  //sector_r = hall_to_sector[sector_r];
+
+  uint8_t sector_l = angle_to_sector(angle);
+  uint8_t sector_r = angle_to_sector(angle);
 
   // Get the vector times from the modulator
   calculate_modulator(midx, angle, &t0, &t1, &t2);
@@ -80,10 +94,9 @@ void TIM8_UP_IRQHandler() {
 void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
-  uint16_t t0;
 
   // Clamp modulation index to 1.0
-  if(midx > 4096) midx = 4096;
+  if(midx >= 4096) midx = 4096;
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
@@ -96,7 +109,7 @@ void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *
   ta2 = fx_mulu(midx,  array_sin(FIXED_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
-  *t0 = (PWM_PERIOD - ta1 - ta2) / 2;
-  *t1 = ta1;
-  *t2 = ta2;
+  (*t0) = (PWM_PERIOD - ta1 - ta2) / 2;
+  (*t1) = (*t0) + ta1;
+  (*t2) = (*t1) + ta2;
 }
