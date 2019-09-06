@@ -10,6 +10,8 @@
 #include "math.h"
 #include "svm.h"
 
+volatile uint16_t svm_debug_angle = 0;	// Debug reference
+
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
@@ -46,6 +48,9 @@ void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
   uint16_t midx = 3000;	// DEBUG: Use fixed value
   uint16_t angle = 300; // DEBUG: Use fixed value
+
+  // Clear the update interrupt flag
+  TIM1->SR &= ~TIM_SR_UIF;
 
   // Debug: blink the led here
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
@@ -85,6 +90,9 @@ void TIM1_UP_IRQHandler() {
 void TIM8_UP_IRQHandler() {
   // Do nothing, timer 1 handles the calculations
   // And both timers should run at the same rate
+
+  // Clear the update interrupt flag
+  TIM8->SR &= ~TIM_SR_UIF;
 }
 
 // Calculate the timer values given the desired voltage vector
