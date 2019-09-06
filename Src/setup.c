@@ -197,6 +197,7 @@ void MX_TIM_Init(void) {
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
   htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  //htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_right);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
@@ -230,6 +231,7 @@ void MX_TIM_Init(void) {
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
   htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  //htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_left);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
@@ -261,8 +263,18 @@ void MX_TIM_Init(void) {
   HAL_TIMEx_ConfigBreakDeadTime(&htim_left, &sBreakDeadTimeConfig);
 
   // Enable update interrupts
-  LEFT_TIM->DIER |= TIM_DIER_UIE;
-  RIGHT_TIM->DIER |= TIM_DIER_UIE;
+  //LEFT_TIM->DIER |= TIM_DIER_UIE;
+  //LEFT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+  //RIGHT_TIM->DIER |= TIM_DIER_UIE;
+  //RIGHT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+  TIM1->DIER |= TIM_DIER_UIE;
+  TIM1->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+
+  HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+
+  //HAL_NVIC_SetPriority(TIM8_UP_IRQn, 0, 0);
+  //HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
 
   // Disable outputs
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
@@ -270,12 +282,12 @@ void MX_TIM_Init(void) {
 
   // Start the timers
   // Start the left timer in interrupt mode (for svm)
-  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start_IT(&htim_left, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_3);
 
   HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_2);

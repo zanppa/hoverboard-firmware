@@ -56,8 +56,10 @@ void TIM3_IRQHandler(void)
   CTRL_TIM->SR = 0;
 
   // Debug: rotate the SVM reference
-  if(svm_debug_angle == 4095) svm_debug_angle = 0;
-  else svm_debug_angle++;
+//  if(svm_debug_angle >= 4054) svm_debug_angle = 0;
+//  else svm_debug_angle += 41;
+  if(svm_debug_angle >= 4095) svm_debug_angle = 0;
+  else svm_debug_angle += 1;
 
   //calculate motor speeds
   _cntL ++;

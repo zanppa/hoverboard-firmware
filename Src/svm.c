@@ -42,15 +42,14 @@ static inline uint8_t angle_to_sector(uint16_t angle) {
   else return 4;
 }
 
-
-// Left motor timer update event handler
+// Timer 1 update handles both motor modulators
 void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
   uint16_t midx = 3000;	// DEBUG: Use fixed value
   uint16_t angle = 300; // DEBUG: Use fixed value
 
   // Clear the update interrupt flag
-  TIM1->SR &= ~TIM_SR_UIF;
+  TIM1->SR = 0; //&= ~TIM_SR_UIF;
 
   // Debug: blink the led here
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
@@ -64,26 +63,31 @@ void TIM1_UP_IRQHandler() {
   //uint8_t sector_r = (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
   //sector_r = hall_to_sector[sector_r];
 
-  uint8_t sector_l = angle_to_sector(angle);
+  uint8_t sector_l = angle_to_sector(svm_debug_angle);
   uint8_t sector_r = angle_to_sector(angle);
 
   // Get the vector times from the modulator
-  calculate_modulator(midx, angle, &t0, &t1, &t2);
+  calculate_modulator(midx, svm_debug_angle, &t0, &t1, &t2);
 
   // Set the timer values
   // Debug: just test something, do not connect motor!
-  LEFT_TIM->LEFT_TIM_U = 200;
-  LEFT_TIM->LEFT_TIM_V = 1000;
-  LEFT_TIM->LEFT_TIM_W = 1500;
+  //LEFT_TIM->LEFT_TIM_U = t0;
+  //LEFT_TIM->LEFT_TIM_V = t1;
+  //LEFT_TIM->LEFT_TIM_W = t2;
 
-  // TODO: Enable this later
-  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][0])) = t0;
-  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][1])) = t1;
-  //*((uint16_t *)(LEFT_TIM + svm_mod_pattern[sector_l][2])) = t2;
+
+  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][0])) = t0;
+  if(sector_l & 0x01) // Every odd sector uses "right" vector first
+    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][1])) = t0 + t2;
+  else // Even sectors uses "left" vector first
+    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][1])) = t0 + t1;
+  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][2])) = t0 + t1 + t2;
 
   // Update modbus variables (globals)
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
+
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 // Right motor timer update event handler
@@ -92,12 +96,14 @@ void TIM8_UP_IRQHandler() {
   // And both timers should run at the same rate
 
   // Clear the update interrupt flag
-  TIM8->SR &= ~TIM_SR_UIF;
+  TIM8->SR = 0; //&= ~TIM_SR_UIF;
+
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 // Calculate the timer values given the desired voltage vector
 // length (modulation index) and angle in fixed point, return
-// vector change times relative to the PWM period in t0, t1 and t2
+// vector legths relative to the PWM period in t0, t1 and t2
 // (t0 is half of the total zero vector length)
 void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
@@ -118,6 +124,6 @@ void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
   (*t0) = (PWM_PERIOD - ta1 - ta2) / 2;
-  (*t1) = (*t0) + ta1;
-  (*t2) = (*t1) + ta2;
+  (*t1) = ta1;
+  (*t2) = ta2;
 }
