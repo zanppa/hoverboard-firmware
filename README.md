@@ -6,13 +6,13 @@ Note that compared to that version, I have changed left/right sides because they
 
 ## Roadmap
  - [ ] Add documentation
-      - [ ] Pinouts
-      - [ ] Flashing
+      - [x] [Pinouts](Docs/pinout.md)
+      - [x] [Flashing](Docs/flash.md)
       - [ ] General documentation
       - [x] [Modulator documentation](Docs/modulation.md)
       - [x] [Current measurement](Docs/current_meas.md)
       - [ ] Control loops
- - [x] Add configs for Raspberry PI Zero W wireless flashing with openocd
+ - [x] Add configs for Raspberry PI Zero W wireless flashing with OpenOCD
  - [ ] Re-organize code
  - [ ] Implement mandatory features
       - [ ] Space vector modulation
