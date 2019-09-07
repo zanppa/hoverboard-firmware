@@ -67,6 +67,14 @@ Where `Ta1` and `Ta2` are active vector times and `T0` is the sum of the zero ve
 the modulation index, i.e. the voltage amplitude and `angle` is the desired voltage angle inside the 
 sector, i.e. 0...60 degrees.
 
+`Ta1` always references to the vector that is clockwise next to the reference, and `Ta2` to the one on 
+the counter-cockwise side. According to the modulation table above, sometimes we wish to use first the 
+clockwise one and sometimes the other. Thus it is necessary to swap `Ta1` and `Ta2` depending on the 
+sector we are in, to achieve correct switching order and correct vector times.
+
+The sectors during which we wish to use the counter-clockwise vector first and need to swap the times are
+0, 2, and 4.
+
 Since it is quite time consuming to calculate sinusoidal function, the value of `Ts * 2/sqrt(3) * sin(angle)` is 
 pre-calculated into an array for 0...60 degrees angle. The `pi/3 - angle` is achieved by reading the 
 array backwards. Since `Ts` is pre-calculated into the array, it is necessary to re-compute the array 
@@ -78,6 +86,26 @@ by dividing with that value, so that modulation index of one gives the maximum c
 
 The modulator requires, as an input, the desired voltage vector length and angle, and as a result it 
 gives out the switching instants of the three switches.
+
+
+### Pulse width limitation
+For current measurement purposes we wish to guarantee certain vector lengths, during which the current 
+is sampled. As a result, we need to modify the calculated ideal vector times in such a way that we 
+have proper vector lengths and also proper zero vector time, i.e. to keep the resulting vector as 
+close to the reference as possible.
+
+One method to do this limitation is to first calculate the ideal vectors, and then if we assume minimum 
+pulse lengths `Tm0` for zero vector and `Tma` for active vector minimum length, we calculate
+```
+Tma2 = Ts - Tma - Tm0
+T0err = max(T0 - Tm0, 0)
+
+Ta1 = min(max(Ta1 - T0err/2), Tma2)
+Ta2 = min(max(Ta2 - T0err/2), Tma2)
+T0 = Ts - Ta1 - Ta2
+```
+This has the downside that the voltage is distorted in sector changes as well as with small or high modulation 
+indices.
 
 
 ## Copyright
