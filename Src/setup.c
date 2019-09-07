@@ -66,6 +66,14 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = BUTTON_PIN;
   HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
 
+  // TODO: Left and right OC pins might be swapped in the schematic/pcb!
+  // To be checked
+  GPIO_InitStruct.Pin = LEFT_OC_PIN;
+  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = RIGHT_OC_PIN;
+  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
+
 
   //output push-pull pins
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -221,7 +229,7 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
   sBreakDeadTimeConfig.LockLevel        = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime         = DEAD_TIME;
-  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_ENABLE;		// Overcurrent stops timer
   sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_right, &sBreakDeadTimeConfig);
@@ -259,7 +267,7 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
   sBreakDeadTimeConfig.LockLevel        = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime         = DEAD_TIME;
-  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_ENABLE;		// Overcurrent stops timer
   sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_left, &sBreakDeadTimeConfig);
