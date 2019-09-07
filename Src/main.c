@@ -64,7 +64,7 @@ int main(void) {
   MX_GPIO_Init();
   MX_TIM_Init();
   MX_ADC1_Init();
-  MX_ADC2_Init();
+  //MX_ADC2_Init();
   UART_Init(0, 1);
 
   ee_init();
@@ -73,7 +73,7 @@ int main(void) {
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
 
   HAL_ADC_Start(&hadc1);
-  HAL_ADC_Start(&hadc2);
+  //HAL_ADC_Start(&hadc2);
 
   enable = 1;
 

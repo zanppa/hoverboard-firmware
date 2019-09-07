@@ -27,6 +27,22 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 volatile adc_buf_t adc_buffer;
 
+volatile uint16_t adc_raw_data[16] = {0};	// Max 16 conversions
+const struct {		// Map AD conversion results array to variables
+  uint16_t v_battery;
+  uint16_t v_switch;
+  uint16_t analog_ref_1;
+  uint16_t analog_ref_2;
+  uint16_t temperature ;
+} adc_map = {
+  .v_battery = 0,
+  .v_switch = 1,
+  .analog_ref_1 = 2,
+  .analog_ref_2 = 3,
+  .temperature = 4
+};
+
+
 void MX_GPIO_Init(void) {
   GPIO_InitTypeDef GPIO_InitStruct;
 
@@ -333,7 +349,7 @@ void MX_TIM_Init(void) {
 
 /* ADC1 init function */
 void MX_ADC1_Init(void) {
-  ADC_MultiModeTypeDef multimode;
+  //ADC_MultiModeTypeDef multimode;
   ADC_ChannelConfTypeDef sConfig;
 
   __HAL_RCC_ADC1_CLK_ENABLE();
@@ -342,9 +358,9 @@ void MX_ADC1_Init(void) {
   hadc1.Init.ScanConvMode          = ADC_SCAN_ENABLE;
   hadc1.Init.ContinuousConvMode    = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;
+  hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;	// TODO: Timer 3 (control) trig?
   hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion       = 4;
+  hadc1.Init.NbrOfConversion       = 5;		// Up to 16 conversions
   HAL_ADC_Init(&hadc1);
 
   /**Enable or disable the remapping of ADC1_ETRGREG:
@@ -352,29 +368,34 @@ void MX_ADC1_Init(void) {
     */
   __HAL_AFIO_REMAP_ADC1_ETRGREG_ENABLE();
 
+  // No multi-mode needed
   //Configure the ADC multi-mode
-  multimode.Mode = ADC_DUALMODE_REGSIMULT;
-  HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
+  //multimode.Mode = ADC_DUALMODE_REGSIMULT;
+  //HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
 
   sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
 
-  sConfig.Channel = ADC_CHANNEL_14; //right motor phase B sense
+  sConfig.Channel = ADC_CHANNEL_12; // Battery voltage
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_0; //left motor phase A sense
+  sConfig.Channel = ADC_CHANNEL_1; // Power switch voltage
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-
-  sConfig.Channel = ADC_CHANNEL_11; //right motor shunt current
+  sConfig.Channel = ADC_CHANNEL_2; // Left UART TX
   sConfig.Rank    = 3;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_12; //v-battery
+  sConfig.Channel = ADC_CHANNEL_3; // Left UART RX
   sConfig.Rank    = 4;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+  // Internal temperature must be sampled with long sample time
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
+  sConfig.Rank    = 5;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
 
@@ -385,7 +406,7 @@ void MX_ADC1_Init(void) {
   DMA1_Channel1->CCR   = 0;
   DMA1_Channel1->CNDTR = 4;
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
-  DMA1_Channel1->CMAR  = (uint32_t)&adc_buffer;
+  DMA1_Channel1->CMAR  = (uint32_t)(&adc_raw_data[0]);  //(uint32_t)&adc_buffer;
 
   //ADC DMA settings:
   //Mem size 32-bit,
