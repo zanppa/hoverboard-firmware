@@ -113,6 +113,13 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = DCLINK_PIN;
   HAL_GPIO_Init(DCLINK_PORT, &GPIO_InitStruct);
 
+  // Left side UART used as analog input references
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+
 
   //alternate function push-pull
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;

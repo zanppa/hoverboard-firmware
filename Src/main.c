@@ -65,7 +65,7 @@ int main(void) {
   MX_TIM_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
-  UART_Init(1, 1);
+  UART_Init(0, 1);
 
   ee_init();
   CfgInit();
@@ -77,7 +77,7 @@ int main(void) {
 
   enable = 1;
 
-  UARTRxEnable(UARTCh2, 1);
+  //UARTRxEnable(UARTCh2, 1);
   UARTRxEnable(UARTCh3, 1);
 
   control_timer_init();
