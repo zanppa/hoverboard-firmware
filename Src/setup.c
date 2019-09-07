@@ -87,20 +87,20 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = LEFT_DC_CUR_PIN;
   HAL_GPIO_Init(LEFT_DC_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_U_CUR_PIN;
-  HAL_GPIO_Init(LEFT_U_CUR_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = LEFT_U_VOLT_PIN;
+  HAL_GPIO_Init(LEFT_U_VOLT_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_V_CUR_PIN;
-  HAL_GPIO_Init(LEFT_V_CUR_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = LEFT_V_VOLT_PIN;
+  HAL_GPIO_Init(LEFT_V_VOLT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = RIGHT_DC_CUR_PIN;
   HAL_GPIO_Init(RIGHT_DC_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_U_CUR_PIN;
-  HAL_GPIO_Init(RIGHT_U_CUR_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = RIGHT_U_VOLT_PIN;
+  HAL_GPIO_Init(RIGHT_U_VOLT_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = RIGHT_V_CUR_PIN;
-  HAL_GPIO_Init(RIGHT_V_CUR_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = RIGHT_V_VOLT_PIN;
+  HAL_GPIO_Init(RIGHT_V_VOLT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = DCLINK_PIN;
   HAL_GPIO_Init(DCLINK_PORT, &GPIO_InitStruct);
