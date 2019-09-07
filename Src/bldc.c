@@ -17,8 +17,6 @@ adc_offsets_t offsets = {0};
 uint16_t _lastPosL = 0;
 uint16_t _lastPosR = 0;
 
-const int pwm_res = 64000000 / 2 / PWM_FREQ; // = 2000
-
 
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
@@ -134,22 +132,29 @@ void DMA1_Channel1_IRQHandler() {
 
   _lastPosL = cfg.vars.pos_l;
   _lastPosR = cfg.vars.pos_r;
-
-  //update PWM channels based on position
-  int ul, vl, wl;
-  int ur, vr, wr;
-
-  //blockPWM(cfg.vars.pwm_l, cfg.vars.pos_l, &ul, &vl, &wl);
-  //blockPWM(cfg.vars.pwm_r, cfg.vars.pos_r, &ur, &vr, &wr);
-  // DEBUG: Output some pwm all the time
-  blockPWM(40, cfg.vars.pos_l, &ul, &vl, &wl);
-  blockPWM(80, cfg.vars.pos_r, &ur, &vr, &wr);
-
-  //LEFT_TIM->LEFT_TIM_U = CLAMP(ul + pwm_res / 2, 10, pwm_res-10);
-  //LEFT_TIM->LEFT_TIM_V = CLAMP(vl + pwm_res / 2, 10, pwm_res-10);
-  //LEFT_TIM->LEFT_TIM_W = CLAMP(wl + pwm_res / 2, 10, pwm_res-10);
-
-  RIGHT_TIM->RIGHT_TIM_U = CLAMP(ur + pwm_res / 2, 10, pwm_res-10);
-  RIGHT_TIM->RIGHT_TIM_V = CLAMP(vr + pwm_res / 2, 10, pwm_res-10);
-  RIGHT_TIM->RIGHT_TIM_W = CLAMP(wr + pwm_res / 2, 10, pwm_res-10);
 }
+
+
+// Timer 8 handler updates the BLDC PWM references
+// This timer runs at twise the switching frequency
+void TIM8_UP_IRQHandler() {
+  int u, v, w;
+
+  // Clear the update interrupt flag
+  TIM8->SR = 0; //&= ~TIM_SR_UIF;
+
+#ifdef LEFT_MOTOR_BLDC
+  blockPWM(cfg.vars.pwm_l, cfg.vars.pos_l, &u, &v, &w);
+  LEFT_TIM->LEFT_TIM_U = CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  LEFT_TIM->LEFT_TIM_V = CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  LEFT_TIM->LEFT_TIM_W = CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+#endif
+
+#ifdef RIGHT_MOTOR_BLDC
+  blockPWM(cfg.vars.pwm_r, cfg.vars.pos_r, &u, &v, &w);
+  RIGHT_TIM->RIGHT_TIM_U = CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  RIGHT_TIM->RIGHT_TIM_V = CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  RIGHT_TIM->RIGHT_TIM_W = CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+#endif
+}
+

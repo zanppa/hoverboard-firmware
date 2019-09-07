@@ -269,6 +269,9 @@ void MX_TIM_Init(void) {
   //LEFT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
   //RIGHT_TIM->DIER |= TIM_DIER_UIE;
   //RIGHT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+
+  // Timer 1 interrupt is used for SVM if one motor uses it
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
   TIM1->DIER |= TIM_DIER_UIE;
   TIM1->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
@@ -276,9 +279,16 @@ void MX_TIM_Init(void) {
   // than current measurement
   HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+#endif
 
-  //HAL_NVIC_SetPriority(TIM8_UP_IRQn, 5, 0);
-  //HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
+#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
+  // Timer 8 interrupt is used for BLDC
+  TIM8->DIER |= TIM_DIER_UIE;
+  TIM8->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+
+  HAL_NVIC_SetPriority(TIM8_UP_IRQn, 4, 0);
+  HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
+#endif
 
   // Disable outputs
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;

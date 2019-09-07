@@ -112,13 +112,3 @@ void TIM1_UP_IRQHandler() {
   // Debug: LED off
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
-
-
-// Timer 8 handler, not used at the moment
-void TIM8_UP_IRQHandler() {
-  // Do nothing, timer 1 handles the calculations
-  // And both timers should run at the same rate
-
-  // Clear the update interrupt flag
-  TIM8->SR = 0; //&= ~TIM_SR_UIF;
-}

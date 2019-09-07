@@ -9,9 +9,11 @@
 //#define RIGHT_MOTOR_SVM			// SVM for right motor
 
 // Modulation parameters
-#define PWM_FREQ         16000     // PWM frequency in Hz
+#define PWM_FREQ         16000		// PWM frequency in Hz
 #define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
-#define DEAD_TIME        32        // PWM deadtime
+
+#define DEAD_TIME        	32		// PWM deadtime
+#define BLDC_SHORT_PULSE	10		// Shortest pulse length in BLDC
 
 // Limits
 #define DC_CUR_LIMIT     1         // Motor DC current limit in amps
