@@ -71,6 +71,11 @@ void TIM3_IRQHandler(void)
 //  else svm_debug_angle += 41;
   if(svm_left.angle >= 4095) svm_left.angle = 0;
   else svm_left.angle += 1;
+  svm_left.modulation_index = 3000;
+
+  if(svm_right.angle >= 4095) svm_right.angle = 0;
+  else svm_right.angle += 1;
+  svm_right.modulation_index = 3000;
 
   // Read HALL sensors
   //determine next position based on hall sensors

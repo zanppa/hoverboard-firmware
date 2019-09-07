@@ -301,7 +301,7 @@ void MX_TIM_Init(void) {
   TIM8->DIER |= TIM_DIER_UIE;
   TIM8->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
-  HAL_NVIC_SetPriority(TIM8_UP_IRQn, 4, 0);
+  HAL_NVIC_SetPriority(TIM8_UP_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
 #endif
 
