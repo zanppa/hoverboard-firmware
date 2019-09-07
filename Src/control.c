@@ -9,6 +9,7 @@
 #include "defines.h"
 #include "cfgbus.h"
 #include "setup.h"
+#include "svm.h"
 
 #define LED_PERIOD (300)  //ms
 volatile uint32_t _ledTick=0;
@@ -20,6 +21,11 @@ volatile uint16_t _cntL;
 volatile uint16_t _cntR;
 volatile uint16_t _lastSpeedL = 0;
 volatile uint16_t _lastSpeedR = 0;
+
+// Debug: SVM references
+extern volatile svm_ref_t svm_left;
+extern volatile svm_ref_t svm_right;
+
 
 //call this from main thread. Responsible for turning off the LED
 //LED is turned on in interrupt, so if LED flashes, we know main-loop
@@ -52,6 +58,12 @@ void update_controls(void)
 void TIM3_IRQHandler(void)
 {
   CTRL_TIM->SR = 0;
+
+  // Debug: rotate the SVM reference
+//  if(svm_debug_angle >= 4054) svm_debug_angle = 0;
+//  else svm_debug_angle += 41;
+  if(svm_left.angle >= 4095) svm_left.angle = 0;
+  else svm_left.angle += 1;
 
   //calculate motor speeds
   _cntL ++;

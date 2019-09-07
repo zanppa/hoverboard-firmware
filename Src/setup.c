@@ -165,12 +165,18 @@ void control_timer_init(void)
 
   HAL_TIM_PWM_Init(&htim_control);
 
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  // Control task should run at a quite low priority compared
+  // to modulator and current measurement
+  HAL_NVIC_SetPriority(TIM3_IRQn, 10, 0);
   HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
   HAL_TIM_Base_Start_IT(&htim_control);
 }
 
+
+/*
+ * Initialize timers for left and right side motors
+ */
 
 void MX_TIM_Init(void) {
   __HAL_RCC_TIM1_CLK_ENABLE();
@@ -181,20 +187,26 @@ void MX_TIM_Init(void) {
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
   TIM_SlaveConfigTypeDef sTimConfig;
 
+  // Initialize timer as center-aligned mode
+  // Timer counts from 0 to "period"-1, creates overflow event, then counts
+  // down to 1 and creates underflow event. Then it restarts.
+  // pre-scaler = 0 and divier = 1 i.e.
+  // the timer runs at crystal(?) frequency
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_right.Init.Period            = 64000000 / 2 / PWM_FREQ;
+  htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
-  htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  //htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_right);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
   sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_right, &sMasterConfig);
 
-  sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
   sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
@@ -217,10 +229,11 @@ void MX_TIM_Init(void) {
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim_left.Init.Period            = 64000000 / 2 / PWM_FREQ;
+  htim_left.Init.Period            = PWM_PERIOD;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
-  htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  //htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_left);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
@@ -231,7 +244,7 @@ void MX_TIM_Init(void) {
   sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
   HAL_TIM_SlaveConfigSynchronization(&htim_left, &sTimConfig);
 
-  sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
   sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
@@ -251,9 +264,28 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_left, &sBreakDeadTimeConfig);
 
+  // Enable update interrupts
+  //LEFT_TIM->DIER |= TIM_DIER_UIE;
+  //LEFT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+  //RIGHT_TIM->DIER |= TIM_DIER_UIE;
+  //RIGHT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+  TIM1->DIER |= TIM_DIER_UIE;
+  TIM1->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
+
+  // Modulator runs at a rather high priority, but still lower
+  // than current measurement
+  HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+
+  //HAL_NVIC_SetPriority(TIM8_UP_IRQn, 5, 0);
+  //HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
+
+  // Disable outputs
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
+  // Start the timers
+  // Start the left timer in interrupt mode (for svm)
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);

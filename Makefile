@@ -40,10 +40,13 @@ Src/setup.c \
 Src/uart.c \
 Src/main.c \
 Src/bldc.c \
+Src/svm.c \
 Src/cfgbus.c \
 Src/control.c \
 Src/modbus.c \
 Src/stm32f1xx_it.c \
+Src/math.c \
+Src/arrays.c \
 
 # ASM sources
 ASM_SOURCES =  \

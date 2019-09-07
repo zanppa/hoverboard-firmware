@@ -5,6 +5,9 @@
 #include "setup.h"
 #include "config.h"
 #include "cfgbus.h"
+#include "bldc.h"
+
+#include "control.h" // Debug
 
 uint8_t enable = 0;
 
@@ -16,17 +19,21 @@ uint16_t _lastPosR = 0;
 
 const int pwm_res = 64000000 / 2 / PWM_FREQ; // = 2000
 
-//(hall_to_pos + 2) % 6
-const uint8_t hall_to_pos[8] = {
-   2,
-   5,
-   1,
-   0,
-   3,
-   4,
-   2,
-   2,
+
+// Array to convert HALL sensor readings (order ABC) to sector number
+// Note that index 0 and 7 are "guards" and should never happen when sensors work properly
+static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
+
+// Same method for bldc commutation, in this case [sector] contains first positive phase and then negative, last is zero
+static const uint8_t bldc_mod_pattern[6][3] = {
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)}
 };
+
 
 inline void blockPWM(int pwm, int pos, int *u, int *v, int *w) {
   switch(pos) {
@@ -62,8 +69,8 @@ inline void blockPWM(int pwm, int pos, int *u, int *v, int *w) {
       break;
     default:
       *u = 0;
-      *v = 0;
-      *w = 0;
+      *v = pwm;	// DEBUG, was 0
+      *w = -pwm;	// DEBUG, was 0
   }
 }
 
@@ -115,8 +122,8 @@ void DMA1_Channel1_IRQHandler() {
   uint8_t hall_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
   uint8_t hall_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
 
-  cfg.vars.pos_r = hall_to_pos[hall_r];
-  cfg.vars.pos_l = hall_to_pos[hall_l];
+  cfg.vars.pos_r = hall_to_sector[hall_r];
+  cfg.vars.pos_l = hall_to_sector[hall_l];
 
   //keep track of wheel movement
   if(_lastPosL != cfg.vars.pos_l)
@@ -132,12 +139,15 @@ void DMA1_Channel1_IRQHandler() {
   int ul, vl, wl;
   int ur, vr, wr;
 
-  blockPWM(cfg.vars.pwm_l, cfg.vars.pos_l, &ul, &vl, &wl);
-  blockPWM(cfg.vars.pwm_r, cfg.vars.pos_r, &ur, &vr, &wr);
+  //blockPWM(cfg.vars.pwm_l, cfg.vars.pos_l, &ul, &vl, &wl);
+  //blockPWM(cfg.vars.pwm_r, cfg.vars.pos_r, &ur, &vr, &wr);
+  // DEBUG: Output some pwm all the time
+  blockPWM(40, cfg.vars.pos_l, &ul, &vl, &wl);
+  blockPWM(80, cfg.vars.pos_r, &ur, &vr, &wr);
 
-  LEFT_TIM->LEFT_TIM_U = CLAMP(ul + pwm_res / 2, 10, pwm_res-10);
-  LEFT_TIM->LEFT_TIM_V = CLAMP(vl + pwm_res / 2, 10, pwm_res-10);
-  LEFT_TIM->LEFT_TIM_W = CLAMP(wl + pwm_res / 2, 10, pwm_res-10);
+  //LEFT_TIM->LEFT_TIM_U = CLAMP(ul + pwm_res / 2, 10, pwm_res-10);
+  //LEFT_TIM->LEFT_TIM_V = CLAMP(vl + pwm_res / 2, 10, pwm_res-10);
+  //LEFT_TIM->LEFT_TIM_W = CLAMP(wl + pwm_res / 2, 10, pwm_res-10);
 
   RIGHT_TIM->RIGHT_TIM_U = CLAMP(ur + pwm_res / 2, 10, pwm_res-10);
   RIGHT_TIM->RIGHT_TIM_V = CLAMP(vr + pwm_res / 2, 10, pwm_res-10);

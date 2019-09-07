@@ -86,7 +86,7 @@ int main(void) {
   while(1)
   {
     //show user board is alive
-    led_update();
+    //led_update();
 
     //update cfg_bus communication
     mb_update();
