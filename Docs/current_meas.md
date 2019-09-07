@@ -47,6 +47,57 @@ For this method to work, three things must be guaranteed:
  * Two different active vectors are used
  * Current is sampled at a precise instant after change of vector
 
+### ADC selection
+The ADCs can sample following channels:
+
+ADC1
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+| 14 | Left B voltage   |
+| 15 | Left C voltage   |
+
+ADC2
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+| 14 | Left B voltage   |
+| 15 | Left C voltage   |
+
+ADC3
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+
+Because ADCs 1 and 2 can sample all channels and ADC 3 everything but left motor 
+phase voltage, it was decided to use ADC1 for samplign all non-motor related 
+signals and ADCs 2 and 3 motor currents and phase voltages.
+
+
 ### Implementation
 The method described above is implemented in the firmware in following fashion.
 
