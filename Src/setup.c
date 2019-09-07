@@ -295,20 +295,29 @@ void MX_TIM_Init(void) {
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
   // Start the timers
-  // Start the left timer in interrupt mode (for svm)
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);
+  // Start the timers in interrupt mode
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_3);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_2);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_3);
 
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_3);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_2);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_3);
+
+  // Enable interrupts with highest priority
+  // for current measurement (in SVM mode only)
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
+  HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+  HAL_NVIC_SetPriority(TIM8_CC_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
+#endif
 
   htim_left.Instance->RCR = 1;
 
