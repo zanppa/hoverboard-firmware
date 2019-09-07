@@ -10,11 +10,9 @@
 #include "math.h"
 #include "svm.h"
 
-volatile uint16_t svm_debug_angle = 0;	// Debug reference
-
-// Array to convert HALL sensor readings (order ABC) to sector number
-// Note that index 0 and 7 are "guards" and should never happen when sensors work properly
-static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
+// References for left and right motors
+volatile svm_ref_t svm_left = {0, 0};
+volatile svm_ref_t svm_right = {0, 0};
 
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
@@ -31,81 +29,12 @@ static const uint8_t svm_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
 };
 
-// Convert fixed point angle into sector number
-static inline uint8_t angle_to_sector(uint16_t angle) {
-  angle &= FIXED_MASK;
-  if(angle < FIXED_60DEG) return 5;
-  else if(angle < 2*FIXED_60DEG) return 0;
-  else if(angle < 3*FIXED_60DEG) return 1;
-  else if(angle < 4*FIXED_60DEG) return 2;
-  else if(angle < 5*FIXED_60DEG) return 3;
-  else return 4;
-}
-
-// Timer 1 update handles both motor modulators
-void TIM1_UP_IRQHandler() {
-  uint16_t t0, t1, t2;
-  uint16_t midx = 3000;	// DEBUG: Use fixed value
-  uint16_t angle = 300; // DEBUG: Use fixed value
-
-  // Clear the update interrupt flag
-  TIM1->SR = 0; //&= ~TIM_SR_UIF;
-
-  // Debug: blink the led here
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
-  //led_update();
-
-
-  // Read HALL sensors to detect rotor position
-  //uint8_t sector_l = (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  //sector_l = hall_to_sector[sector_l];
-
-  //uint8_t sector_r = (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  //sector_r = hall_to_sector[sector_r];
-
-  uint8_t sector_l = angle_to_sector(svm_debug_angle);
-  uint8_t sector_r = angle_to_sector(angle);
-
-  // Get the vector times from the modulator
-  calculate_modulator(midx, svm_debug_angle, &t0, &t1, &t2);
-
-  // Set the timer values
-  // Debug: just test something, do not connect motor!
-  //LEFT_TIM->LEFT_TIM_U = t0;
-  //LEFT_TIM->LEFT_TIM_V = t1;
-  //LEFT_TIM->LEFT_TIM_W = t2;
-
-
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][0])) = t0;
-  if(sector_l & 0x01) // Every odd sector uses "right" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][1])) = t0 + t2;
-  else // Even sectors uses "left" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][1])) = t0 + t1;
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector_l][2])) = t0 + t1 + t2;
-
-  // Update modbus variables (globals)
-  cfg.vars.pos_l = sector_l;
-  cfg.vars.pos_r = sector_r;
-
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
-}
-
-// Right motor timer update event handler
-void TIM8_UP_IRQHandler() {
-  // Do nothing, timer 1 handles the calculations
-  // And both timers should run at the same rate
-
-  // Clear the update interrupt flag
-  TIM8->SR = 0; //&= ~TIM_SR_UIF;
-
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
-}
 
 // Calculate the timer values given the desired voltage vector
 // length (modulation index) and angle in fixed point, return
 // vector legths relative to the PWM period in t0, t1 and t2
 // (t0 is half of the total zero vector length)
-void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
+static void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
 
@@ -126,4 +55,70 @@ void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *
   (*t0) = (PWM_PERIOD - ta1 - ta2) / 2;
   (*t1) = ta1;
   (*t2) = ta2;
+}
+
+
+// Convert fixed point angle into sector number
+static inline uint8_t angle_to_sector(uint16_t angle) {
+  angle &= FIXED_MASK;
+  if(angle < FIXED_60DEG) return 5;
+  else if(angle < 2*FIXED_60DEG) return 0;
+  else if(angle < 3*FIXED_60DEG) return 1;
+  else if(angle < 4*FIXED_60DEG) return 2;
+  else if(angle < 5*FIXED_60DEG) return 3;
+  else return 4;
+}
+
+// Timer 1 update handles space vector modulation for both motors
+void TIM1_UP_IRQHandler() {
+  uint16_t t0, t1, t2;
+  uint8_t sector;
+
+  // Clear the update interrupt flag
+  TIM1->SR = 0; //&= ~TIM_SR_UIF;
+
+  // DEBUG: LED on
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+
+#ifdef LEFT_MOTOR_SVM
+  // Get the vector times from the modulator
+  sector = angle_to_sector(svm_left.angle);
+  calculate_modulator(svm_left.modulation_index, svm_left.angle, &t0, &t1, &t2);
+
+  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
+  // Since the timer compare is wrong way
+  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  if(sector & 0x01) // Every odd sector uses "right" vector first
+    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+  else // Even sectors uses "left" vector first
+    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+#endif
+
+#ifdef RIGHT_MOTOR_SVM
+  sector = angle_to_sector(svm_right.angle);
+  calculate_modulator(svm_right.modulation_index, svm_right.angle, &t0, &t1, &t2);
+
+  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
+  // Since the timer compare is wrong way
+  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  if(sector & 0x01) // Every odd sector uses "right" vector first
+    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+  else // Even sectors uses "left" vector first
+    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+#endif
+
+  // Debug: LED off
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+}
+
+
+// Timer 8 handler, not used at the moment
+void TIM8_UP_IRQHandler() {
+  // Do nothing, timer 1 handles the calculations
+  // And both timers should run at the same rate
+
+  // Clear the update interrupt flag
+  TIM8->SR = 0; //&= ~TIM_SR_UIF;
 }
