@@ -21,10 +21,17 @@ volatile uint16_t _cntL;
 volatile uint16_t _cntR;
 volatile uint16_t _lastSpeedL = 0;
 volatile uint16_t _lastSpeedR = 0;
+volatile uint16_t _lastPosL = 0;
+volatile uint16_t _lastPosR = 0;
+
 
 // Debug: SVM references
 extern volatile svm_ref_t svm_left;
 extern volatile svm_ref_t svm_right;
+
+// Array to convert HALL sensor readings (order ABC) to sector number
+// Note that index 0 and 7 are "guards" and should never happen when sensors work properly
+static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
 
 
 //call this from main thread. Responsible for turning off the LED
@@ -64,6 +71,25 @@ void TIM3_IRQHandler(void)
 //  else svm_debug_angle += 41;
   if(svm_left.angle >= 4095) svm_left.angle = 0;
   else svm_left.angle += 1;
+
+  // Read HALL sensors
+  //determine next position based on hall sensors
+  uint8_t hall_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
+  uint8_t hall_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+
+  cfg.vars.pos_r = hall_to_sector[hall_r];
+  cfg.vars.pos_l = hall_to_sector[hall_l];
+
+  //keep track of wheel movement
+  if(_lastPosL != cfg.vars.pos_l)
+    cfg.vars.tacho_l += (_lastPosL == (cfg.vars.pos_l + 1)%6) ? 1 : -1;
+
+  if(_lastPosR != cfg.vars.pos_r)
+    cfg.vars.tacho_r += (_lastPosR == (cfg.vars.pos_r + 1)%6) ? 1 : -1;
+
+  _lastPosL = cfg.vars.pos_l;
+  _lastPosR = cfg.vars.pos_r;
+
 
   //calculate motor speeds
   _cntL ++;

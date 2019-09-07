@@ -14,14 +14,6 @@ uint8_t enable = 0;
 uint32_t offsetcount = 0;
 adc_offsets_t offsets = {0};
 
-uint16_t _lastPosL = 0;
-uint16_t _lastPosR = 0;
-
-
-// Array to convert HALL sensor readings (order ABC) to sector number
-// Note that index 0 and 7 are "guards" and should never happen when sensors work properly
-static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
-
 // Same method for bldc commutation, in this case [sector] contains first positive phase and then negative, last is zero
 static const uint8_t bldc_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},
@@ -103,7 +95,7 @@ void DMA1_Channel1_IRQHandler() {
     offsets.vbat /= 1024;
   }
 
-  //disable PWM when current limit is reached (current chopping)
+  // Disable PWM when current limit is reached (current chopping)
   if(ABS(adc_buffer.dcl - offsets.dcl) > DC_CUR_THRESHOLD || enable == 0) {
     LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   } else {
@@ -115,23 +107,6 @@ void DMA1_Channel1_IRQHandler() {
   } else {
     RIGHT_TIM->BDTR |= TIM_BDTR_MOE;
   }
-
-  //determine next position based on hall sensors
-  uint8_t hall_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  uint8_t hall_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-
-  cfg.vars.pos_r = hall_to_sector[hall_r];
-  cfg.vars.pos_l = hall_to_sector[hall_l];
-
-  //keep track of wheel movement
-  if(_lastPosL != cfg.vars.pos_l)
-    cfg.vars.tacho_l += (_lastPosL == (cfg.vars.pos_l + 1)%6) ? 1 : -1;
-
-  if(_lastPosR != cfg.vars.pos_r)
-    cfg.vars.tacho_r += (_lastPosR == (cfg.vars.pos_r + 1)%6) ? 1 : -1;
-
-  _lastPosL = cfg.vars.pos_l;
-  _lastPosR = cfg.vars.pos_r;
 }
 
 
