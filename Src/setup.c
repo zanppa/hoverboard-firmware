@@ -204,7 +204,7 @@ void MX_TIM_Init(void) {
   sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_right, &sMasterConfig);
 
-  sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
   sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
@@ -242,7 +242,7 @@ void MX_TIM_Init(void) {
   sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
   HAL_TIM_SlaveConfigSynchronization(&htim_left, &sTimConfig);
 
-  sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
   sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
