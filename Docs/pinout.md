@@ -57,3 +57,7 @@ function(s) used in the firmware.
 | SWDIO                       | I/O       | 46         | **JTMS-SWDIO**<br/>PA13                                                         |
 | SWCLK                       | I/O       | 49         | **JTCK-SWCLK**<br/>PA14                                                         |
 | NRST                        | **I**     | 7          | **NRST**                                                                        |
+
+
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

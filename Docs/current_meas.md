@@ -84,3 +84,5 @@ first with long sampling time, and then sample the current.
 
 
  
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

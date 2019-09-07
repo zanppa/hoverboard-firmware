@@ -78,3 +78,7 @@ by dividing with that value, so that modulation index of one gives the maximum c
 
 The modulator requires, as an input, the desired voltage vector length and angle, and as a result it 
 gives out the switching instants of the three switches.
+
+
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

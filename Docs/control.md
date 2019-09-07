@@ -16,3 +16,5 @@ applied voltage at a constant level below some pre-defined frequency.
 
 ![V/f control with IR compensation](vf_control_with_ir.png)
 
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

@@ -32,3 +32,7 @@ The base frequency is currently not known. It should be the speed at which the n
 achieved (back-emf).
 
 All the values are then scaled such that 1.0 represents the base value, voltage, current or speed.
+
+
+## Copyright
+Copyright (C) 2019 Lauri Peltonen
