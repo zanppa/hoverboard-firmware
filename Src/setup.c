@@ -25,6 +25,7 @@ TIM_HandleTypeDef htim_left;
 TIM_HandleTypeDef htim_control;
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
+ADC_HandleTypeDef hadc3;
 volatile adc_buf_t adc_buffer;
 
 void MX_GPIO_Init(void) {
@@ -325,9 +326,11 @@ void MX_TIM_Init(void) {
 }
 
 
-/* ADC1 init function */
+
+// Init ADC1 which is used to sample all common signals
+// like battery voltage, temperature
 void MX_ADC1_Init(void) {
-  ADC_MultiModeTypeDef multimode;
+  //ADC_MultiModeTypeDef multimode;
   ADC_ChannelConfTypeDef sConfig;
 
   __HAL_RCC_ADC1_CLK_ENABLE();
@@ -338,37 +341,35 @@ void MX_ADC1_Init(void) {
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;
   hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion       = 4;
+  hadc1.Init.NbrOfConversion       = 3;
   HAL_ADC_Init(&hadc1);
 
   /**Enable or disable the remapping of ADC1_ETRGREG:
     * ADC1 External Event regular conversion is connected to TIM8 TRG0
     */
+  // TODO: Can we map timer 3 (control timer) to trigger this? Or some other
+  // good timer...
   __HAL_AFIO_REMAP_ADC1_ETRGREG_ENABLE();
 
   //Configure the ADC multi-mode
-  multimode.Mode = ADC_DUALMODE_REGSIMULT;
-  HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
+  //multimode.Mode = ADC_DUALMODE_REGSIMULT;
+  //HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
 
   sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
 
-  sConfig.Channel = ADC_CHANNEL_14; //right motor phase B sense
+  sConfig.Channel = ADC_CHANNEL_12;  // Battery voltage
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_0; //left motor phase A sense
+  sConfig.Channel = ADC_CHANNEL_1; // Power switch voltage
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
   sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
 
-  sConfig.Channel = ADC_CHANNEL_11; //right motor shunt current
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; // Processor internal temperature
   sConfig.Rank    = 3;
-  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-
-  sConfig.Channel = ADC_CHANNEL_12; //v-battery
-  sConfig.Rank    = 4;
-  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
 
@@ -392,46 +393,61 @@ void MX_ADC1_Init(void) {
   DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
   DMA1_Channel1->CCR |= DMA_CCR_EN;
 
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  // General ADC values run at a low priority
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 8, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
 
-/* ADC2 init function */
+// ADC2 init function. ADC2 is used to measure left motor
+// current and phase voltages
 void MX_ADC2_Init(void) {
   ADC_ChannelConfTypeDef sConfig;
 
   __HAL_RCC_ADC2_CLK_ENABLE();
 
   hadc2.Instance                   = ADC2;
-  hadc2.Init.ScanConvMode          = ADC_SCAN_ENABLE;
+  hadc2.Init.ScanConvMode          = ADC_SCAN_DISABLE;
   hadc2.Init.ContinuousConvMode    = DISABLE;
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
   hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion       = 4;
+  hadc2.Init.NbrOfConversion       = 1;
   HAL_ADC_Init(&hadc2);
 
   sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
 
-  sConfig.Channel = ADC_CHANNEL_15; //right motor phace C sense
+  // TODO: Check is this really left or right!
+  sConfig.Channel = ADC_CHANNEL_11; // Left motor shunt current
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_13; //left motor phace B sense
-  sConfig.Rank    = 2;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-
-  sConfig.Channel = ADC_CHANNEL_10; //left motor shunt current
-  sConfig.Rank    = 3;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
-  sConfig.Rank    = 4;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  hadc2.Instance->CR2 |= ADC_CR2_DMA;
   __HAL_ADC_ENABLE(&hadc2);
+}
+
+
+// ADC3 init function. ADC3 is used to measure right motor
+// current and phase voltages
+void MX_ADC3_Init(void) {
+  ADC_ChannelConfTypeDef sConfig;
+
+  __HAL_RCC_ADC3_CLK_ENABLE();
+
+  hadc3.Instance                   = ADC3;
+  hadc3.Init.ScanConvMode          = ADC_SCAN_DISABLE;
+  hadc3.Init.ContinuousConvMode    = DISABLE;
+  hadc3.Init.DiscontinuousConvMode = DISABLE;
+  hadc3.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
+  hadc3.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  hadc3.Init.NbrOfConversion       = 1;
+  HAL_ADC_Init(&hadc3);
+
+  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+
+  // TODO: Check is this really left or right!
+  sConfig.Channel = ADC_CHANNEL_10; // Right motor shunt current
+  sConfig.Rank    = 1;
+  HAL_ADC_ConfigChannel(&hadc3, &sConfig);
+
+  __HAL_ADC_ENABLE(&hadc3);
 }

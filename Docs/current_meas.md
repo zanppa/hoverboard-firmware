@@ -97,6 +97,9 @@ Because ADCs 1 and 2 can sample all channels and ADC 3 everything but left motor
 phase voltage, it was decided to use ADC1 for samplign all non-motor related 
 signals and ADCs 2 and 3 motor currents and phase voltages.
 
+However, it turns out only ADC1 and ADC3 can generate DMA request, so it is 
+only possible to sample single value from ADC2. As a result, both ADC2 and ADC3
+sample only the current and do not use DMA.
 
 ### Implementation
 The method described above is implemented in the firmware in following fashion.
@@ -105,13 +108,11 @@ The method described above is implemented in the firmware in following fashion.
 
 ADCs are set in scan mode and channels are defined according to following table.
 
-| Channel | Sampling time |  Source                  |
-|:-------:|:-------------:|--------------------------|
-| 0       | xx            | A phase voltage          |
-| 1       | xx            | B phase voltage          |
-| 2       | xx            | motor current            |
+| Position | Sampling time |  Source                  |
+|:--------:|:-------------:|--------------------------|
+| 1        | xx            | Motor current            |
 
-ADCs are set to use DMA mode and generate interrupt at end of conversion. In the interrupt 
+ADCs are set to generate an interrupt at end of conversion. In the interrupt 
 servicing routine, the current sign is corrected and value is copied to correct phase 
 current variable, depending on which voltage vector was active during sampling.
 
