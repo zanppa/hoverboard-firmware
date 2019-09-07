@@ -50,15 +50,15 @@ For this method to work, three things must be guaranteed:
 ### Implementation
 The method described above is implemented in the firmware in following fashion.
 
-`ADC1` is used for left motor and `ADC2`for right motor.
+`ADC2` is used for left motor and `ADC3`for right motor.
 
 ADCs are set in scan mode and channels are defined according to following table.
 
 | Channel | Sampling time |  Source                  |
 |:-------:|:-------------:|--------------------------|
-| 0       | xx            | battery voltage          |
-| 1       | xx            | xx                       |
-| 2       | xx            | left/right motor current |
+| 0       | xx            | A phase voltage          |
+| 1       | xx            | B phase voltage          |
+| 2       | xx            | motor current            |
 
 ADCs are set to use DMA mode and generate interrupt at end of conversion. In the interrupt 
 servicing routine, the current sign is corrected and value is copied to correct phase 
@@ -82,5 +82,3 @@ first with long sampling time, and then sample the current.
 
 ![Current measurement method](current_sampling.png)
 
-
- 
