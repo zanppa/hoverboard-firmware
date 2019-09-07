@@ -165,7 +165,9 @@ void control_timer_init(void)
 
   HAL_TIM_PWM_Init(&htim_control);
 
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  // Control task should run at a quite low priority compared
+  // to modulator and current measurement
+  HAL_NVIC_SetPriority(TIM3_IRQn, 10, 0);
   HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
   HAL_TIM_Base_Start_IT(&htim_control);
@@ -270,10 +272,12 @@ void MX_TIM_Init(void) {
   TIM1->DIER |= TIM_DIER_UIE;
   TIM1->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
-  HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 0, 0);
+  // Modulator runs at a rather high priority, but still lower
+  // than current measurement
+  HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
 
-  //HAL_NVIC_SetPriority(TIM8_UP_IRQn, 0, 0);
+  //HAL_NVIC_SetPriority(TIM8_UP_IRQn, 5, 0);
   //HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
 
   // Disable outputs
