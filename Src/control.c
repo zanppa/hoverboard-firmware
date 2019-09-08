@@ -123,7 +123,7 @@ void TIM3_IRQHandler(void)
     _cntR = 0;
   }
 
-
+#if 0
   //update left motor PWM
   if(_lastSpeedL != cfg.vars.setpoint_l)
   {
@@ -152,6 +152,7 @@ void TIM3_IRQHandler(void)
 
     _lastSpeedR = cfg.vars.pwm_r;
   }
+#endif
 
 
   if(cfg.vars.buzzer == 0)

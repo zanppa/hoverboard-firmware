@@ -93,6 +93,7 @@ int main(void) {
 
     float vBatNew = ((float)(((uint32_t)adc_buffer.vbat)*VBAT_ADC_TO_UV))/1000000;
     cfg.vars.vbat = vBatNew;
+    cfg.vars.vbat_r = adc_buffer.vbat; // TODO: Use the raw value
 
   }
 }

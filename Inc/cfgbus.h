@@ -29,18 +29,21 @@
         _ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) \
         _ENTRY( setpoint_l     , int16_t    , _I16     , true      , "PWM Setpoint-L"    ) \
         _ENTRY( setpoint_r     , int16_t    , _I16     , true      , "PWM Setpoint-R"    ) \
-		    _ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) \
-	      _ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) \
-		    _ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer"            ) \
+	    _ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) \
+        _ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) \
+	    _ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer"            ) \
         _ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) \
         _ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
         _ENTRY( tacho_l        , uint16_t   , _U16     , false     , "Tacho Left"        ) \
         _ENTRY( tacho_r        , uint16_t   , _U16     , false     , "Tacho Right"       ) \
-        _ENTRY( pwm_l          , int32_t    , _I32     , false     , "PWM-Left"          ) \
-        _ENTRY( pwm_r          , int32_t    , _I32     , false     , "PWM-Right"         ) \
+        _ENTRY( pwm_l          , int32_t    , _I32     , true     , "PWM-Left"          ) \
+        _ENTRY( pwm_r          , int32_t    , _I32     , true     , "PWM-Right"         ) \
         _ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \
         _ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) \
-        _ENTRY( vbat           , float      , _FLT     , false     , "Battery Voltage"   )
+        _ENTRY( vbat           , float      , _FLT     , false     , "Battery Voltage"   ) \
+        _ENTRY( vbat_r         , uint16_t   , _FLT     , false     , "Battery V RAW"   )
+
+// DEBUG: Allow writing to pwm_l and pwm_r
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

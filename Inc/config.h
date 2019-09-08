@@ -2,11 +2,11 @@
 #include "stm32f1xx_hal.h"
 
 // What control method to use for which motor
-#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
-//#define LEFT_MOTOR_SVM			// Use SVM for left motor
+//#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+#define LEFT_MOTOR_SVM			// Use SVM for left motor
 
-//#define RIGHT_MOTOR_BLDC		// BLDC for right motor
-#define RIGHT_MOTOR_SVM			// SVM for right motor
+#define RIGHT_MOTOR_BLDC		// BLDC for right motor
+//#define RIGHT_MOTOR_SVM			// SVM for right motor
 
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
