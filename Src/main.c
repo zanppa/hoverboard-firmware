@@ -32,7 +32,7 @@
 void SystemClock_Config(void);
 
 extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
+//extern ADC_HandleTypeDef hadc2;
 extern uint8_t enable;
 
 

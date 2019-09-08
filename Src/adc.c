@@ -18,7 +18,7 @@
 #define ADC_MAX_CH	16		// Maximum analog channels to sample
 
 ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
+//ADC_HandleTypeDef hadc2;
 volatile adc_buf_t analog_meas;
 
 static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
@@ -95,7 +95,7 @@ void ADC1_init(void) {
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
   sConfig.Rank    = 7;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
 
