@@ -110,6 +110,7 @@ void SystemClock_Config(void) {
 
   //Initializes the CPU, AHB and APB bus oscillator
   //HSI/2 * 16 = 8/2*16 = 64MHz
+  // Use the 8 MHz high speed internal oscillator with PLL set to 16/2 ==>  64 MHz
   RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = 16;
@@ -123,16 +124,22 @@ void SystemClock_Config(void) {
   RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;  // APB1 @ 32 Mhz (max 36 MHz)
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;  // PB2 @ 64 MHz (e.g. ADC) (max 72 MHz)
+
+  // APB1: USART23 etc
+  // APB2: ADC123, USART1, GPIO etc
+  // TIM 3,4,5,6,7 are APB1 x1 if APB1 prescaler is 1, otherwise APB1 x2 ==> 64 MHz
+  // TIM 1,8 are APB2 x1 if APB2 prescaler is 1, otherwise APB2 x2 ==> 64 MHz
 
   HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2);
 
-  //configure ADC clock as 1/8th of PCLK2
-  //PCLK2 = APB2/1 = 64MHz -> ADC @ 8MHz
+  // Configure ADC clock as 1/8th of PCLK2
+  // PCLK2 = APB2; APB2 / 8 = 64MHz / 8 ==> ADC @ 8MHz
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
   PeriphClkInit.AdcClockSelection    = RCC_ADCPCLK2_DIV8;
   HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
+
 
   //Configure the Systick interrupt time and interrupt
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);

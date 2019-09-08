@@ -1,6 +1,20 @@
 #include "defines.h"
 #include "config.h"
 
+// ADC runs at 8 MHz (main.c)
+// Sampling time is tsample + 12.5 cycles, i.e.
+// 7.5 sampling time is 7.5+12.5 = 20 cycles @ 8 MHz = 2.5 us
+//	tsample	sampling	conversion
+//			time us		time us
+// 	1.5		0.1875		1.75
+//	7.5		0.9375		2.5
+//	13.5	1.6875		3.25
+//	28.5	3.5625		5.125
+//	41.5	5.1875		6.75
+//	55.5	6.9375		8.5
+//	71.5	8.9375		10.5
+//	239.5	29.9375		31.5
+
 #define ADC_MAX_CH	16		// Maximum analog channels to sample
 
 ADC_HandleTypeDef hadc1;
