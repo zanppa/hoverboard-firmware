@@ -1,29 +1,26 @@
 #include "defines.h"
 #include "config.h"
 
+#define ADC_MAX_CH	16		// Maximum analog channels to sample
+
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 volatile adc_buf_t analog_meas;
 
-volatile uint16_t adc_raw_data[16] = {0};	// Max 16 conversions
+static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
 
-// Map AD conversion results array to variables
-// The values must match the sampling sequence of ADC1
-const struct {
-  uint16_t v_battery;
-  uint16_t v_switch;
-  uint16_t analog_ref_1;
-  uint16_t analog_ref_2;
-  uint16_t temperature ;
-} adc_map = {
-  .v_battery = 0,
-  .v_switch = 1,
-  .analog_ref_1 = 2,
-  .analog_ref_2 = 3,
-  .temperature = 4
+// Pointers to where to store analog variables
+// order must match the channel mapping of ADC1, and NULL means do not copy
+static volatile uint16_t *adc_map[ADC_MAX_CH] = {
+  &analog_meas.v_battery,
+  &analog_meas.v_switch,
+  &analog_meas.analog_ref_1,
+  &analog_meas.analog_ref_2,
+  &analog_meas.temperature,
+  NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL
 };
-
-
 
 // ADC1 init function
 // This is used to sample all non-motor related parameters
@@ -169,13 +166,13 @@ void MX_ADC2_Init(void) {
 // This function copies all data from the DMA buffer
 // to correct variales
 void DMA1_Channel1_IRQHandler() {
+  uint8_t i;
+
   // Clear interrupt flag
   DMA1->IFCR = DMA_IFCR_CTCIF1;
 
-  analog_meas.v_battery = adc_raw_data[adc_map.v_battery];
-  analog_meas.v_switch = adc_raw_data[adc_map.v_switch];
-  analog_meas.temperature = adc_raw_data[adc_map.temperature];
-  analog_meas.analog_ref_1 = adc_raw_data[adc_map.analog_ref_1];
-  analog_meas.analog_ref_2 = adc_raw_data[adc_map.analog_ref_2];
+  // Copy data from ADC DMA buffer to variables
+  for(i=0; i<ADC_MAX_CH; i++)
+    if(adc_map[i]) *(adc_map[i]) = adc_raw_data[i];
 }
 
