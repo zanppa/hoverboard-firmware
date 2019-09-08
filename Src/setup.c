@@ -193,7 +193,7 @@ void MX_TIM_Init(void) {
   // the timer runs at crystal(?) frequency
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
-  htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
@@ -227,7 +227,7 @@ void MX_TIM_Init(void) {
 
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
-  htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_left.Init.Period            = PWM_PERIOD;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
@@ -294,7 +294,8 @@ void MX_TIM_Init(void) {
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
   // Start the timers
-  // Start the timers in interrupt mode
+  // Start the timers in interrupt mode for current measurement
+  // I.e. TIM1->DIER |= TIM_DIER_CC1IE | TIM_DIER_CC2IE | TIM_DIER_CC3IE
   HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_3);

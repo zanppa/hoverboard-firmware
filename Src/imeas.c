@@ -22,7 +22,9 @@ void ADC2_init(void) {
   hadc2.Init.NbrOfConversion       = 1;
   HAL_ADC_Init(&hadc2);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  // Sample about 3.5 us after switching
+  // Total conversion time 5.125 us
+  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
 
   // TODO: Check is this really left or right!
   sConfig.Channel = ADC_CHANNEL_11; // Left motor shunt current
@@ -54,7 +56,9 @@ void ADC3_init(void) {
   hadc3.Init.NbrOfConversion       = 1;
   HAL_ADC_Init(&hadc3);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  // Sample about 3.5 us after switching
+  // Total conversion time 5.125 us
+  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
 
   // TODO: Check is this really left or right!
   sConfig.Channel = ADC_CHANNEL_10; // Right motor shunt current
