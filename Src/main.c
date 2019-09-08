@@ -27,6 +27,7 @@
 #include "modbus.h"
 #include "control.h"
 #include "eeprom.h"
+#include "adc.h"
 
 void SystemClock_Config(void);
 
@@ -63,16 +64,19 @@ int main(void) {
 
   MX_GPIO_Init();
   MX_TIM_Init();
-  MX_ADC1_Init();
-  //MX_ADC2_Init();
+
+  ADC1_init();
+  HAL_ADC_Start(&hadc1);
+  ADC1_calibrate();
+
   UART_Init(0, 1);
 
   ee_init();
   CfgInit();
 
+  // Enable power latch
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
 
-  HAL_ADC_Start(&hadc1);
   //HAL_ADC_Start(&hadc2);
 
   enable = 1;
@@ -91,8 +95,8 @@ int main(void) {
     //update cfg_bus communication
     mb_update();
 
-    float vBatNew = ((float)(((uint32_t)adc_buffer.vbat)*VBAT_ADC_TO_UV))/1000000;
-    cfg.vars.vbat = vBatNew;
+    //float vBatNew = ((float)(((uint32_t)adc_buffer.vbat)*VBAT_ADC_TO_UV))/1000000;
+    //cfg.vars.vbat = vBatNew;
 
   }
 }

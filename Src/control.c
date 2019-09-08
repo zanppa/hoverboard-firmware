@@ -10,6 +10,11 @@
 #include "cfgbus.h"
 #include "setup.h"
 #include "svm.h"
+#include "adc.h"
+
+// From adc.c
+extern ADC_HandleTypeDef hadc1;
+extern volatile adc_buf_t analog_meas;
 
 #define LED_PERIOD (300)  //ms
 volatile uint32_t _ledTick=0;
@@ -25,7 +30,7 @@ volatile uint16_t _lastPosL = 0;
 volatile uint16_t _lastPosR = 0;
 
 
-// Debug: SVM references
+// Debug: SVM references from svm.c
 extern volatile svm_ref_t svm_left;
 extern volatile svm_ref_t svm_right;
 
@@ -67,10 +72,10 @@ void TIM3_IRQHandler(void)
   CTRL_TIM->SR = 0;
 
   // Debug: rotate the SVM reference
-//  if(svm_debug_angle >= 4054) svm_debug_angle = 0;
-//  else svm_debug_angle += 41;
   if(svm_left.angle >= 4095) svm_left.angle = 0;
   else svm_left.angle += 1;
+  if(svm_right.angle >= 4095) svm_right.angle = 0;
+  else svm_right.angle += 1;
 
   // Read HALL sensors
   //determine next position based on hall sensors
@@ -149,6 +154,7 @@ void TIM3_IRQHandler(void)
   }
 
 
+  // Update buzzer
   if(cfg.vars.buzzer == 0)
   {
 	  HAL_GPIO_WritePin(BUZZER_PORT,BUZZER_PIN,0);
@@ -158,9 +164,19 @@ void TIM3_IRQHandler(void)
 	  HAL_GPIO_TogglePin(BUZZER_PORT, BUZZER_PIN);
   }
 
+  // Copy ADC values to cfg array
+  cfg.vars.vbat = analog_meas.v_battery;
+  cfg.vars.temperature = analog_meas.temperature;
+  cfg.vars.aref1 = analog_meas.analog_ref_1;
+  cfg.vars.aref2 = analog_meas.analog_ref_2;
+
   //update state variables
   _ledTick++;
   _ctrlTick++;
   _tachoL = cfg.vars.tacho_l;
   _tachoR = cfg.vars.tacho_r;
+
+  // Launch ADC1 so that at next call we
+  // have fresh analog measurements
+  hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
 }
