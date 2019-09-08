@@ -131,6 +131,7 @@
 typedef struct {
   uint16_t v_battery;
   uint16_t v_switch;
+  uint16_t v_ref;
   uint16_t temperature;
   uint16_t analog_ref_1;
   uint16_t analog_ref_2;

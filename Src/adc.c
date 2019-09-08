@@ -30,8 +30,9 @@ static volatile uint16_t *adc_map[ADC_MAX_CH] = {
   &analog_meas.v_switch,
   &analog_meas.analog_ref_1,
   &analog_meas.analog_ref_2,
+  &analog_meas.v_ref,
   &analog_meas.temperature,
-  NULL, NULL, NULL,
+  NULL, NULL,
   NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL
 };
@@ -83,10 +84,17 @@ void ADC1_init(void) {
   sConfig.Rank    = 4;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
+  sConfig.Channel = ADC_CHANNEL_VREFINT; // Internal reference voltage
+  sConfig.Rank    = 6;
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+
   // Internal temperature must be sampled with long sample time
+  // Recommended is 17.1 us which is not possible with 8 MHz clock
+  // so use the next larger one
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
-  sConfig.Rank    = 5;
+  sConfig.Rank    = 7;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
