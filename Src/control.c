@@ -11,6 +11,11 @@
 #include "setup.h"
 #include "svm.h"
 #include "math.h"
+#include "adc.h"
+
+// From adc.c
+extern ADC_HandleTypeDef hadc1;
+extern volatile adc_buf_t analog_meas;
 
 #define LED_PERIOD (300)  //ms
 
@@ -147,6 +152,7 @@ void TIM3_IRQHandler(void)
 #endif
 
 
+  // Update buzzer
   if(cfg.vars.buzzer == 0)
   {
 	  HAL_GPIO_WritePin(BUZZER_PORT,BUZZER_PIN,0);
@@ -162,7 +168,6 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_LEFT].act.speed = speed_l;
   motor_state[STATE_RIGHT].act.speed = speed_r;
 
-
   // Update config array
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
@@ -171,8 +176,17 @@ void TIM3_IRQHandler(void)
   //_old_tachoL = cfg.vars.tacho_l;
   //_old_tachoR = cfg.vars.tacho_r;
 
+  // Copy ADC values to cfg array
+  cfg.vars.vbat = analog_meas.v_battery;
+  cfg.vars.temperature = analog_meas.temperature;
+  cfg.vars.aref1 = analog_meas.analog_ref_1;
+  cfg.vars.aref2 = analog_meas.analog_ref_2;
 
   //update state variables
   _ledTick++;
   _ctrlTick++;
+
+  // Launch ADC1 so that at next call we
+  // have fresh analog measurements
+  hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
 }

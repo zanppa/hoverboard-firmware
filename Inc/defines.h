@@ -127,29 +127,15 @@
 #define MIN3(a, b, c) MIN(a, MIN(b, c))
 #define MAX3(a, b, c) MAX(a, MAX(b, c))
 
-
+// Structure that stores analog measurements
 typedef struct {
-  uint16_t rr1;
-  uint16_t rr2;
-  uint16_t rl1;
-  uint16_t rl2;
-  uint16_t dcr;
-  uint16_t dcl;
-  uint16_t vbat;
-  uint16_t temp;
+  uint16_t v_battery;
+  uint16_t v_switch;
+  uint16_t v_ref;
+  uint16_t temperature;
+  uint16_t analog_ref_1;
+  uint16_t analog_ref_2;
 } adc_buf_t;
-
-//adc startup offsets
-typedef struct {
-  int32_t rr1;
-  int32_t rr2;
-  int32_t rl1;
-  int32_t rl2;
-  int32_t dcr;
-  int32_t dcl;
-  int32_t vbat;
-  int32_t temp;
-} adc_offsets_t;
 
 
 // Struct holding relevant state variables

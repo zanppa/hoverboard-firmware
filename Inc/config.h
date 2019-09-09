@@ -32,6 +32,10 @@
 #define DC_CUR_THRESHOLD  (DC_CUR_LIMIT*50) // x50 = /0.02 (old MOTOR_AMP_CONV_DC_AMP)
 
 
+// How many times to sample ADC to get offsets
+#define ADC_OFFSET_SAMPLES		1024
+
+
 
 // Sanity checks here
 
