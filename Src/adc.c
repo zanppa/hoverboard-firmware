@@ -193,6 +193,9 @@ void DMA1_Channel1_IRQHandler() {
   // Clear interrupt flag
   DMA1->IFCR = DMA_IFCR_CTCIF1;
 
+  // DEBUG: Toggle led in ADC/DMA
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+
   // Copy data from ADC DMA buffer to variables
   for(i=0; i<ADC_MAX_CH; i++)
     if(adc_map[i]) *(adc_map[i]) = adc_raw_data[i];
