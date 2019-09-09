@@ -16,9 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "stm32f1xx_hal.h"
 #include <math.h>
 #include "defines.h"
-#include "setup.h"
 #include "config.h"
-#include "cfgbus.h"
 #include "bldc.h"
 
 //#include "control.h" // Debug
@@ -26,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "svm.h"
 
 // References for left and right motors
-volatile svm_ref_t svm_left = {0, 0};
-volatile svm_ref_t svm_right = {0, 0};
+//volatile svm_ref_t svm_left = {0, 0};
+//volatile svm_ref_t svm_right = {0, 0};
+
+extern volatile motor_state_t motor_state[2];
 
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
@@ -49,12 +49,14 @@ static const uint8_t svm_mod_pattern[6][3] = {
 // length (modulation index) and angle in fixed point, return
 // vector legths relative to the PWM period in t0, t1 and t2
 // (t0 is half of the total zero vector length)
-static void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
+static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
 
+  // Clamp < 0 modulation index to zero
+  if(midx <= 0) midx = 0;
   // Clamp modulation index to 1.0
-  if(midx >= 4096) midx = 4096;
+  else if(midx >= 4096) midx = 4096;
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
@@ -97,8 +99,8 @@ void TIM1_UP_IRQHandler() {
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator
-  sector = angle_to_sector(svm_left.angle);
-  calculate_modulator(svm_left.modulation_index, svm_left.angle, &t0, &t1, &t2);
+  sector = angle_to_sector(motor_state[STATE_LEFT].ctrl.angle);
+  calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, motor_state[STATE_LEFT].ctrl.angle, &t0, &t1, &t2);
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
@@ -111,8 +113,8 @@ void TIM1_UP_IRQHandler() {
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
-  sector = angle_to_sector(svm_right.angle);
-  calculate_modulator(svm_right.modulation_index, svm_right.angle, &t0, &t1, &t2);
+  sector = angle_to_sector(motor_state[STATE_RIGHT].ctrl.angle);
+  calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, motor_state[STATE_RIGHT].ctrl.angle, &t0, &t1, &t2);
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way

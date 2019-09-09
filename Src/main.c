@@ -32,8 +32,9 @@ void SystemClock_Config(void);
 
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
-extern uint8_t enable;
 
+//extern uint8_t enable;
+extern volatile motor_state_t motor_state[2];
 
 int main(void) {
 
@@ -75,7 +76,9 @@ int main(void) {
   HAL_ADC_Start(&hadc1);
   HAL_ADC_Start(&hadc2);
 
-  enable = 1;
+  //enable = 1;
+  motor_state[STATE_LEFT].ctrl.enable = 1;
+  motor_state[STATE_RIGHT].ctrl.enable = 1;
 
   //UARTRxEnable(UARTCh2, 1);
   UARTRxEnable(UARTCh3, 1);

@@ -150,3 +150,35 @@ typedef struct {
   int32_t vbat;
   int32_t temp;
 } adc_offsets_t;
+
+
+// Struct holding relevant state variables
+// (to be shared across modules)
+typedef struct {
+  // Actual values
+  struct {
+    int16_t speed;
+    uint8_t sector;		// Rotor sector from HALL sensors
+    uint16_t position;	// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
+    int16_t current[3];	// Current of phases A, B, C (p.u.)
+  } act;
+
+  // Reference(s)
+  struct {
+    int16_t value;	// Typically speed reference
+    uint8_t control_mode;
+  } ref;
+
+  // Control outputs to modulator
+  struct {
+    int16_t amplitude;	// Can also be < 0
+    uint16_t angle;
+    uint8_t enable;
+  } ctrl;
+} motor_state_t;
+
+#define STATE_LEFT 0
+#define STATE_RIGHT 1
+
+// Control modes
+#define CONTROL_SPEED 0

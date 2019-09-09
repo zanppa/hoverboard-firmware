@@ -10,24 +10,34 @@
 #include "cfgbus.h"
 #include "setup.h"
 #include "svm.h"
+#include "math.h"
 
 #define LED_PERIOD (300)  //ms
+
+// TODO: Move to setup.c and calculate there
+const uint16_t motor_nominal_counts = (3<<12);		// timer ticks/sector change at rated speed
+
+volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
+volatile motor_state_t motor_state[2] = {0};
+static volatile uint16_t speed_tick[2] = {0};
+
 volatile uint32_t _ledTick=0;
 volatile uint32_t _ctrlTick=0;
 
-volatile uint16_t _tachoL=0;
-volatile uint16_t _tachoR=0;
+/*
+volatile uint16_t _old_tachoL=0;
+volatile uint16_t _old_tachoR=0;
 volatile uint16_t _cntL;
 volatile uint16_t _cntR;
 volatile uint16_t _lastSpeedL = 0;
 volatile uint16_t _lastSpeedR = 0;
 volatile uint16_t _lastPosL = 0;
 volatile uint16_t _lastPosR = 0;
-
+*/
 
 // Debug: SVM references
-extern volatile svm_ref_t svm_left;
-extern volatile svm_ref_t svm_right;
+//extern volatile svm_ref_t svm_left;
+//extern volatile svm_ref_t svm_right;
 
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
@@ -64,94 +74,76 @@ void update_controls(void)
 //called 64000000/64000 = 1000 times per second
 void TIM3_IRQHandler(void)
 {
+  uint8_t sector_l, sector_r;
+  uint8_t prev_sector_l, prev_sector_r;
+  int16_t speed_l, speed_r;
+  int32_t pwmDiff;
+
   CTRL_TIM->SR = 0;
 
   // Debug: rotate the SVM reference
-//  if(svm_debug_angle >= 4054) svm_debug_angle = 0;
-//  else svm_debug_angle += 41;
-  if(svm_left.angle >= 4095) svm_left.angle = 0;
-  else svm_left.angle += 1;
-  svm_left.modulation_index = 3000;
+  if(motor_state[STATE_LEFT].ctrl.angle >= 4095) motor_state[STATE_LEFT].ctrl.angle = 0;
+  else motor_state[STATE_LEFT].ctrl.angle += 1;
+  motor_state[STATE_LEFT].ctrl.amplitude = 3000;
 
-  if(svm_right.angle >= 4095) svm_right.angle = 0;
-  else svm_right.angle += 1;
-  svm_right.modulation_index = 3000;
+  if(motor_state[STATE_RIGHT].ctrl.angle >= 4095) motor_state[STATE_RIGHT].ctrl.angle = 0;
+  else motor_state[STATE_RIGHT].ctrl.angle += 1;
+  motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
+
 
   // Read HALL sensors
-  //determine next position based on hall sensors
-  uint8_t hall_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  uint8_t hall_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+  // Determine rotor position (sector) based on HALL sensors
+  sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
+  sector_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+  sector_l = hall_to_sector[sector_l];
+  sector_r = hall_to_sector[sector_r];
 
-  cfg.vars.pos_r = hall_to_sector[hall_r];
-  cfg.vars.pos_l = hall_to_sector[hall_l];
+  prev_sector_l = motor_state[STATE_LEFT].act.sector;
+  prev_sector_r = motor_state[STATE_RIGHT].act.sector;
 
-  //keep track of wheel movement
-  if(_lastPosL != cfg.vars.pos_l)
-    cfg.vars.tacho_l += (_lastPosL == (cfg.vars.pos_l + 1)%6) ? 1 : -1;
+  // Left motor speed
+  if(sector_l != prev_sector_l) {
+    speed_l = motor_nominal_counts / speed_tick[0];
 
-  if(_lastPosR != cfg.vars.pos_r)
-    cfg.vars.tacho_r += (_lastPosR == (cfg.vars.pos_r + 1)%6) ? 1 : -1;
+    if(sector_l != ((prev_sector_l + 1) % 6)) speed_l = -speed_l;
 
-  _lastPosL = cfg.vars.pos_l;
-  _lastPosR = cfg.vars.pos_r;
-
-
-  //calculate motor speeds
-  _cntL ++;
-
-  if(cfg.vars.tacho_l != _tachoL)
-  {
-    cfg.vars.speed_l = (((int32_t)cfg.vars.tacho_l - (int32_t)_tachoL) * 4096) / _cntL;
-    _cntL = 0;
-  }
-  else if(_cntL >= 100)
-  {
-    cfg.vars.speed_l = 0;
-    _cntL = 0;
+    speed_tick[0] = 0;
+  } else {
+    speed_l = motor_state[STATE_LEFT].act.speed;
+    if(speed_tick[0] < 4095) speed_tick[0]++;
   }
 
-  _cntR ++;
+  // Right motor speed
+  if(sector_r != prev_sector_r) {
+    speed_r = motor_nominal_counts / speed_tick[1];
 
-  if(cfg.vars.tacho_r != _tachoR)
-  {
-    cfg.vars.speed_r = (((int32_t)cfg.vars.tacho_r - (int32_t)_tachoR) * 4096) / _cntR;
-    _cntR = 0;
-  }
-  else if(_cntR >= 100)
-  {
-    cfg.vars.speed_r = 0;
-    _cntR = 0;
-  }
+    if(sector_r != ((prev_sector_r + 1) % 6)) speed_r = -speed_r;
 
-#if 0
-  //update left motor PWM
-  if(_lastSpeedL != cfg.vars.setpoint_l)
-  {
-    cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -1000, 1000);
-    cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
-
-    int32_t pwmDiff = (int32_t)cfg.vars.setpoint_l - cfg.vars.pwm_l;
-    pwmDiff = CLAMP(pwmDiff,-cfg.vars.rate_limit,cfg.vars.rate_limit);
-
-    cfg.vars.pwm_l += pwmDiff;
-
-    _lastSpeedL = cfg.vars.pwm_l;
+    speed_tick[1] = 0;
+  } else {
+    speed_r = motor_state[STATE_RIGHT].act.speed;
+    if(speed_tick[1] < 4095) speed_tick[1]++;
   }
 
 
-  //update right motor PWM
-  if(_lastSpeedR != cfg.vars.setpoint_r)
-  {
-    cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -1000, 1000);
-    cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
+#ifdef LEFT_MOTOR_BLDC
+  // Torque (voltage) control of left motor in BLDC mode
+  cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
-    int32_t pwmDiff = (int32_t)cfg.vars.setpoint_r - cfg.vars.pwm_r;
-    pwmDiff = CLAMP(pwmDiff,-cfg.vars.rate_limit,cfg.vars.rate_limit);
+  pwmDiff = (int32_t)cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
+  pwmDiff = CLAMP(pwmDiff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
-    cfg.vars.pwm_r += pwmDiff;
+  motor_state[STATE_LEFT].ctrl.amplitude += pwmDiff;
+#endif
 
-    _lastSpeedR = cfg.vars.pwm_r;
-  }
+#ifdef RIGHT_MOTOR_BLDC
+  // Torque (voltage) control of left motor in BLDC mode
+  cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
+
+  pwmDiff = (int32_t)cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
+  pwmDiff = CLAMP(pwmDiff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
+
+  motor_state[STATE_RIGHT].ctrl.amplitude += pwmDiff;
 #endif
 
 
@@ -164,9 +156,23 @@ void TIM3_IRQHandler(void)
 	  HAL_GPIO_TogglePin(BUZZER_PORT, BUZZER_PIN);
   }
 
+  // Update motor state variables
+  motor_state[STATE_LEFT].act.sector = sector_l;
+  motor_state[STATE_RIGHT].act.sector = sector_r;
+  motor_state[STATE_LEFT].act.speed = speed_l;
+  motor_state[STATE_RIGHT].act.speed = speed_r;
+
+
+  // Update config array
+  cfg.vars.pos_l = sector_l;
+  cfg.vars.pos_r = sector_r;
+  cfg.vars.speed_l = speed_l;
+  cfg.vars.speed_r = speed_r;
+  //_old_tachoL = cfg.vars.tacho_l;
+  //_old_tachoR = cfg.vars.tacho_r;
+
+
   //update state variables
   _ledTick++;
   _ctrlTick++;
-  _tachoL = cfg.vars.tacho_l;
-  _tachoR = cfg.vars.tacho_r;
 }

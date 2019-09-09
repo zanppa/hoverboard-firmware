@@ -1,18 +1,19 @@
 
 #include "stm32f1xx_hal.h"
+
 #include <math.h>
+
 #include "defines.h"
-#include "setup.h"
 #include "config.h"
-#include "cfgbus.h"
 #include "bldc.h"
 
-#include "control.h" // Debug
+//uint8_t enable = 0;
 
-uint8_t enable = 0;
+extern volatile motor_state_t motor_state[2];
 
-uint32_t offsetcount = 0;
-adc_offsets_t offsets = {0};
+static uint32_t offsetcount = 0;
+static adc_offsets_t offsets = {0};
+extern volatile adc_buf_t adc_buffer;
 
 // Same method for bldc commutation, in this case [sector] contains first positive phase and then negative, last is zero
 static const uint8_t bldc_mod_pattern[6][3] = {
@@ -25,7 +26,7 @@ static const uint8_t bldc_mod_pattern[6][3] = {
 };
 
 
-inline void blockPWM(int pwm, int pos, int *u, int *v, int *w) {
+inline void blockPWM(int16_t pwm, uint8_t pos, int16_t *u, int16_t *v, int16_t *w) {
   switch(pos) {
     case 0:
       *u = 0;
@@ -96,13 +97,13 @@ void DMA1_Channel1_IRQHandler() {
   }
 
   // Disable PWM when current limit is reached (current chopping)
-  if(ABS(adc_buffer.dcl - offsets.dcl) > DC_CUR_THRESHOLD || enable == 0) {
+  if(ABS(adc_buffer.dcl - offsets.dcl) > DC_CUR_THRESHOLD || motor_state[STATE_LEFT].ctrl.enable == 0) {
     LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
   } else {
     LEFT_TIM->BDTR |= TIM_BDTR_MOE;
   }
 
-  if(ABS(adc_buffer.dcr - offsets.dcr) > DC_CUR_THRESHOLD || enable == 0) {
+  if(ABS(adc_buffer.dcr - offsets.dcr) > DC_CUR_THRESHOLD || motor_state[STATE_RIGHT].ctrl.enable == 0) {
     RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
   } else {
     RIGHT_TIM->BDTR |= TIM_BDTR_MOE;
@@ -113,20 +114,20 @@ void DMA1_Channel1_IRQHandler() {
 // Timer 8 handler updates the BLDC PWM references
 // This timer runs at twise the switching frequency
 void TIM8_UP_IRQHandler() {
-  int u, v, w;
+  int16_t u, v, w;
 
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
 
 #ifdef LEFT_MOTOR_BLDC
-  blockPWM(cfg.vars.pwm_l, cfg.vars.pos_l, &u, &v, &w);
+  blockPWM(motor_state[STATE_LEFT].ctrl.amplitude, motor_state[STATE_LEFT].act.sector, &u, &v, &w);
   LEFT_TIM->LEFT_TIM_U = CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
   LEFT_TIM->LEFT_TIM_V = CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
   LEFT_TIM->LEFT_TIM_W = CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
 #endif
 
 #ifdef RIGHT_MOTOR_BLDC
-  blockPWM(cfg.vars.pwm_r, cfg.vars.pos_r, &u, &v, &w);
+  blockPWM(motor_state[STATE_RIGHT].ctrl.amplitude, motor_state[STATE_RIGHT].act.sector, &u, &v, &w);
   RIGHT_TIM->RIGHT_TIM_U = CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
   RIGHT_TIM->RIGHT_TIM_V = CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
   RIGHT_TIM->RIGHT_TIM_W = CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);

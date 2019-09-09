@@ -1,6 +1,13 @@
 #pragma once
 #include "stm32f1xx_hal.h"
 
+// Motor parameters
+#define MOTOR_VOLTS		36		// Volts (phase) at rated speed (RMS)
+#define MOTOR_SPEED		750		// Nominal speed rpm
+#define MOTOR_POLES		4		// Polepairs, mechanical speed to electrical speed
+#define MOTOR_CUR		5		// A at rated load / phase (RMS)
+
+
 // What control method to use for which motor
 //#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
 #define LEFT_MOTOR_SVM			// Use SVM for left motor
