@@ -36,8 +36,8 @@
 	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
 	_ENTRY( tacho_l        , uint16_t   , _U16     , false     , "Tacho Left"        ) \
 	_ENTRY( tacho_r        , uint16_t   , _U16     , false     , "Tacho Right"       ) \
-	_ENTRY( pwm_l          , int16_t    , _I32     , false     , "PWM-Left"          ) \
-	_ENTRY( pwm_r          , int16_t    , _I32     , false     , "PWM-Right"         ) \
+	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) \
+	_ENTRY( pwm_r          , int16_t    , _I16     , false     , "PWM-Right"         ) \
 	_ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \
 	_ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) \
 	_ENTRY( vbat           , uint16_t   , _U16     , false     , "Battery Voltage"   ) \
