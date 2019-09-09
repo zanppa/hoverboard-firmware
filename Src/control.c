@@ -17,6 +17,8 @@
 extern ADC_HandleTypeDef hadc1;
 extern volatile adc_buf_t analog_meas;
 
+extern volatile uint16_t adc_raw_data[16];
+
 #define LED_PERIOD (300)  //ms
 
 // TODO: Move to setup.c and calculate there
@@ -178,6 +180,7 @@ void TIM3_IRQHandler(void)
 
   // Copy ADC values to cfg array
   cfg.vars.vbat = analog_meas.v_battery;
+  cfg.vars.vsw = analog_meas.v_switch;
   cfg.vars.temperature = analog_meas.temperature;
   cfg.vars.aref1 = analog_meas.analog_ref_1;
   cfg.vars.aref2 = analog_meas.analog_ref_2;

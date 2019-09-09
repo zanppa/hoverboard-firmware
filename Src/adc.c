@@ -21,7 +21,8 @@ ADC_HandleTypeDef hadc1;
 //ADC_HandleTypeDef hadc2;
 volatile adc_buf_t analog_meas;
 
-static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
+//static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
+volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// DEBUG: Not static and do not copy
 
 // Pointers to where to store analog variables
 // order must match the channel mapping of ADC1, and NULL means do not copy
@@ -52,7 +53,7 @@ void ADC1_init(void) {
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion       = 5;		// Up to 16 conversions
+  hadc1.Init.NbrOfConversion       = 6;		// Up to 16 conversions
   HAL_ADC_Init(&hadc1);
 
   /**Enable or disable the remapping of ADC1_ETRGREG:
@@ -66,7 +67,7 @@ void ADC1_init(void) {
   //multimode.Mode = ADC_DUALMODE_REGSIMULT;
   //HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode);
 
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
 
   sConfig.Channel = ADC_CHANNEL_12; // Battery voltage
   sConfig.Rank    = 1;
@@ -85,18 +86,18 @@ void ADC1_init(void) {
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
   sConfig.Channel = ADC_CHANNEL_VREFINT; // Internal reference voltage
-  sConfig.Rank    = 6;
+  sConfig.Rank    = 5;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-
 
   // Internal temperature must be sampled with long sample time
   // Recommended is 17.1 us which is not possible with 8 MHz clock
   // so use the next larger one
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
-  sConfig.Rank    = 7;
+  sConfig.Rank    = 6;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
+  // Enable DMA
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
 
   __HAL_ADC_ENABLE(&hadc1);
@@ -104,7 +105,7 @@ void ADC1_init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   DMA1_Channel1->CCR   = 0;
-  DMA1_Channel1->CNDTR = 4;
+  DMA1_Channel1->CNDTR = 6;
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
   DMA1_Channel1->CMAR  = (uint32_t)(&adc_raw_data[0]);  //(uint32_t)&adc_buffer;
 
@@ -116,10 +117,15 @@ void ADC1_init(void) {
   //Peripheral-to-memory
   //Transfer complete interrupt
   //Priority level high
-  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
+
+  // This transfers 32 bits since it used to transfer also the ADC2 values
+  //DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
+
+  // Read 32 bits (16xADC2 16xADC1) from peripheral then write lowest 16 bits to memory
+  DMA1_Channel1->CCR  = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
   DMA1_Channel1->CCR |= DMA_CCR_EN;
 
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 10, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 }
 
