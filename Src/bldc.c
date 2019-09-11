@@ -56,8 +56,8 @@ inline void blockPWM(int16_t pwm, uint8_t pos, int16_t *u, int16_t *v, int16_t *
       break;
     default:
       *u = 0;
-      *v = pwm;	// DEBUG, was 0
-      *w = -pwm;	// DEBUG, was 0
+      *v = 0;
+      *w = 0;
   }
 }
 
