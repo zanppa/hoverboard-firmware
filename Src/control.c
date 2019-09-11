@@ -99,11 +99,15 @@ void TIM3_IRQHandler(void)
 
     if(sector_l != ((prev_sector_l + 1) % 6)) speed_l = -speed_l;
 
+    motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
   } else {
     speed_l = motor_state[STATE_LEFT].act.speed;
     if(speed_tick[0] < 4095) speed_tick[0]++;
-    else speed_l = 0;	// Easy way but response time is long
+    else {
+      speed_l = 0;	// Easy way but response time is long
+      motor_state[STATE_LEFT].act.period = 0xFFFF;
+    }
   }
 
   // Right motor speed
@@ -112,11 +116,15 @@ void TIM3_IRQHandler(void)
 
     if(sector_r != ((prev_sector_r + 1) % 6)) speed_r = -speed_r;
 
+    motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
   } else {
     speed_r = motor_state[STATE_RIGHT].act.speed;
     if(speed_tick[1] < 4095) speed_tick[1]++;
-    else speed_r = 0;	// Easy way but response time is long
+    else {
+      speed_r = 0;	// Easy way but response time is long
+      motor_state[STATE_RIGHT].act.period = 0xFFFF;
+    }
   }
 
 
