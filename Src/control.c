@@ -13,11 +13,11 @@
 #include "math.h"
 #include "adc.h"
 
+#include <stm32f1xx_hal_gpio.h>
+
 // From adc.c
 extern ADC_HandleTypeDef hadc1;
 extern volatile adc_buf_t analog_meas;
-
-extern volatile uint16_t adc_raw_data[16];
 
 #define LED_PERIOD (300)  //ms
 
@@ -26,28 +26,25 @@ const uint16_t motor_nominal_counts = (3<<12);		// timer ticks/sector change at 
 
 volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
 volatile motor_state_t motor_state[2] = {0};
-static volatile uint16_t speed_tick[2] = {0};
 
-volatile uint32_t _ledTick=0;
-volatile uint32_t _ctrlTick=0;
+// Buzzer tone control
+volatile uint16_t buzzer_tone = 0x0; // No tone. This defines the tone(s) to play. 1 bit is 1 ms.
+volatile uint16_t buzzer_pattern = 0xFF00;	// Beep pattern, 1 bit is 64 ms (8b on 8b off is about 1 Hz beep)
+
+// LED blinking pattern control
+volatile uint16_t led_pattern = 0xFF00;		// Default blinking pattern
+
+// Non-volatile variables that are ONLY used in the control timer interrupt
+static uint16_t control_tick = 0;
+static uint16_t speed_tick[2] = {0};
+
+static uint8_t buzzer_tone_tick = 0;
+static uint8_t pattern_tick = 0;
 
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
 
-
-//call this from main thread. Responsible for turning off the LED
-//LED is turned on in interrupt, so if LED flashes, we know main-loop
-//and control interrupt are running properly.
-void led_update(void)
-{
-  //turn off status LED if on for LED_PERIOD
-  if(_ledTick >= LED_PERIOD)
-  {
-    HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
-   _ledTick = 0;
-  }
-}
 
 
 void init_controls(void)
@@ -69,7 +66,10 @@ void TIM3_IRQHandler(void)
   uint8_t sector_l, sector_r;
   uint8_t prev_sector_l, prev_sector_r;
   int16_t speed_l, speed_r;
-  int32_t pwmDiff;
+
+#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
+  int32_t pwm_diff;
+#endif
 
   CTRL_TIM->SR = 0;
 
@@ -103,6 +103,7 @@ void TIM3_IRQHandler(void)
   } else {
     speed_l = motor_state[STATE_LEFT].act.speed;
     if(speed_tick[0] < 4095) speed_tick[0]++;
+    else speed_l = 0;	// Easy way but response time is long
   }
 
   // Right motor speed
@@ -115,39 +116,61 @@ void TIM3_IRQHandler(void)
   } else {
     speed_r = motor_state[STATE_RIGHT].act.speed;
     if(speed_tick[1] < 4095) speed_tick[1]++;
+    else speed_r = 0;	// Easy way but response time is long
   }
 
 
+  // TODO: Move volatile(?) setpoints to local variables
 #ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
-  pwmDiff = (int32_t)cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
-  pwmDiff = CLAMP(pwmDiff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
+  pwm_diff = (int32_t)cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
+  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
-  motor_state[STATE_LEFT].ctrl.amplitude += pwmDiff;
+  motor_state[STATE_LEFT].ctrl.amplitude += pwm_diff;
 #endif
 
 #ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
-  pwmDiff = (int32_t)cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
-  pwmDiff = CLAMP(pwmDiff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
+  pwm_diff = (int32_t)cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
+  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
-  motor_state[STATE_RIGHT].ctrl.amplitude += pwmDiff;
+  motor_state[STATE_RIGHT].ctrl.amplitude += pwm_diff;
 #endif
 
 
   // Update buzzer
-  if(cfg.vars.buzzer == 0)
+  if(!cfg.vars.buzzer)
   {
-	  HAL_GPIO_WritePin(BUZZER_PORT,BUZZER_PIN,0);
+	  HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, 0);
   }
-  else if( (_ctrlTick%cfg.vars.buzzer) == 0 && _ctrlTick%200 > 100  && _ctrlTick%3000 > 2000)
+  else
   {
-	  HAL_GPIO_TogglePin(BUZZER_PORT, BUZZER_PIN);
+    if(((buzzer_pattern >> pattern_tick) & 1) && ((buzzer_tone >> buzzer_tone_tick) & 1))
+      HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, 1);
+    else
+      HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, 0);
+
+    // Update tone
+    buzzer_tone_tick = (buzzer_tone_tick + 1) & 0xF;
   }
+
+
+#if 0 // Disabled while LED is used for interrupt timing etc
+  // Update LED
+  if((led_pattern >> pattern_tick) & 1)
+    HAL_GPIO_WritePin(LED_PORT, LED_PIN, 1);
+  else
+    HAL_GPIO_WritePin(LED_PORT, LED_PIN, 0);
+#endif
+
+  // Update pattern
+  if(!(control_tick ^ 0x40))	// Every 64 ms
+    pattern_tick = (pattern_tick + 1) & 0xF;
+
 
   // Update motor state variables
   motor_state[STATE_LEFT].act.sector = sector_l;
@@ -155,13 +178,13 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_LEFT].act.speed = speed_l;
   motor_state[STATE_RIGHT].act.speed = speed_r;
 
+
   // Update config array
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
   cfg.vars.speed_l = speed_l;
   cfg.vars.speed_r = speed_r;
-  //_old_tachoL = cfg.vars.tacho_l;
-  //_old_tachoR = cfg.vars.tacho_r;
+
 
   // Copy ADC values to cfg array
   cfg.vars.vbat = analog_meas.v_battery;
@@ -170,9 +193,7 @@ void TIM3_IRQHandler(void)
   cfg.vars.aref1 = analog_meas.analog_ref_1;
   cfg.vars.aref2 = analog_meas.analog_ref_2;
 
-  //update state variables
-  _ledTick++;
-  _ctrlTick++;
+  control_tick++;
 
   // Launch ADC1 so that at next call we
   // have fresh analog measurements
