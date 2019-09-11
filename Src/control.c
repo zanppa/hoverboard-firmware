@@ -74,19 +74,6 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
-  // Debug: rotate the SVM reference
-#ifdef LEFT_MOTOR_SVM
-  if(motor_state[STATE_LEFT].ctrl.angle >= 4095) motor_state[STATE_LEFT].ctrl.angle = 0;
-  else motor_state[STATE_LEFT].ctrl.angle += 1;
-  motor_state[STATE_LEFT].ctrl.amplitude = 3000;
-#endif
-
-#ifdef RIGHT_MOTOR_SVM
-  if(motor_state[STATE_RIGHT].ctrl.angle >= 4095) motor_state[STATE_RIGHT].ctrl.angle = 0;
-  else motor_state[STATE_RIGHT].ctrl.angle += 1;
-  motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
-#endif
-
   // Read HALL sensors
   // Determine rotor position (sector) based on HALL sensors
   sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
@@ -100,9 +87,15 @@ void TIM3_IRQHandler(void)
   // Left motor speed
   if(sector_l != prev_sector_l) {
     speed_l = motor_nominal_counts / speed_tick[0];
+    uint16_t angle = sector_l * FIXED_60DEG;
 
-    if(sector_l != ((prev_sector_l + 1) % 6)) speed_l = -speed_l;
+    if(sector_l != ((prev_sector_l + 1) % 6)) {
+      speed_l = -speed_l;
+      angle += FIXED_60DEG;
+    }
 
+
+    motor_state[STATE_LEFT].ctrl.angle = angle;
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
   } else {
@@ -117,9 +110,14 @@ void TIM3_IRQHandler(void)
   // Right motor speed
   if(sector_r != prev_sector_r) {
     speed_r = motor_nominal_counts / speed_tick[1];
+    uint16_t angle = sector_r * FIXED_60DEG;
 
-    if(sector_r != ((prev_sector_r + 1) % 6)) speed_r = -speed_r;
+    if(sector_r != ((prev_sector_r + 1) % 6)) {
+      speed_r = -speed_r;
+      angle += FIXED_60DEG;
+    }
 
+    motor_state[STATE_RIGHT].ctrl.angle = angle;
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
   } else {
@@ -131,9 +129,25 @@ void TIM3_IRQHandler(void)
     }
   }
 
+  // Debug: rotate the SVM reference
+#ifdef LEFT_MOTOR_SVM
+  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
+  else motor_state[STATE_LEFT].ctrl.angle += 5;
+  //motor_state[STATE_LEFT].ctrl.amplitude = 3000;
+#endif
+
+#ifdef RIGHT_MOTOR_SVM
+  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
+  else motor_state[STATE_RIGHT].ctrl.angle += 5;
+  //motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
+#endif
+
+
+
+
 
   // TODO: Move volatile(?) setpoints to local variables
-#ifdef LEFT_MOTOR_BLDC
+//#ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
@@ -141,9 +155,9 @@ void TIM3_IRQHandler(void)
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   motor_state[STATE_LEFT].ctrl.amplitude += pwm_diff;
-#endif
+//#endif
 
-#ifdef RIGHT_MOTOR_BLDC
+//#ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
@@ -151,7 +165,7 @@ void TIM3_IRQHandler(void)
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   motor_state[STATE_RIGHT].ctrl.amplitude += pwm_diff;
-#endif
+//#endif
 
 
   // Update buzzer
@@ -194,8 +208,8 @@ void TIM3_IRQHandler(void)
   // Update config array
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
-  cfg.vars.speed_l = speed_l;
-  cfg.vars.speed_r = speed_r;
+  cfg.vars.speed_l = motor_state[STATE_LEFT].act.period;//speed_l;
+  cfg.vars.speed_r = motor_state[STATE_RIGHT].act.period; //speed_r;
 
 
   // Copy ADC values to cfg array
