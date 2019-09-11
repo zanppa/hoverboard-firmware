@@ -31,24 +31,9 @@ static volatile uint16_t speed_tick[2] = {0};
 volatile uint32_t _ledTick=0;
 volatile uint32_t _ctrlTick=0;
 
-/*
-volatile uint16_t _old_tachoL=0;
-volatile uint16_t _old_tachoR=0;
-volatile uint16_t _cntL;
-volatile uint16_t _cntR;
-volatile uint16_t _lastSpeedL = 0;
-volatile uint16_t _lastSpeedR = 0;
-volatile uint16_t _lastPosL = 0;
-volatile uint16_t _lastPosR = 0;
-*/
-
-// Debug: SVM references
-//extern volatile svm_ref_t svm_left;
-//extern volatile svm_ref_t svm_right;
-
 // Array to convert HALL sensor readings (order ABC) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
-static const uint8_t hall_to_sector[8] = { 2, 5, 1, 0, 3, 4, 2, 2 };
+static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
 
 
 //call this from main thread. Responsible for turning off the LED
