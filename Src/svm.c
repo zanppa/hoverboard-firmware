@@ -52,6 +52,8 @@ static const uint8_t svm_mod_pattern[6][3] = {
 static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
+  uint16_t tz;
+  uint16_t terr = 0;
 
   // Clamp < 0 modulation index to zero
   if(midx <= 0) midx = 0;
@@ -69,9 +71,20 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   ta2 = fx_mulu(midx,  array_sin(FIXED_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
-  (*t0) = (PWM_PERIOD - ta1 - ta2) / 2;
-  (*t1) = ta1;
-  (*t2) = ta2;
+  tz = (PWM_PERIOD - ta1 - ta2) / 2;
+
+  // Minimum pulse limitations
+  if(tz < SVM_SHORT_ZPULSE) {
+    terr = SVM_SHORT_ZPULSE - tz;
+    tz = SVM_SHORT_ZPULSE;
+  }
+
+  ta1 = CLAMP(ta1 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
+  ta2 = CLAMP(ta2 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
+
+  *t0 = tz;
+  *t1 = ta1;
+  *t2 = ta2;
 }
 
 
