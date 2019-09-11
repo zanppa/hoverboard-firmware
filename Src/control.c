@@ -6,6 +6,7 @@
  */
 
 #include "control.h"
+#include "config.h"
 #include "defines.h"
 #include "cfgbus.h"
 #include "setup.h"
@@ -68,20 +69,23 @@ void TIM3_IRQHandler(void)
   int16_t speed_l, speed_r;
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
-  int32_t pwm_diff;
+  int16_t pwm_diff;
 #endif
 
   CTRL_TIM->SR = 0;
 
   // Debug: rotate the SVM reference
+#ifdef LEFT_MOTOR_SVM
   if(motor_state[STATE_LEFT].ctrl.angle >= 4095) motor_state[STATE_LEFT].ctrl.angle = 0;
   else motor_state[STATE_LEFT].ctrl.angle += 1;
   motor_state[STATE_LEFT].ctrl.amplitude = 3000;
+#endif
 
+#ifdef RIGHT_MOTOR_SVM
   if(motor_state[STATE_RIGHT].ctrl.angle >= 4095) motor_state[STATE_RIGHT].ctrl.angle = 0;
   else motor_state[STATE_RIGHT].ctrl.angle += 1;
   motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
-
+#endif
 
   // Read HALL sensors
   // Determine rotor position (sector) based on HALL sensors
@@ -133,7 +137,7 @@ void TIM3_IRQHandler(void)
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
-  pwm_diff = (int32_t)cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
+  pwm_diff = cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   motor_state[STATE_LEFT].ctrl.amplitude += pwm_diff;
@@ -143,7 +147,7 @@ void TIM3_IRQHandler(void)
   // Torque (voltage) control of left motor in BLDC mode
   cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
-  pwm_diff = (int32_t)cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
+  pwm_diff = cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   motor_state[STATE_RIGHT].ctrl.amplitude += pwm_diff;
@@ -200,6 +204,8 @@ void TIM3_IRQHandler(void)
   cfg.vars.temperature = analog_meas.temperature;
   cfg.vars.aref1 = analog_meas.analog_ref_1;
   cfg.vars.aref2 = analog_meas.analog_ref_2;
+  cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
+  cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
 
   control_tick++;
 
