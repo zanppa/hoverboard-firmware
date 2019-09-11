@@ -144,6 +144,7 @@ typedef struct {
   // Actual values
   struct {
     int16_t speed;
+    int16_t period;		// Period of hall-sensor sector changes in control ticks
     uint8_t sector;		// Rotor sector from HALL sensors
     uint16_t position;	// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
     int16_t current[3];	// Current of phases A, B, C (p.u.)
