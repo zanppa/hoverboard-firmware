@@ -34,8 +34,8 @@ void SystemClock_Config(void);
 extern ADC_HandleTypeDef hadc1;
 //extern ADC_HandleTypeDef hadc2;
 
-//extern uint8_t enable;
 extern volatile motor_state_t motor_state[2];
+extern volatile adc_buf_t analog_meas;
 
 int main(void) {
 
@@ -96,10 +96,22 @@ int main(void) {
     //update cfg_bus communication
     mb_update();
 
-    //float vBatNew = ((float)(((uint32_t)adc_buffer.vbat)*VBAT_ADC_TO_UV))/1000000;
-    //cfg.vars.vbat = vBatNew;
-    //cfg.vars.vbat_r = adc_buffer.vbat; // TODO: Use the raw value
 
+    // Do all "slow" calculations here, on background
+    // These will be pre-empted by everything more important
+    // And all variables most likely will change so copy them locally first
+
+    float v_battery = analog_meas.v_battery;
+    v_battery *= ADC_BATTERY_VOLTS;
+    //cfg.vars.v_battery = v_battery;
+
+    float act_speed = motor_state[STATE_LEFT].act.period;
+    act_speed *= MOTOR_PERIOD_TO_CMS;
+    //cfg.vars.speed_l = act_speed;
+
+    act_speed = motor_state[STATE_RIGHT].act.period;
+    act_speed *= MOTOR_PERIOD_TO_CMS;
+    //cfg.vars.speed_r = act_speed;
   }
 }
 
