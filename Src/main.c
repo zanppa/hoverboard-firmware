@@ -56,8 +56,6 @@ int main(void) {
   HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
   /* PendSV_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(PendSV_IRQn, 0, 0);
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
   SystemClock_Config();
 
@@ -145,8 +143,8 @@ void SystemClock_Config(void) {
   HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
 
 
-  //Configure the Systick interrupt time and interrupt
+  // Configure the Systick interrupt time and interrupt
+  // This already sets the interrupt priority to lowest value
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
