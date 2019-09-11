@@ -20,10 +20,6 @@
 #include "defines.h"
 #include "config.h"
 
-TIM_HandleTypeDef htim_right;
-TIM_HandleTypeDef htim_left;
-TIM_HandleTypeDef htim_control;
-
 void MX_GPIO_Init(void) {
   GPIO_InitTypeDef GPIO_InitStruct;
 
@@ -32,12 +28,18 @@ void MX_GPIO_Init(void) {
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  //general GPIO struct init
-  GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 
-  //Digital Input pins
+  // Digital Input pins
   GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+
+  // Charge detect pin should have internal pull-up
+  GPIO_InitStruct.Pull  = GPIO_PULLUP;
+  GPIO_InitStruct.Pin = CHARGER_PIN;
+  HAL_GPIO_Init(CHARGER_PORT, &GPIO_InitStruct);
+
+  // Other pins are driven by external pull-up/down or push-pull
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
 
   GPIO_InitStruct.Pin = LEFT_HALL_U_PIN;
   HAL_GPIO_Init(LEFT_HALL_PORT, &GPIO_InitStruct);
@@ -57,9 +59,6 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_HALL_W_PIN;
   HAL_GPIO_Init(RIGHT_HALL_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = CHARGER_PIN;
-  HAL_GPIO_Init(CHARGER_PORT, &GPIO_InitStruct);
-
   GPIO_InitStruct.Pin = BUTTON_PIN;
   HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
 
@@ -72,7 +71,7 @@ void MX_GPIO_Init(void) {
   HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
 
 
-  //output push-pull pins
+  // Output push-pull pins
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 
   GPIO_InitStruct.Pin = LED_PIN;
@@ -85,7 +84,7 @@ void MX_GPIO_Init(void) {
   HAL_GPIO_Init(OFF_PORT, &GPIO_InitStruct);
 
 
-  //analog IO pins
+  // Analog IO pins
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
 
   //Current / Phase sense and battery measurements
@@ -165,6 +164,8 @@ void MX_GPIO_Init(void) {
 
 void control_timer_init(void)
 {
+  TIM_HandleTypeDef htim_control;
+
   __HAL_RCC_TIM3_CLK_ENABLE();
 
   htim_control.Instance               = CTRL_TIM;
@@ -191,6 +192,9 @@ void control_timer_init(void)
  */
 
 void MX_TIM_Init(void) {
+  TIM_HandleTypeDef htim_right;
+  TIM_HandleTypeDef htim_left;
+
   __HAL_RCC_TIM1_CLK_ENABLE();
   __HAL_RCC_TIM8_CLK_ENABLE();
 
