@@ -15,7 +15,7 @@ Note that compared to that version, I have changed left/right sides because they
  - [x] Add configs for Raspberry PI Zero W wireless flashing with OpenOCD
  - [ ] Re-organize code
  - [ ] Implement mandatory features
-      - [ ] Space vector modulation
+      - [x] Space vector modulation (requires more testing and reference chain)
       - [ ] U/f control with IR compensation
       - [ ] Better current measurement
       - [ ] FOC
