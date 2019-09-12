@@ -22,8 +22,10 @@
 
 #define DEAD_TIME        	32		// PWM deadtime (see ST32F103 datasheet)
 #define BLDC_SHORT_PULSE	10		// Shortest pulse length in BLDC, in 1/64 MHz
-#define SVM_SHORT_PULSE		192		// in 1/64 MHz, 192 = 3 us
-#define SVM_SHORT_ZPULSE	86		// Minimum zero pulse length, in 1/64 MHz
+//#define SVM_SHORT_PULSE		192		// in 1/64 MHz, 192 = 3 us
+//#define SVM_SHORT_ZPULSE	86		// Minimum zero pulse length, in 1/64 MHz
+#define SVM_SHORT_PULSE		30		// in 1/64 MHz
+#define SVM_SHORT_ZPULSE	30		// Minimum zero pulse length, in 1/64 MHz
 #define SVM_LONG_PULSE (PWM_PERIOD - SVM_SHORT_PULSE - SVM_SHORT_ZPULSE)	// Maximum pulse length
 
 // Limits

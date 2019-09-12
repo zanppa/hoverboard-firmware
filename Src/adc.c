@@ -18,11 +18,9 @@
 #define ADC_MAX_CH	16		// Maximum analog channels to sample
 
 ADC_HandleTypeDef hadc1;
-//ADC_HandleTypeDef hadc2;
 volatile adc_buf_t analog_meas;
 
-//static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
-volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// DEBUG: Not static and do not copy
+static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
 
 // Pointers to where to store analog variables
 // order must match the channel mapping of ADC1, and NULL means do not copy
@@ -99,6 +97,9 @@ void ADC1_init(void) {
 
   // Enable DMA
   hadc1.Instance->CR2 |= ADC_CR2_DMA;
+
+  // Enable VREF and temperature
+  hadc1.Instance->CR2 |= ADC_CR2_TSVREFE;
 
   __HAL_ADC_ENABLE(&hadc1);
 
