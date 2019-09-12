@@ -117,12 +117,12 @@ void TIM1_UP_IRQHandler() {
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   else // Even sectors uses "left" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
@@ -131,12 +131,12 @@ void TIM1_UP_IRQHandler() {
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
-  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   else // Even sectors uses "left" vector first
-    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
   // Debug: LED off
