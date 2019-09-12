@@ -105,7 +105,20 @@ Ta2 = min(max(Ta2 - T0err/2), Tma2)
 T0 = Ts - Ta1 - Ta2
 ```
 This has the downside that the voltage is distorted in sector changes as well as with small or high modulation 
-indices.
+indices. Following figure shows how the actual voltage looks like compared to the ideal reference, with 3 different 
+modulation indices: 0.05, 0.6 and 0.85 (note that in this case 0.866 is maximum linear region).
+
+![Pulse limit distortion](./short_pulse_limits.png)
+
+At low modulation index the active pulse length limitation, forcing the usage of two short active pulses, distorts 
+the waveform. The same also affects sector changes where only one active vector would be needed.
+
+At high modulation index the forced usage of zero pulse distorts the voltage at the center of sectors where 
+there would be no need for zero vector.
+
+The limitations mentioned above are caused mainly by requiring the vectors for current measurement reasons. If phase 
+current measurement is not needed (or its accuracy can be decreased), the pulse limitations may not be needed and 
+more accurate voltage generated.
 
 
 ## Copyright
