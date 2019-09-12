@@ -21,68 +21,33 @@ static const uint8_t bldc_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)}
 };
 
-
-inline void blockPWM(int16_t pwm, uint8_t pos, int16_t *u, int16_t *v, int16_t *w) {
-  switch(pos) {
-    case 0:
-      *u = 0;
-      *v = pwm;
-      *w = -pwm;
-      break;
-    case 1:
-      *u = -pwm;
-      *v = pwm;
-      *w = 0;
-      break;
-    case 2:
-      *u = -pwm;
-      *v = 0;
-      *w = pwm;
-      break;
-    case 3:
-      *u = 0;
-      *v = -pwm;
-      *w = pwm;
-      break;
-    case 4:
-      *u = pwm;
-      *v = -pwm;
-      *w = 0;
-      break;
-    case 5:
-      *u = pwm;
-      *v = 0;
-      *w = -pwm;
-      break;
-    default:
-      *u = 0;
-      *v = 0;
-      *w = 0;
-  }
-}
-
 // Timer 8 handler updates the BLDC PWM references
 // This timer runs at twise the switching frequency
 void TIM8_UP_IRQHandler() {
-  int16_t u, v, w;
+  uint8_t sector;
+  int16_t ampl;
 
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
 
 #ifdef LEFT_MOTOR_BLDC
-  blockPWM(motor_state[STATE_LEFT].ctrl.amplitude, motor_state[STATE_LEFT].act.sector, &u, &v, &w);
-  //blockPWM(400, motor_state[STATE_LEFT].act.sector, &u, &v, &w);
-  LEFT_TIM->LEFT_TIM_U = (uint16_t)CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
-  LEFT_TIM->LEFT_TIM_V = (uint16_t)CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
-  LEFT_TIM->LEFT_TIM_W = (uint16_t)CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  sector = motor_state[STATE_LEFT].act.sector;
+  ampl = motor_state[STATE_LEFT].ctrl.amplitude;
+  ampl = CLAMP(ampl, 0, (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
+
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) + ampl;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
 #endif
 
 #ifdef RIGHT_MOTOR_BLDC
-  blockPWM(motor_state[STATE_RIGHT].ctrl.amplitude, motor_state[STATE_RIGHT].act.sector, &u, &v, &w);
-  //blockPWM(700, motor_state[STATE_RIGHT].act.sector, &u, &v, &w);
-  RIGHT_TIM->RIGHT_TIM_U = (uint16_t)CLAMP(u + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
-  RIGHT_TIM->RIGHT_TIM_V = (uint16_t)CLAMP(v + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
-  RIGHT_TIM->RIGHT_TIM_W = (uint16_t)CLAMP(w + PWM_PERIOD / 2, BLDC_SHORT_PULSE, PWM_PERIOD-BLDC_SHORT_PULSE);
+  sector = motor_state[STATE_RIGHT].act.sector;
+  ampl = motor_state[STATE_RIGHT].ctrl.amplitude;
+  ampl = CLAMP(ampl, 0, (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
+
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) + ampl;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
 #endif
 }
 
