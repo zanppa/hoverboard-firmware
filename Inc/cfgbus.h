@@ -34,8 +34,8 @@
 	_ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer"            ) \
 	_ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) \
 	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
-	_ENTRY( tacho_l        , uint16_t   , _U16     , false     , "Tacho Left"        ) \
-	_ENTRY( tacho_r        , uint16_t   , _U16     , false     , "Tacho Right"       ) \
+	_ENTRY( spdref_l       , int16_t    , _I16     , false     , "Speed ref L"       ) \
+	_ENTRY( spdref_r       , int16_t    , _I16     , false     , "Speed ref R"       ) \
 	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) \
 	_ENTRY( pwm_r          , int16_t    , _I16     , false     , "PWM-Right"         ) \
 	_ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \

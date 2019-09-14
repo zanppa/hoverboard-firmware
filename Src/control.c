@@ -139,7 +139,7 @@ void TIM3_IRQHandler(void)
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
-  motor_state[STATE_LEFT].ctrl.speed = 5;
+  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
 // Old way
 //  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
 //  else motor_state[STATE_LEFT].ctrl.angle += 5;
@@ -148,7 +148,7 @@ void TIM3_IRQHandler(void)
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
-  motor_state[STATE_RIGHT].ctrl.speed = 5;
+  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
 // Old way
 //  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
 //  else motor_state[STATE_RIGHT].ctrl.angle += 5;

@@ -142,13 +142,15 @@ void CfgInit()
   if(cfg.vars.max_pwm_l == 0)
       cfg.vars.max_pwm_l = 200;
 
+  // Debug: non-zero default speed refs
+  cfg.vars.spdref_l = 5;
+  cfg.vars.spdref_r = 5;
+
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
   cfg.vars.buzzer = 0;
   cfg.vars.speed_l = 0;
   cfg.vars.speed_r = 0;
-  cfg.vars.tacho_l = 0;
-  cfg.vars.tacho_r =0;
   cfg.vars.pwm_l = 0;
   cfg.vars.pwm_r = 0;
   cfg.vars.pos_l = 0;
