@@ -96,7 +96,9 @@ void TIM3_IRQHandler(void)
     }
 
 
+    __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].ctrl.angle = angle;
+    __enable_irq();
     motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
@@ -119,7 +121,9 @@ void TIM3_IRQHandler(void)
       angle += ANGLE_60DEG;
     }
 
+    __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].ctrl.angle = angle;
+    __enable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
