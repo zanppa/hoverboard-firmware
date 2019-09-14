@@ -62,13 +62,16 @@ int main(void) {
   __HAL_RCC_DMA1_CLK_DISABLE();
 
   MX_GPIO_Init();
+
+  initialize_control_state();
+
   MX_TIM_Init();
 
   ADC1_init();
   HAL_ADC_Start(&hadc1);
   ADC1_calibrate();
 
-  UART_Init(0, 1);
+  UART_Init(0, 1);	// Use only UART3 for modbus
 
   ee_init();
   CfgInit();
@@ -78,7 +81,7 @@ int main(void) {
 
   //HAL_ADC_Start(&hadc2);
 
-  //enable = 1;
+  // Enable both motor drivers
   motor_state[STATE_LEFT].ctrl.enable = 1;
   motor_state[STATE_RIGHT].ctrl.enable = 1;
 

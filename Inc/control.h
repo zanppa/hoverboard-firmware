@@ -14,4 +14,10 @@ void led_update(void);
 void update_controls(void);
 void init_controls(void);
 
+void initialize_control_state(void);
+
+uint8_t read_left_hall(void);
+uint8_t read_right_hall(void);
+
+
 #endif /* INC_CONTROL_H_ */

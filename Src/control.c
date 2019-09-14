@@ -61,6 +61,42 @@ void update_controls(void)
 
 }
 
+// Read left hall sensors and return corresponding sector
+uint8_t read_left_hall(void) {
+  uint8_t sector;
+  sector =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
+  sector = hall_to_sector[sector];
+  return sector;
+}
+
+// Read right hall sensors and return corresponding sector
+uint8_t read_right_hall(void) {
+  uint8_t sector;
+  sector =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+  sector = hall_to_sector[sector];
+  return sector;
+}
+
+// Initialize the control state, i.e. set starting positions
+// for motors, set control variables, do precalculations and so one
+void initialize_control_state(void) {
+  uint8_t sector;
+
+  // Initial rotor positions
+  sector = read_left_hall();
+  motor_state[STATE_LEFT].act.sector = sector;
+  __disable_irq();
+  motor_state[STATE_LEFT].ctrl.angle = sector * ANGLE_60DEG;
+  __enable_irq();
+
+  sector = read_right_hall();
+  motor_state[STATE_RIGHT].act.sector = sector;
+  __disable_irq();
+  motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
+  __enable_irq();
+
+}
+
 
 //called 64000000/64000 = 1000 times per second
 void TIM3_IRQHandler(void)
