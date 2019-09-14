@@ -24,6 +24,7 @@ extern volatile adc_buf_t analog_meas;
 
 // TODO: Move to setup.c and calculate there
 const uint16_t motor_nominal_counts = (3<<12);		// timer ticks/sector change at rated speed
+const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/1000);	// Control cycle runs at 1000 Hz
 
 volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
 volatile motor_state_t motor_state[2] = {0};
@@ -87,15 +88,16 @@ void TIM3_IRQHandler(void)
   // Left motor speed
   if(sector_l != prev_sector_l) {
     speed_l = motor_nominal_counts / speed_tick[0];
-    uint16_t angle = sector_l * FIXED_60DEG;
+    uint16_t angle = sector_l * ANGLE_60DEG;
 
     if(sector_l != ((prev_sector_l + 1) % 6)) {
       speed_l = -speed_l;
-      angle += FIXED_60DEG;
+      angle += ANGLE_60DEG;
     }
 
 
     motor_state[STATE_LEFT].ctrl.angle = angle;
+    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
   } else {
@@ -110,14 +112,15 @@ void TIM3_IRQHandler(void)
   // Right motor speed
   if(sector_r != prev_sector_r) {
     speed_r = motor_nominal_counts / speed_tick[1];
-    uint16_t angle = sector_r * FIXED_60DEG;
+    uint16_t angle = sector_r * ANGLE_60DEG;
 
     if(sector_r != ((prev_sector_r + 1) % 6)) {
       speed_r = -speed_r;
-      angle += FIXED_60DEG;
+      angle += ANGLE_60DEG;
     }
 
     motor_state[STATE_RIGHT].ctrl.angle = angle;
+    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
   } else {
@@ -131,14 +134,20 @@ void TIM3_IRQHandler(void)
 
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
-  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
-  else motor_state[STATE_LEFT].ctrl.angle += 5;
+// New way
+  motor_state[STATE_LEFT].ctrl.speed = 5;
+// Old way
+//  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
+//  else motor_state[STATE_LEFT].ctrl.angle += 5;
   //motor_state[STATE_LEFT].ctrl.amplitude = 3000;
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
-  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
-  else motor_state[STATE_RIGHT].ctrl.angle += 5;
+// New way
+  motor_state[STATE_RIGHT].ctrl.speed = 5;
+// Old way
+//  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
+//  else motor_state[STATE_RIGHT].ctrl.angle += 5;
   //motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
 #endif
 

@@ -159,7 +159,8 @@ typedef struct {
   // Control outputs to modulator
   struct {
     int16_t amplitude;	// Can also be < 0
-    uint16_t angle;
+    uint16_t angle;		// Angle
+    int8_t speed;		// Speed in angle increments per modulator call
     uint8_t enable;
   } ctrl;
 } motor_state_t;

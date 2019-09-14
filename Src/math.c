@@ -39,21 +39,23 @@ int16_t fx_mul(int16_t a, int16_t b) {
 
 // Trigonometric functions
 
-extern uint16_t sine_array[512];
+extern uint16_t sine_array[256];
 
 int16_t array_sin(uint16_t angle) {
   uint8_t modulo;
   uint16_t sine;
   uint16_t inv_sine;
 
-  angle &= FIXED_MASK;	// Clamp to 0...4096 (0...360 degrees)
-  modulo = (angle & 0x03FF) >> 2; // 0...90 degrees (0...1024) scaled to array (256=90 deg)
+  // Change from 12 bits = circle to full 16 bits = circle
+  //angle &= FIXED_MASK;	// Clamp to 0...4096 (0...360 degrees)
+  //modulo = (angle & 0x03FF) >> 2; // 0...90 degrees (0...1024) scaled to array (256=90 deg)
+  modulo = angle >> 6;		// 16384 (90 degrees) to an array of 256 values
 
   sine = sine_array[modulo];
   inv_sine = sine_array[255-modulo];
 
-  if(angle < 0x400) return sine;
-  else if(angle < 0x800) return inv_sine;
-  else if(angle < 0xC00) return -sine;
+  if(angle < ANGLE_90DEG) return sine;
+  else if(angle < ANGLE_180DEG) return inv_sine;
+  else if(angle < ANGLE_270DEG) return -sine;
   else return -inv_sine;
 }

@@ -17,11 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FIXED_ONE		4096
 #define FIXED_SHIFT		12
 #define FIXED_MASK		0x0FFF
-#define FIXED_45DEG		512
-#define FIXED_60DEG		683		// 682.6666
+
+#define ANGLE_45DEG		8192
+#define ANGLE_60DEG		10922	// 10922.667
+#define ANGLE_90DEG		16384
+#define ANGLE_120DEG	21845
+#define ANGLE_180DEG	32768
+#define ANGLE_240DEG	43690
+#define ANGLE_270DEG	49152
+#define ANGLE_300DEG	54613
 
 uint16_t fx_mulu(uint16_t a, uint16_t b);
 int16_t fx_mul(int16_t a, int16_t b);
 
 int16_t array_sin(uint16_t angle);
-

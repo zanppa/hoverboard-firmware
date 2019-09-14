@@ -62,13 +62,13 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
-  angle = angle % FIXED_60DEG;
+  angle = angle % ANGLE_60DEG;
 
   // Calculate the vector times
   ta1 = fx_mulu(midx, array_sin(angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mulu(midx,  array_sin(FIXED_60DEG - angle));
+  ta2 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
   tz = (PWM_PERIOD - ta1 - ta2) / 2;
@@ -90,18 +90,19 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
 // Convert fixed point angle into sector number
 static inline uint8_t angle_to_sector(uint16_t angle) {
-  angle &= FIXED_MASK;
-  if(angle < FIXED_60DEG) return 5;
-  else if(angle < 2*FIXED_60DEG) return 0;
-  else if(angle < 3*FIXED_60DEG) return 1;
-  else if(angle < 4*FIXED_60DEG) return 2;
-  else if(angle < 5*FIXED_60DEG) return 3;
+  //angle &= FIXED_MASK;	// Changed to full circle = 16 bits
+  if(angle < ANGLE_60DEG) return 5;
+  else if(angle < ANGLE_120DEG) return 0;
+  else if(angle < ANGLE_180DEG) return 1;
+  else if(angle < ANGLE_240DEG) return 2;
+  else if(angle < ANGLE_300DEG) return 3;
   else return 4;
 }
 
 // Timer 1 update handles space vector modulation for both motors
 void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
+  uint16_t angle;
   uint8_t sector;
 
   // Clear the update interrupt flag
@@ -112,8 +113,11 @@ void TIM1_UP_IRQHandler() {
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator
-  sector = angle_to_sector(motor_state[STATE_LEFT].ctrl.angle);
-  calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, motor_state[STATE_LEFT].ctrl.angle, &t0, &t1, &t2);
+  motor_state[STATE_LEFT].ctrl.angle =+ motor_state[STATE_LEFT].ctrl.speed;
+
+  angle = motor_state[STATE_LEFT].ctrl.angle;
+  sector = angle_to_sector(angle);
+  calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
@@ -126,8 +130,11 @@ void TIM1_UP_IRQHandler() {
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
-  sector = angle_to_sector(motor_state[STATE_RIGHT].ctrl.angle);
-  calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, motor_state[STATE_RIGHT].ctrl.angle, &t0, &t1, &t2);
+  motor_state[STATE_RIGHT].ctrl.angle =+ motor_state[STATE_RIGHT].ctrl.speed;
+
+  angle = motor_state[STATE_RIGHT].ctrl.angle;
+  sector = angle_to_sector(angle);
+  calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
