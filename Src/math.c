@@ -34,6 +34,17 @@ int16_t fx_mul(int16_t a, int16_t b) {
   return (int16_t)res;
 }
 
+// Divide two unsigned fixed points, a/b
+uint16_t fx_divu(uint16_t a, uint16_t b) {
+  uint32_t res = a << FIXED_SHIFT;
+  return res / b;
+}
+
+// Divide two signed fixed points, a/b
+int16_t fx_div(int16_t a, int16_t b) {
+  int32_t res = a * FIXED_ONE;
+  return res / b;
+}
 
 
 
