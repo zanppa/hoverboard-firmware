@@ -16,6 +16,11 @@
 #define RIGHT_MOTOR_BLDC		// BLDC for right motor
 //#define RIGHT_MOTOR_SVM			// SVM for right motor
 
+
+#define SVM_HALL_UPDATE	1		// Update reference position from HALL sensors or not
+//#undef SVM_HALL_UPDATE
+
+
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
 #define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
