@@ -306,6 +306,7 @@ void TIM3_IRQHandler(void)
   cfg.vars.aref2 = analog_meas.analog_ref_2;
   cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
   cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
+  cfg.vars.ref_scale = voltage_scale;
 
   control_tick++;
 

@@ -44,7 +44,8 @@
 	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) \
 	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) \
 	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
-	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      )
+	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      ) \
+	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"      )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
