@@ -293,11 +293,12 @@ void TIM3_IRQHandler(void)
   // Update config array
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
-  cfg.vars.speed_l = motor_state[STATE_LEFT].act.period;//speed_l;
-  cfg.vars.speed_r = motor_state[STATE_RIGHT].act.period; //speed_r;
+  cfg.vars.speed_l = motor_state[STATE_LEFT].act.period;//speed_l; // DEBUG
+  cfg.vars.speed_r = motor_state[STATE_RIGHT].act.period; //speed_r;  // DEBUG
 
 
   // Copy ADC values to cfg array
+  // TODO: Move to main?
   cfg.vars.vbat = analog_meas.v_battery;
   cfg.vars.vsw = analog_meas.v_switch;
   cfg.vars.temperature = analog_meas.temperature;

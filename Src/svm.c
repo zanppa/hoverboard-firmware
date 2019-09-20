@@ -19,13 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "config.h"
 #include "bldc.h"
 
-//#include "control.h" // Debug
 #include "math.h"
 #include "svm.h"
-
-// References for left and right motors
-//volatile svm_ref_t svm_left = {0, 0};
-//volatile svm_ref_t svm_right = {0, 0};
 
 extern volatile motor_state_t motor_state[2];
 
