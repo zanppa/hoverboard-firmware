@@ -74,13 +74,28 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   tz = (PWM_PERIOD - ta1 - ta2) / 2;
 
   // Minimum pulse limitations
-  if(tz < SVM_SHORT_ZPULSE) {
+/*  if(tz < SVM_SHORT_ZPULSE) {
     terr = SVM_SHORT_ZPULSE - tz;
     tz = SVM_SHORT_ZPULSE;
   }
 
   ta1 = CLAMP(ta1 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
   ta2 = CLAMP(ta2 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
+*/
+
+  // Dead time compensation
+  // Downcounting -> Update values for next upcounting part (000 -> 111)
+  if(TIM1->CR1 & TIM_CR1_DIR) {
+    if(tz > SVM_DEAD_TIME_COMP)
+      tz -= SVM_DEAD_TIME_COMP;
+
+    if(ta1 > SVM_DEAD_TIME_COMP)
+      ta1 -= SVM_DEAD_TIME_COMP;
+  } else {
+    // Upcounting -> update for downcounting part (111 -> 000)
+    if(tz > SVM_DEAD_TIME_COMP)
+      tz -= SVM_DEAD_TIME_COMP;
+  }
 
   *t0 = tz;
   *t1 = ta1;
@@ -109,7 +124,7 @@ void TIM1_UP_IRQHandler() {
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
 
   // DEBUG: LED on
-  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator
@@ -147,5 +162,5 @@ void TIM1_UP_IRQHandler() {
 #endif
 
   // Debug: LED off
-  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }

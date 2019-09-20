@@ -105,15 +105,15 @@ int main(void) {
     // And all variables most likely will change so copy them locally first
 
     float v_battery = analog_meas.v_battery;
-    v_battery *= ADC_BATTERY_VOLTS;
+    v_battery = (v_battery - ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
     //cfg.vars.v_battery = v_battery;
 
     float act_speed = motor_state[STATE_LEFT].act.period;
-    act_speed *= MOTOR_PERIOD_TO_CMS;
+    act_speed = MOTOR_PERIOD_TO_MS / act_speed;
     //cfg.vars.speed_l = act_speed;
 
     act_speed = motor_state[STATE_RIGHT].act.period;
-    act_speed *= MOTOR_PERIOD_TO_CMS;
+    act_speed = MOTOR_PERIOD_TO_MS / act_speed;
     //cfg.vars.speed_r = act_speed;
   }
 }

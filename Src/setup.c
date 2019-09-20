@@ -211,6 +211,7 @@ void MX_TIM_Init(void) {
   htim_right.Instance               = RIGHT_TIM;
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  //htim_right.Init.CounterMode       = TIM_COUNTERMODE_UP;
   htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;

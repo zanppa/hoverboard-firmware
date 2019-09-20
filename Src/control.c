@@ -25,8 +25,12 @@ extern volatile adc_buf_t analog_meas;
 // TODO: Move to setup.c and calculate there
 const uint16_t motor_nominal_counts = (3<<12);		// timer ticks/sector change at rated speed
 const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/1000);	// Control cycle runs at 1000 Hz
+const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
 volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
+const uint32_t adc_battery_to_pu = (FIXED_ONE / MOTOR_VOLTS) * (FIXED_ONE * ADC_BATTERY_VOLTS);
+const uint16_t adc_battery_filt = FIXED_ONE / 10;		// Low-pass filter gain in fixed point
+
 volatile motor_state_t motor_state[2] = {0};
 
 // Buzzer tone control
@@ -98,12 +102,22 @@ void initialize_control_state(void) {
 }
 
 
+// Controller internal variables, e.g. limited and ramped references
+static int16_t setpoint_l_limit = 0;
+static int16_t setpoint_r_limit = 0;
+static int16_t pwm_l_ramp = 0;
+static int16_t pwm_r_ramp = 0;
+static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
+
 //called 64000000/64000 = 1000 times per second
+// TODO: At 20 km/h HALL sector changes every 1 ms so this
+// is definitely too slow / called too seldom
 void TIM3_IRQHandler(void)
 {
   uint8_t sector_l, sector_r;
   uint8_t prev_sector_l, prev_sector_r;
   int16_t speed_l, speed_r;
+  uint16_t voltage_scale;
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
@@ -136,9 +150,9 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].ctrl.angle = angle;
     __enable_irq();
+    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
 
-    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
   } else {
@@ -164,9 +178,9 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].ctrl.angle = angle;
     __enable_irq();
+    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
 
-    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
   } else {
@@ -178,10 +192,22 @@ void TIM3_IRQHandler(void)
     }
   }
 
+
+  // Analog measurements (battery voltage, to be used in modulator)
+  analog_meas.v_battery += ADC_BATTERY_OFFSET;
+  battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
+  voltage_scale = ((battery_voltage_filt >> 4) * adc_battery_to_pu) >> FIXED_SHIFT;
+
+  // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
+  // So we scale all references by battery_voltage / nominal voltage
+  voltage_scale = fx_divu(FIXED_ONE, voltage_scale);
+
+
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
-  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+//  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+  motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
 // Old way
 //  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
 //  else motor_state[STATE_LEFT].ctrl.angle += 5;
@@ -190,7 +216,8 @@ void TIM3_IRQHandler(void)
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
-  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+//  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+  motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r; // DEBUG
 // Old way
 //  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
 //  else motor_state[STATE_RIGHT].ctrl.angle += 5;
@@ -198,28 +225,31 @@ void TIM3_IRQHandler(void)
 #endif
 
 
-
-
-
   // TODO: Move volatile(?) setpoints to local variables
 //#ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
-  cfg.vars.setpoint_l = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
+  setpoint_l_limit = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
-  pwm_diff = cfg.vars.setpoint_l - motor_state[STATE_LEFT].ctrl.amplitude;
+  pwm_diff = setpoint_l_limit - pwm_l_ramp;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
-  motor_state[STATE_LEFT].ctrl.amplitude += pwm_diff;
+  pwm_l_ramp += pwm_diff;
+
+  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
+  motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
 //#endif
 
 //#ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
-  cfg.vars.setpoint_r = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
+  setpoint_r_limit = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
-  pwm_diff = cfg.vars.setpoint_r - motor_state[STATE_RIGHT].ctrl.amplitude;
+  pwm_diff = setpoint_r_limit - pwm_r_ramp;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
-  motor_state[STATE_RIGHT].ctrl.amplitude += pwm_diff;
+  pwm_r_ramp += pwm_diff;
+
+  //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale);
+  motor_state[STATE_RIGHT].ctrl.amplitude = pwm_r_ramp;
 //#endif
 
 
