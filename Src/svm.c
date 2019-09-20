@@ -136,7 +136,6 @@ void TIM1_UP_IRQHandler() {
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
@@ -153,7 +152,6 @@ void TIM1_UP_IRQHandler() {
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
