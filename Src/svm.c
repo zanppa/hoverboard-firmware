@@ -206,8 +206,8 @@ void TIM1_UP_IRQHandler() {
 
 
 // Dead time compensation values
-dead_time_t dead_time_l = {0};
-dead_time_t dead_time_r = {0};
+volatile dead_time_t dead_time_l = {0};
+volatile dead_time_t dead_time_r = {0};
 
 // IRQ handlers for dead time compensation
 // Placed here even though the values could also be used

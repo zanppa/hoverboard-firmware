@@ -44,7 +44,11 @@
 	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) \
 	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) \
 	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
-	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      )
+	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      ) \
+	_ENTRY( dead_ruu       , int16_t    , _I16     , false     , "LU dead up"        ) \
+	_ENTRY( dead_rud       , int16_t    , _I16     , false     , "LU dead down"      ) \
+	_ENTRY( dead_rvu       , int16_t    , _I16     , false     , "LV dead up"        ) \
+	_ENTRY( dead_rvd       , int16_t    , _I16     , false     , "LV dead down"      )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

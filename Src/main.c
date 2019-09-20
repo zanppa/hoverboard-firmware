@@ -28,6 +28,7 @@
 #include "control.h"
 #include "eeprom.h"
 #include "adc.h"
+#include "svm.h"
 
 void SystemClock_Config(void);
 
@@ -36,6 +37,10 @@ extern ADC_HandleTypeDef hadc1;
 
 extern volatile motor_state_t motor_state[2];
 extern volatile adc_buf_t analog_meas;
+
+//extern volatile dead_time_t dead_time_l;
+extern volatile dead_time_t dead_time_r;
+
 
 int main(void) {
 
@@ -115,6 +120,12 @@ int main(void) {
     act_speed = motor_state[STATE_RIGHT].act.period;
     act_speed = MOTOR_PERIOD_TO_MS / act_speed;
     //cfg.vars.speed_r = act_speed;
+
+    // DEBUG: Dead time values to config bus
+    cfg.vars.dead_ruu = dead_time_r.u_up;
+    cfg.vars.dead_rud = dead_time_r.u_down;
+    cfg.vars.dead_rvu = dead_time_r.v_up;
+    cfg.vars.dead_rvd = dead_time_r.v_down;
   }
 }
 
