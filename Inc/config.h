@@ -55,7 +55,7 @@
 
 // ADC calibration values
 // ADC reading to volts
-#define ADC_BATTERY_VOLTS   0.2444	// Approximately: (3.3 V / 4096) * (15k+15k+1k) / 1k, but calibrated by hand
+#define ADC_BATTERY_VOLTS   0.02444	// Approximately: (3.3 V / 4096) * (15k+15k+1k) / 1k, but calibrated by hand
 #define ADC_BATTERY_OFFSET	87		// ADC offset when reading zero volts, in ADC units
 
 //do not change, deducted from other settings

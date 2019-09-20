@@ -196,7 +196,7 @@ void TIM3_IRQHandler(void)
   // Analog measurements (battery voltage, to be used in modulator)
   analog_meas.v_battery += ADC_BATTERY_OFFSET;
   battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
-  voltage_scale = ((battery_voltage_filt >> 4) * adc_battery_to_pu) >> FIXED_SHIFT;
+  voltage_scale = fx_mulu((battery_voltage_filt >> 4), adc_battery_to_pu);
 
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
   // So we scale all references by battery_voltage / nominal voltage
