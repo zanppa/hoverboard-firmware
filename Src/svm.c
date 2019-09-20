@@ -85,6 +85,7 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
   // Dead time compensation
   // Downcounting -> Update values for next upcounting part (000 -> 111)
+/*
   if(TIM1->CR1 & TIM_CR1_DIR) {
     if(tz > SVM_DEAD_TIME_COMP)
       tz -= SVM_DEAD_TIME_COMP;
@@ -96,6 +97,7 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
     if(tz > SVM_DEAD_TIME_COMP)
       tz -= SVM_DEAD_TIME_COMP;
   }
+*/
 
   *t0 = tz;
   *t1 = ta1;
