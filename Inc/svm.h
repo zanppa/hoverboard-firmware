@@ -20,3 +20,13 @@ typedef struct {
   uint16_t modulation_index;
   uint16_t angle;
 } svm_ref_t;
+
+// Dead time structure
+typedef struct {
+  int16_t u_up;		// Going from low to high (up)
+  int16_t u_down;	// Going from high to low (down)
+  int16_t v_up;
+  int16_t v_down;
+  int16_t w_up;
+  int16_t w_down;
+} dead_time_t;

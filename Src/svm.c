@@ -29,6 +29,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern volatile motor_state_t motor_state[2];
 
+// Shadow variables for counter values for dead time compensation
+// Order is u_up, v_up, w_up, u_down, v_down, w_down
+static uint16_t counter_l[6] = {0};
+static uint16_t counter_r[6] = {0};
+
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
 // 000 -> Active 1 -> Active 2 -> 111 -> Active 2 -> Active 1 -> 000
@@ -44,6 +49,15 @@ static const uint8_t svm_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
 };
 
+// Map to store the counter values
+static const uint8_t counter_pattern[6][3] = {
+  {1, 0, 2},
+  {1, 2, 0},
+  {2, 1, 0},
+  {2, 0, 1},
+  {0, 2, 1},
+  {0, 1, 2}
+};
 
 // Calculate the timer values given the desired voltage vector
 // length (modulation index) and angle in fixed point, return
@@ -119,6 +133,8 @@ void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
   uint16_t angle;
   uint8_t sector;
+  uint16_t *counter_l_shadow = NULL;
+  uint16_t *counter_r_shadow = NULL;
 
   // Clear the update interrupt flag
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
@@ -126,7 +142,19 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
+  if(TIM1->CR1 & TIM_CR1_DIR) {
+    // Counting down currently, references go to up counter shadow
+    counter_l_shadow = &counter_l[0];
+    counter_r_shadow = &counter_r[0];
+  } else {
+    // Counting up currently, values go to down counter shadow
+    counter_l_shadow = &counter_l[3];
+    counter_r_shadow = &counter_r[3];
+  }
+
+
 #ifdef LEFT_MOTOR_SVM
+
   // Get the vector times from the modulator
   motor_state[STATE_LEFT].ctrl.angle += motor_state[STATE_LEFT].ctrl.speed;
 
@@ -137,11 +165,17 @@ void TIM1_UP_IRQHandler() {
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
-  if(sector & 0x01) // Every odd sector uses "right" vector first
+  counter_l_shadow[counter_pattern[sector][0]] = t0;
+  if(sector & 0x01) { // Every odd sector uses "right" vector first
     *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-  else // Even sectors uses "left" vector first
+    counter_l_shadow[counter_pattern[sector][1]] = t0 + t2;
+  } else { // Even sectors uses "left" vector first
     *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+    counter_l_shadow[counter_pattern[sector][1]] = t0 + t1;
+  }
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+    counter_l_shadow[counter_pattern[sector][2]] = t0 + t2 + t3;
+
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
@@ -154,13 +188,94 @@ void TIM1_UP_IRQHandler() {
   // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
   // Since the timer compare is wrong way
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
-  if(sector & 0x01) // Every odd sector uses "right" vector first
+  counter_r_shadow[counter_pattern[sector][0]] = t0;
+  if(sector & 0x01) { // Every odd sector uses "right" vector first
     *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-  else // Even sectors uses "left" vector first
+    counter_r_shadow[counter_pattern[sector][1]] = t0 + t2;
+  } else { // Even sectors uses "left" vector first
     *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+    counter_r_shadow[counter_pattern[sector][1]] = t0 + t1;
+  }
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+  counter_r_shadow[counter_pattern[sector][2]] = t0 + t1 + t2;
 #endif
 
   // Debug: LED off
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+}
+
+
+// Dead time compensation values
+dead_time_t dead_time_l = {0};
+dead_time_t dead_time_r = {0};
+
+// IRQ handlers for dead time compensation
+// Placed here even though the values could also be used
+// with the basic BLDC modulation
+void EXTI4_IRQHandler(void) {
+  // Left U phase
+  // TIM8 CCR1
+  int16_t dead;
+  uint16_t counter = LEFT_TIM->CNT;
+
+  if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
+    // Counting downwards, going from high to low
+    dead = counter - counter_l[3];
+    dead_time_l.u_down = dead;
+  } else {
+    // Upwards, going from low to high
+    dead = counter - counter_l[0];
+    dead_time_l.u_up = dead;
+  }
+}
+
+void EXTI9_5_IRQHandler(void) {
+  // Left V phase
+  // TIM8 CCR2
+  int16_t dead;
+  uint16_t counter = LEFT_TIM->CNT;
+
+  if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
+    // Counting downwards, going from high to low
+    dead = counter - counter_l[4];
+    dead_time_l.v_down = dead;
+  } else {
+    // Upwards, going from low to high
+    dead = counter - counter_l[1];
+    dead_time_l.v_up = dead;
+  }
+}
+
+void EXTI0_IRQHandler(void) {
+  // Right U phase
+  // TIM1 CCR1
+  int16_t dead;
+  uint16_t counter = RIGHT_TIM->CNT;
+
+  if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
+    // Counting downwards, going from high to low
+    dead = counter - counter_r[3];
+    dead_time_r.u_down = dead;
+  } else {
+    // Upwards, going from low to high
+    dead = counter - counter_r[0];
+    dead_time_r.u_up = dead;
+  }
+}
+
+void EXTI3_IRQHandler(void) {
+  // Right V phase
+  // TIM1 CCR2
+  int16_t dead;
+  uint16_t counter = RIGHT_TIM->CNT;
+
+  if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
+    // Counting downwards, going from high to low
+    dead = counter - counter_r[4];
+    dead_time_r.v_down = dead;
+  } else {
+    // Upwards, going from low to high
+    dead = counter - counter_r[1];
+    dead_time_r.v_up = dead;
+  }
 }
