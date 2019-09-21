@@ -103,21 +103,6 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   ta2 = CLAMP(ta2 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
 */
 
-  // Dead time compensation
-  // Downcounting -> Update values for next upcounting part (000 -> 111)
-/*
-  if(TIM1->CR1 & TIM_CR1_DIR) {
-    if(tz > SVM_DEAD_TIME_COMP)
-      tz -= SVM_DEAD_TIME_COMP;
-
-    if(ta1 > SVM_DEAD_TIME_COMP)
-      ta1 -= SVM_DEAD_TIME_COMP;
-  } else {
-    // Upcounting -> update for downcounting part (111 -> 000)
-    if(tz > SVM_DEAD_TIME_COMP)
-      tz -= SVM_DEAD_TIME_COMP;
-  }
-*/
   *t0 = tz;
   *t1 = ta1;
   *t2 = ta2;
@@ -136,6 +121,7 @@ static inline uint8_t angle_to_sector(uint16_t angle) {
 }
 
 // Timer 1 update handles space vector modulation for both motors
+// 21.9.2019 Takes 4.2 us with one motor / call
 void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
   uint16_t tact;
@@ -143,21 +129,27 @@ void TIM1_UP_IRQHandler() {
   uint8_t sector;
   uint16_t *counter_l_shadow = NULL;
   uint16_t *counter_r_shadow = NULL;
+  volatile int16_t *dead_l = NULL;
+  volatile int16_t *dead_r = NULL;
 
   // Clear the update interrupt flag
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
 
   // DEBUG: LED on
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   if(TIM1->CR1 & TIM_CR1_DIR) {
     // Counting down currently, references go to up counter shadow
     counter_l_shadow = &counter_l[0];
     counter_r_shadow = &counter_r[0];
+    dead_l = &dead_time_l[0];
+    dead_r = &dead_time_r[0];
   } else {
     // Counting up currently, values go to down counter shadow
     counter_l_shadow = &counter_l[3];
     counter_r_shadow = &counter_r[3];
+    dead_l = &dead_time_l[3];
+    dead_r = &dead_time_r[3];
   }
 
 
@@ -171,18 +163,21 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
+  if(tact > dead_l[counter_pattern[sector][0]]) tact -= dead_l[counter_pattern[sector][0]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_l_shadow[counter_pattern[sector][0]] = tact;
 
   if(sector & 0x01) { // Every odd sector uses "right" vector first
-    tact += t2;
+    tact = t0 + t2;
   } else {// Even sectors uses "left" vector first
-    tact += t1;
+    tact = t0 + t1;
   }
+  if(tact > dead_l[counter_pattern[sector][1]]) tact -= dead_l[counter_pattern[sector][1]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_l_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
+  if(tact > dead_l[counter_pattern[sector][2]]) tact -= dead_l[counter_pattern[sector][2]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_l_shadow[counter_pattern[sector][2]] = tact;
 
@@ -196,24 +191,27 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
+  if(tact > dead_r[counter_pattern[sector][0]]) tact -= dead_r[counter_pattern[sector][0]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_r_shadow[counter_pattern[sector][0]] = tact;
 
   if(sector & 0x01) { // Every odd sector uses "right" vector first
-    tact += t2;
+    tact = t0 + t2;
   } else { // Even sectors uses "left" vector first
-    tact += t1;
+    tact = t0 + t1;
   }
+  if(tact > dead_r[counter_pattern[sector][1]]) tact -= dead_r[counter_pattern[sector][1]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_r_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
+  if(tact > dead_r[counter_pattern[sector][2]]) tact -= dead_r[counter_pattern[sector][2]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_r_shadow[counter_pattern[sector][2]] = tact;
 #endif
 
   // Debug: LED off
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 
@@ -246,6 +244,8 @@ void EXTI9_5_IRQHandler(void) {
   // Left V phase
   // TIM8 CCR2
 
+  // Debug: LED ON
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
 
   int16_t dead;
@@ -262,12 +262,17 @@ void EXTI9_5_IRQHandler(void) {
     dead = counter - counter_l[1];
     dead_time_l[1] = dead;
   }
+
+  // Debug: LED OFF
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 void EXTI0_IRQHandler(void) {
   // Right U phase
   // TIM1 CCR1
 
+  // Debug: LED ON
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
 
   int16_t dead;
@@ -284,6 +289,8 @@ void EXTI0_IRQHandler(void) {
     dead = counter - counter_r[0];
     dead_time_r[0] = dead;
   }
+  // Debug: LED OFF
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 void EXTI3_IRQHandler(void) {
