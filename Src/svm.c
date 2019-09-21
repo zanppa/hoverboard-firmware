@@ -99,6 +99,7 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
   // Dead time compensation
   // Downcounting -> Update values for next upcounting part (000 -> 111)
+/*
   if(TIM1->CR1 & TIM_CR1_DIR) {
     if(tz > SVM_DEAD_TIME_COMP)
       tz -= SVM_DEAD_TIME_COMP;
@@ -110,7 +111,7 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
     if(tz > SVM_DEAD_TIME_COMP)
       tz -= SVM_DEAD_TIME_COMP;
   }
-
+*/
   *t0 = tz;
   *t1 = ta1;
   *t2 = ta2;
@@ -215,6 +216,9 @@ volatile dead_time_t dead_time_r = {0};
 void EXTI4_IRQHandler(void) {
   // Left U phase
   // TIM8 CCR1
+
+  __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
+
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
@@ -232,6 +236,9 @@ void EXTI4_IRQHandler(void) {
 void EXTI9_5_IRQHandler(void) {
   // Left V phase
   // TIM8 CCR2
+
+  __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
+
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
@@ -249,6 +256,9 @@ void EXTI9_5_IRQHandler(void) {
 void EXTI0_IRQHandler(void) {
   // Right U phase
   // TIM1 CCR1
+
+  __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
+
   int16_t dead;
   uint16_t counter = RIGHT_TIM->CNT;
 
@@ -266,6 +276,9 @@ void EXTI0_IRQHandler(void) {
 void EXTI3_IRQHandler(void) {
   // Right V phase
   // TIM1 CCR2
+
+  __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
+
   int16_t dead;
   uint16_t counter = RIGHT_TIM->CNT;
 

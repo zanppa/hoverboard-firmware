@@ -96,7 +96,6 @@ void MX_GPIO_Init(void) {
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
 
-
   // Output push-pull pins
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 
