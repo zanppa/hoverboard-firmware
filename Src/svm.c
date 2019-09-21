@@ -132,6 +132,7 @@ static inline uint8_t angle_to_sector(uint16_t angle) {
 // Timer 1 update handles space vector modulation for both motors
 void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
+  uint16_t tact;
   uint16_t angle;
   uint8_t sector;
   uint16_t *counter_l_shadow = NULL;
@@ -163,19 +164,21 @@ void TIM1_UP_IRQHandler() {
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
-  // Since the timer compare is wrong way
-  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
-  counter_l_shadow[counter_pattern[sector][0]] = t0;
+  tact = t0;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
+  counter_l_shadow[counter_pattern[sector][0]] = tact;
+
   if(sector & 0x01) { // Every odd sector uses "right" vector first
-    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-    counter_l_shadow[counter_pattern[sector][1]] = t0 + t2;
-  } else { // Even sectors uses "left" vector first
-    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-    counter_l_shadow[counter_pattern[sector][1]] = t0 + t1;
+    tact += t2;
+  } else {// Even sectors uses "left" vector first
+    tact += t1;
   }
-  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
-    counter_l_shadow[counter_pattern[sector][2]] = t0 + t2 + t3;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
+  counter_l_shadow[counter_pattern[sector][1]] = tact;
+
+  tact = t0 + t1 + t2;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
+  counter_l_shadow[counter_pattern[sector][2]] = tact;
 
 #endif
 
@@ -186,19 +189,21 @@ void TIM1_UP_IRQHandler() {
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
-  // Since the timer compare is wrong way
-  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
-  counter_r_shadow[counter_pattern[sector][0]] = t0;
+  tact = t0;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
+  counter_r_shadow[counter_pattern[sector][0]] = tact;
+
   if(sector & 0x01) { // Every odd sector uses "right" vector first
-    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-    counter_r_shadow[counter_pattern[sector][1]] = t0 + t2;
+    tact += t2;
   } else { // Even sectors uses "left" vector first
-    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-    counter_r_shadow[counter_pattern[sector][1]] = t0 + t1;
+    tact += t1;
   }
-  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
-  counter_r_shadow[counter_pattern[sector][2]] = t0 + t1 + t2;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
+  counter_r_shadow[counter_pattern[sector][1]] = tact;
+
+  tact = t0 + t1 + t2;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
+  counter_r_shadow[counter_pattern[sector][2]] = tact;
 #endif
 
   // Debug: LED off
