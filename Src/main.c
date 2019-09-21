@@ -38,8 +38,8 @@ extern ADC_HandleTypeDef hadc1;
 extern volatile motor_state_t motor_state[2];
 extern volatile adc_buf_t analog_meas;
 
-//extern volatile dead_time_t dead_time_l;
-extern volatile dead_time_t dead_time_r;
+//extern volatile int16_t dead_time_l[6];
+extern volatile int16_t dead_time_r[6];
 
 
 int main(void) {
@@ -122,10 +122,10 @@ int main(void) {
     //cfg.vars.speed_r = act_speed;
 
     // DEBUG: Dead time values to config bus
-    cfg.vars.dead_ruu = dead_time_r.u_up;
-    cfg.vars.dead_rud = dead_time_r.u_down;
-    cfg.vars.dead_rvu = dead_time_r.v_up;
-    cfg.vars.dead_rvd = dead_time_r.v_down;
+    cfg.vars.dead_ruu = dead_time_r[0];
+    cfg.vars.dead_rud = dead_time_r[3];
+    cfg.vars.dead_rvu = dead_time_r[1];
+    cfg.vars.dead_rvd = dead_time_r[4];
   }
 }
 

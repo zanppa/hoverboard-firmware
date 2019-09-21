@@ -34,6 +34,12 @@ extern volatile motor_state_t motor_state[2];
 static uint16_t counter_l[6] = {0};
 static uint16_t counter_r[6] = {0};
 
+// Dead time compensation values
+// Order is u_up, v_up, w_up, u_down, v_down, w_down
+volatile int16_t dead_time_l[6] = {0};
+volatile int16_t dead_time_r[6] = {0};
+
+
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
 // 000 -> Active 1 -> Active 2 -> 111 -> Active 2 -> Active 1 -> 000
@@ -211,10 +217,6 @@ void TIM1_UP_IRQHandler() {
 }
 
 
-// Dead time compensation values
-volatile dead_time_t dead_time_l = {0};
-volatile dead_time_t dead_time_r = {0};
-
 // IRQ handlers for dead time compensation
 // Placed here even though the values could also be used
 // with the basic BLDC modulation
@@ -232,11 +234,11 @@ void EXTI4_IRQHandler(void) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_l[3];
-    dead_time_l.u_down = dead;
+    dead_time_l[3] = dead;
   } else {
     // Upwards, going from low to high
     dead = counter - counter_l[0];
-    dead_time_l.u_up = dead;
+    dead_time_l[0] = dead;
   }
 }
 
@@ -254,11 +256,11 @@ void EXTI9_5_IRQHandler(void) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_l[4];
-    dead_time_l.v_down = dead;
+    dead_time_l[4] = dead;
   } else {
     // Upwards, going from low to high
     dead = counter - counter_l[1];
-    dead_time_l.v_up = dead;
+    dead_time_l[1] = dead;
   }
 }
 
@@ -276,11 +278,11 @@ void EXTI0_IRQHandler(void) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_r[3];
-    dead_time_r.u_down = dead;
+    dead_time_r[3] = dead;
   } else {
     // Upwards, going from low to high
     dead = counter - counter_r[0];
-    dead_time_r.u_up = dead;
+    dead_time_r[0] = dead;
   }
 }
 
@@ -298,10 +300,10 @@ void EXTI3_IRQHandler(void) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_r[4];
-    dead_time_r.v_down = dead;
+    dead_time_r[4] = dead;
   } else {
     // Upwards, going from low to high
     dead = counter - counter_r[1];
-    dead_time_r.v_up = dead;
+    dead_time_r[1] = dead;
   }
 }
