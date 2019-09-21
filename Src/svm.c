@@ -227,8 +227,8 @@ void EXTI4_IRQHandler(void) {
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
-  //if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
-  if(!HAL_GPIO_ReadPin(LEFT_U_VOLT_PORT, LEFT_U_VOLT_PIN)) {
+  if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
+  //if(!HAL_GPIO_ReadPin(LEFT_U_VOLT_PORT, LEFT_U_VOLT_PIN)) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_l[3];
@@ -251,8 +251,8 @@ void EXTI9_5_IRQHandler(void) {
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
-  //if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
-  if(!HAL_GPIO_ReadPin(LEFT_V_VOLT_PORT, LEFT_V_VOLT_PIN)) {
+  if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
+  //if(!HAL_GPIO_ReadPin(LEFT_V_VOLT_PORT, LEFT_V_VOLT_PIN)) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_l[4];
@@ -278,8 +278,8 @@ void EXTI0_IRQHandler(void) {
   int16_t dead;
   uint16_t counter = RIGHT_TIM->CNT;
 
-  //if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
-  if(!HAL_GPIO_ReadPin(RIGHT_U_VOLT_PORT, RIGHT_U_VOLT_PIN)) {
+  if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
+  //if(!HAL_GPIO_ReadPin(RIGHT_U_VOLT_PORT, RIGHT_U_VOLT_PIN)) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_r[3];
@@ -302,8 +302,8 @@ void EXTI3_IRQHandler(void) {
   int16_t dead;
   uint16_t counter = RIGHT_TIM->CNT;
 
-  //if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
-  if(!HAL_GPIO_ReadPin(RIGHT_V_VOLT_PORT, RIGHT_V_VOLT_PIN)) {
+  if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
+  //if(!HAL_GPIO_ReadPin(RIGHT_V_VOLT_PORT, RIGHT_V_VOLT_PIN)) {
     // Counting downwards, going from high to low
     // Or pin is low after trigger
     dead = counter - counter_r[4];
