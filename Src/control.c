@@ -28,7 +28,7 @@ const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/1000);	// Contro
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
 volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
-const uint32_t adc_battery_to_pu = (FIXED_ONE / MOTOR_VOLTS) * (FIXED_ONE * ADC_BATTERY_VOLTS);
+const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt = FIXED_ONE / 10;		// Low-pass filter gain in fixed point
 
 volatile motor_state_t motor_state[2] = {0};
