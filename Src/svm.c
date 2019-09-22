@@ -163,7 +163,7 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
-  if(tact > dead_l[counter_pattern[sector][0]]) tact -= dead_l[counter_pattern[sector][0]];
+  //if(tact > dead_l[counter_pattern[sector][0]]) tact -= dead_l[counter_pattern[sector][0]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_l_shadow[counter_pattern[sector][0]] = tact;
 
@@ -172,12 +172,12 @@ void TIM1_UP_IRQHandler() {
   } else {// Even sectors uses "left" vector first
     tact = t0 + t1;
   }
-  if(tact > dead_l[counter_pattern[sector][1]]) tact -= dead_l[counter_pattern[sector][1]];
+  //if(tact > dead_l[counter_pattern[sector][1]]) tact -= dead_l[counter_pattern[sector][1]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_l_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
-  if(tact > dead_l[counter_pattern[sector][2]]) tact -= dead_l[counter_pattern[sector][2]];
+  //if(tact > dead_l[counter_pattern[sector][2]]) tact -= dead_l[counter_pattern[sector][2]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_l_shadow[counter_pattern[sector][2]] = tact;
 
@@ -191,7 +191,7 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
-  if(tact > dead_r[counter_pattern[sector][0]]) tact -= dead_r[counter_pattern[sector][0]];
+  //if(tact > dead_r[counter_pattern[sector][0]]) tact -= dead_r[counter_pattern[sector][0]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_r_shadow[counter_pattern[sector][0]] = tact;
 
@@ -200,12 +200,12 @@ void TIM1_UP_IRQHandler() {
   } else { // Even sectors uses "left" vector first
     tact = t0 + t1;
   }
-  if(tact > dead_r[counter_pattern[sector][1]]) tact -= dead_r[counter_pattern[sector][1]];
+  //if(tact > dead_r[counter_pattern[sector][1]]) tact -= dead_r[counter_pattern[sector][1]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_r_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
-  if(tact > dead_r[counter_pattern[sector][2]]) tact -= dead_r[counter_pattern[sector][2]];
+  //if(tact > dead_r[counter_pattern[sector][2]]) tact -= dead_r[counter_pattern[sector][2]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_r_shadow[counter_pattern[sector][2]] = tact;
 #endif
@@ -223,7 +223,7 @@ void EXTI4_IRQHandler(void) {
   // TIM8 CCR1
 
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
-
+#if 0
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
@@ -238,6 +238,7 @@ void EXTI4_IRQHandler(void) {
     dead = counter - counter_l[0];
     dead_time_l[0] = dead;
   }
+#endif
 }
 
 void EXTI9_5_IRQHandler(void) {
@@ -247,7 +248,7 @@ void EXTI9_5_IRQHandler(void) {
   // Debug: LED ON
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
-
+#if 0
   int16_t dead;
   uint16_t counter = LEFT_TIM->CNT;
 
@@ -262,22 +263,24 @@ void EXTI9_5_IRQHandler(void) {
     dead = counter - counter_l[1];
     dead_time_l[1] = dead;
   }
-
+#endif
   // Debug: LED OFF
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
+
+volatile uint16_t counter_ru = 0;
 
 void EXTI0_IRQHandler(void) {
   // Right U phase
   // TIM1 CCR1
 
   // Debug: LED ON
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
 
   int16_t dead;
-  uint16_t counter = RIGHT_TIM->CNT;
-
+  uint16_t counter_ru = RIGHT_TIM->CNT;
+#if 0
   if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(RIGHT_U_VOLT_PORT, RIGHT_U_VOLT_PIN)) {
     // Counting downwards, going from high to low
@@ -289,19 +292,26 @@ void EXTI0_IRQHandler(void) {
     dead = counter - counter_r[0];
     dead_time_r[0] = dead;
   }
+#endif
   // Debug: LED OFF
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
+volatile uint16_t counter_rv = 0;
+
+// 22.9.2019 This takes about 700 ns with the complete calculation
+// With just the storage this takes about 320 ns
 void EXTI3_IRQHandler(void) {
   // Right V phase
   // TIM1 CCR2
 
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
 
   int16_t dead;
-  uint16_t counter = RIGHT_TIM->CNT;
+  uint16_t counter_rv = RIGHT_TIM->CNT;
 
+#if 0
   if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(RIGHT_V_VOLT_PORT, RIGHT_V_VOLT_PIN)) {
     // Counting downwards, going from high to low
@@ -313,4 +323,6 @@ void EXTI3_IRQHandler(void) {
     dead = counter - counter_r[1];
     dead_time_r[1] = dead;
   }
+#endif
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
