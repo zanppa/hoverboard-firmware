@@ -39,6 +39,12 @@ static uint16_t counter_r[6] = {0};
 volatile int16_t dead_time_l[6] = {0};
 volatile int16_t dead_time_r[6] = {0};
 
+// Commutation instants from external interrupts
+static volatile uint16_t commutation_lu = 0;
+static volatile uint16_t commutation_lv = 0;
+static volatile uint16_t commutation_ru = 0;
+static volatile uint16_t commutation_rv = 0;
+
 
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
@@ -129,11 +135,23 @@ void TIM1_UP_IRQHandler() {
   uint8_t sector;
   uint16_t *counter_l_shadow = NULL;
   uint16_t *counter_r_shadow = NULL;
-  volatile int16_t *dead_l = NULL;
-  volatile int16_t *dead_r = NULL;
+  //volatile int16_t *dead_l = NULL;
+  //volatile int16_t *dead_r = NULL;
 
   // Clear the update interrupt flag
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
+
+  // Store the last commuation instants locally
+  uint16_t comm_lu = commutation_lu;
+  uint16_t comm_lv = commutation_lv;
+  uint16_t comm_ru = commutation_ru;
+  uint16_t comm_rv = commutation_rv;
+
+  // Zero the storage registers
+  commutation_lu = 0;
+  commutation_lv = 0;
+  commutation_ru = 0;
+  commutation_rv = 0;
 
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
@@ -142,14 +160,26 @@ void TIM1_UP_IRQHandler() {
     // Counting down currently, references go to up counter shadow
     counter_l_shadow = &counter_l[0];
     counter_r_shadow = &counter_r[0];
-    dead_l = &dead_time_l[0];
-    dead_r = &dead_time_r[0];
+    //dead_l = &dead_time_l[0];
+    //dead_r = &dead_time_r[0];
+
+    // Calculate last commutation delays, values are from up counting => low to high
+    dead_time_l[0] = comm_lu - counter_l[0];
+    dead_time_l[1] = comm_lv - counter_l[1];
+    dead_time_r[0] = comm_ru - counter_r[0];
+    dead_time_r[1] = comm_rv - counter_r[1];
   } else {
     // Counting up currently, values go to down counter shadow
     counter_l_shadow = &counter_l[3];
     counter_r_shadow = &counter_r[3];
-    dead_l = &dead_time_l[3];
-    dead_r = &dead_time_r[3];
+    //dead_l = &dead_time_l[3];
+    //dead_r = &dead_time_r[3];
+
+    // Calculate last commutation delays, values are from down counting => high to low
+    dead_time_l[3] = comm_lu - counter_l[3];
+    dead_time_l[4] = comm_lv - counter_l[4];
+    dead_time_r[3] = comm_ru - counter_r[3];
+    dead_time_r[4] = comm_rv - counter_r[4];
   }
 
 
@@ -223,9 +253,10 @@ void EXTI4_IRQHandler(void) {
   // TIM8 CCR1
 
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
+  commutation_lu = LEFT_TIM->CNT;
+
 #if 0
   int16_t dead;
-  uint16_t counter = LEFT_TIM->CNT;
 
   if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(LEFT_U_VOLT_PORT, LEFT_U_VOLT_PIN)) {
@@ -248,9 +279,11 @@ void EXTI9_5_IRQHandler(void) {
   // Debug: LED ON
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
+
+  commutation_lv = LEFT_TIM->CNT;
+
 #if 0
   int16_t dead;
-  uint16_t counter = LEFT_TIM->CNT;
 
   if(LEFT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(LEFT_V_VOLT_PORT, LEFT_V_VOLT_PIN)) {
@@ -268,7 +301,6 @@ void EXTI9_5_IRQHandler(void) {
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
-volatile uint16_t counter_ru = 0;
 
 void EXTI0_IRQHandler(void) {
   // Right U phase
@@ -278,9 +310,11 @@ void EXTI0_IRQHandler(void) {
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
 
-  int16_t dead;
-  uint16_t counter_ru = RIGHT_TIM->CNT;
+  commutation_ru = RIGHT_TIM->CNT;
+
 #if 0
+  int16_t dead;
+
   if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(RIGHT_U_VOLT_PORT, RIGHT_U_VOLT_PIN)) {
     // Counting downwards, going from high to low
@@ -297,7 +331,6 @@ void EXTI0_IRQHandler(void) {
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
-volatile uint16_t counter_rv = 0;
 
 // 22.9.2019 This takes about 700 ns with the complete calculation
 // With just the storage this takes about 320 ns
@@ -308,10 +341,11 @@ void EXTI3_IRQHandler(void) {
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
 
-  int16_t dead;
-  uint16_t counter_rv = RIGHT_TIM->CNT;
+  commutation_rv = RIGHT_TIM->CNT;
 
 #if 0
+  int16_t dead;
+
   if(RIGHT_TIM->CR1 & TIM_CR1_DIR) {
   //if(!HAL_GPIO_ReadPin(RIGHT_V_VOLT_PORT, RIGHT_V_VOLT_PIN)) {
     // Counting downwards, going from high to low
