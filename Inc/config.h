@@ -10,8 +10,8 @@
 #define MOTOR_PERIOD_TO_CMS		0.007854	// Motor sector change period in ms to cm/s speed value
 
 // What control method to use for which motor
-//#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
-#define LEFT_MOTOR_SVM			// Use SVM for left motor
+#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+//#define LEFT_MOTOR_SVM			// Use SVM for left motor
 
 #define RIGHT_MOTOR_BLDC		// BLDC for right motor
 //#define RIGHT_MOTOR_SVM			// SVM for right motor
