@@ -75,25 +75,25 @@ void MX_GPIO_Init(void) {
   // for dead time measurement
   GPIO_InitStruct.Mode  = GPIO_MODE_IT_RISING_FALLING;
 
-  GPIO_InitStruct.Pin = LEFT_U_VOLT_PIN;	// PC4
-  HAL_GPIO_Init(LEFT_U_VOLT_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = RIGHT_U_VOLT_PIN;	// PC4 (V: Blue cable, right motor)
+  HAL_GPIO_Init(RIGHT_U_VOLT_PORT, &GPIO_InitStruct);
   HAL_NVIC_SetPriority(EXTI4_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
-  GPIO_InitStruct.Pin = LEFT_V_VOLT_PIN;	// PC5
-  HAL_GPIO_Init(LEFT_V_VOLT_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = RIGHT_V_VOLT_PIN;	// PC5 (W: Yellow cable, right motor)
+  HAL_GPIO_Init(RIGHT_V_VOLT_PORT, &GPIO_InitStruct);
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 3, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  GPIO_InitStruct.Pin = RIGHT_U_VOLT_PIN;	// PA0
-  HAL_GPIO_Init(RIGHT_U_VOLT_PORT, &GPIO_InitStruct);
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 3, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+  GPIO_InitStruct.Pin = LEFT_U_VOLT_PIN;	// PA0
+  HAL_GPIO_Init(LEFT_U_VOLT_PORT, &GPIO_InitStruct);
+  //HAL_NVIC_SetPriority(EXTI0_IRQn, 3, 0);
+  //HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  GPIO_InitStruct.Pin = RIGHT_V_VOLT_PIN;	// PC3
-  HAL_GPIO_Init(RIGHT_V_VOLT_PORT, &GPIO_InitStruct);
-  HAL_NVIC_SetPriority(EXTI3_IRQn, 3, 0);
-  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+  GPIO_InitStruct.Pin = LEFT_V_VOLT_PIN;	// PC3
+  HAL_GPIO_Init(LEFT_V_VOLT_PORT, &GPIO_InitStruct);
+  //HAL_NVIC_SetPriority(EXTI3_IRQn, 3, 0);
+  //HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
 
   // Output push-pull pins

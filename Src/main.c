@@ -122,8 +122,8 @@ int main(void) {
     //cfg.vars.speed_r = act_speed;
 
     // DEBUG: Dead time values to config bus
-    cfg.vars.dead_ruu = dead_time_r[0];
-    cfg.vars.dead_rud = dead_time_r[3];
+    cfg.vars.dead_rwu = dead_time_r[2];
+    cfg.vars.dead_rwd = dead_time_r[5];
     cfg.vars.dead_rvu = dead_time_r[1];
     cfg.vars.dead_rvd = dead_time_r[4];
   }

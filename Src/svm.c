@@ -42,7 +42,7 @@ volatile int16_t dead_time_r[6] = {0};
 // Commutation instants from external interrupts
 static volatile uint16_t commutation_lu = 0;
 static volatile uint16_t commutation_lv = 0;
-static volatile uint16_t commutation_ru = 0;
+static volatile uint16_t commutation_rw = 0;
 static volatile uint16_t commutation_rv = 0;
 
 
@@ -135,8 +135,8 @@ void TIM1_UP_IRQHandler() {
   uint8_t sector;
   uint16_t *counter_l_shadow = NULL;
   uint16_t *counter_r_shadow = NULL;
-  //volatile int16_t *dead_l = NULL;
-  //volatile int16_t *dead_r = NULL;
+  volatile int16_t *dead_l = NULL;
+  volatile int16_t *dead_r = NULL;
 
   // Clear the update interrupt flag
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
@@ -144,14 +144,14 @@ void TIM1_UP_IRQHandler() {
   // Store the last commuation instants locally
   uint16_t comm_lu = commutation_lu;
   uint16_t comm_lv = commutation_lv;
-  uint16_t comm_ru = commutation_ru;
   uint16_t comm_rv = commutation_rv;
+  uint16_t comm_rw = commutation_rw;
 
   // Zero the storage registers
   commutation_lu = 0;
   commutation_lv = 0;
-  commutation_ru = 0;
   commutation_rv = 0;
+  commutation_rw = 0;
 
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
@@ -160,26 +160,26 @@ void TIM1_UP_IRQHandler() {
     // Counting down currently, references go to up counter shadow
     counter_l_shadow = &counter_l[0];
     counter_r_shadow = &counter_r[0];
-    //dead_l = &dead_time_l[0];
-    //dead_r = &dead_time_r[0];
+    dead_l = &dead_time_l[0];
+    dead_r = &dead_time_r[0];
 
     // Calculate last commutation delays, values are from up counting => low to high
-    dead_time_l[0] = comm_lu - counter_l[0];
-    dead_time_l[1] = comm_lv - counter_l[1];
-    dead_time_r[0] = comm_ru - counter_r[0];
-    dead_time_r[1] = comm_rv - counter_r[1];
+    //dead_time_l[0] = comm_lu - counter_l[0];
+    //dead_time_l[1] = comm_lv - counter_l[1];
+    //dead_time_r[1] = comm_rv - counter_r[1];
+    //dead_time_r[2] = comm_rw - counter_r[2];
   } else {
     // Counting up currently, values go to down counter shadow
     counter_l_shadow = &counter_l[3];
     counter_r_shadow = &counter_r[3];
-    //dead_l = &dead_time_l[3];
-    //dead_r = &dead_time_r[3];
+    dead_l = &dead_time_l[3];
+    dead_r = &dead_time_r[3];
 
     // Calculate last commutation delays, values are from down counting => high to low
-    dead_time_l[3] = comm_lu - counter_l[3];
-    dead_time_l[4] = comm_lv - counter_l[4];
-    dead_time_r[3] = comm_ru - counter_r[3];
-    dead_time_r[4] = comm_rv - counter_r[4];
+    //dead_time_l[3] = comm_lu - counter_l[3];
+    //dead_time_l[4] = comm_lv - counter_l[4];
+    //dead_time_r[4] = comm_rv - counter_r[4];
+    //dead_time_r[5] = comm_rw - counter_r[5];
   }
 
 
@@ -193,7 +193,7 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
-  //if(tact > dead_l[counter_pattern[sector][0]]) tact -= dead_l[counter_pattern[sector][0]];
+  if(tact > dead_l[counter_pattern[sector][0]]) tact -= dead_l[counter_pattern[sector][0]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_l_shadow[counter_pattern[sector][0]] = tact;
 
@@ -202,12 +202,12 @@ void TIM1_UP_IRQHandler() {
   } else {// Even sectors uses "left" vector first
     tact = t0 + t1;
   }
-  //if(tact > dead_l[counter_pattern[sector][1]]) tact -= dead_l[counter_pattern[sector][1]];
+  if(tact > dead_l[counter_pattern[sector][1]]) tact -= dead_l[counter_pattern[sector][1]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_l_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
-  //if(tact > dead_l[counter_pattern[sector][2]]) tact -= dead_l[counter_pattern[sector][2]];
+  if(tact > dead_l[counter_pattern[sector][2]]) tact -= dead_l[counter_pattern[sector][2]];
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_l_shadow[counter_pattern[sector][2]] = tact;
 
@@ -221,7 +221,7 @@ void TIM1_UP_IRQHandler() {
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   tact = t0;
-  //if(tact > dead_r[counter_pattern[sector][0]]) tact -= dead_r[counter_pattern[sector][0]];
+  if(tact > dead_r[counter_pattern[sector][0]]) tact -= dead_r[counter_pattern[sector][0]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = tact;
   counter_r_shadow[counter_pattern[sector][0]] = tact;
 
@@ -230,12 +230,12 @@ void TIM1_UP_IRQHandler() {
   } else { // Even sectors uses "left" vector first
     tact = t0 + t1;
   }
-  //if(tact > dead_r[counter_pattern[sector][1]]) tact -= dead_r[counter_pattern[sector][1]];
+  if(tact > dead_r[counter_pattern[sector][1]]) tact -= dead_r[counter_pattern[sector][1]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = tact;
   counter_r_shadow[counter_pattern[sector][1]] = tact;
 
   tact = t0 + t1 + t2;
-  //if(tact > dead_r[counter_pattern[sector][2]]) tact -= dead_r[counter_pattern[sector][2]];
+  if(tact > dead_r[counter_pattern[sector][2]]) tact -= dead_r[counter_pattern[sector][2]];
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = tact;
   counter_r_shadow[counter_pattern[sector][2]] = tact;
 #endif
@@ -249,11 +249,12 @@ void TIM1_UP_IRQHandler() {
 // Placed here even though the values could also be used
 // with the basic BLDC modulation
 void EXTI4_IRQHandler(void) {
-  // Left U phase
-  // TIM8 CCR1
+  // Right V phase (V? Blue cable)
+  // TIM1 CCR2
 
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
-  commutation_lu = LEFT_TIM->CNT;
+  commutation_rv = RIGHT_TIM->CNT;
 
 #if 0
   int16_t dead;
@@ -270,17 +271,18 @@ void EXTI4_IRQHandler(void) {
     dead_time_l[0] = dead;
   }
 #endif
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 void EXTI9_5_IRQHandler(void) {
-  // Left V phase
-  // TIM8 CCR2
+  // Right W phase (C? Yellow cable)
+  // TIM1 CCR3
 
   // Debug: LED ON
-  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
 
-  commutation_lv = LEFT_TIM->CNT;
+  commutation_rw = RIGHT_TIM->CNT;
 
 #if 0
   int16_t dead;
@@ -298,19 +300,19 @@ void EXTI9_5_IRQHandler(void) {
   }
 #endif
   // Debug: LED OFF
-  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }
 
 
 void EXTI0_IRQHandler(void) {
-  // Right U phase
-  // TIM1 CCR1
+  // Left U phase
+  // TIM8 CCR1
 
   // Debug: LED ON
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
 
-  commutation_ru = RIGHT_TIM->CNT;
+  commutation_lu = LEFT_TIM->CNT;
 
 #if 0
   int16_t dead;
@@ -335,13 +337,13 @@ void EXTI0_IRQHandler(void) {
 // 22.9.2019 This takes about 700 ns with the complete calculation
 // With just the storage this takes about 320 ns
 void EXTI3_IRQHandler(void) {
-  // Right V phase
-  // TIM1 CCR2
+  // Left V phase
+  // TIM8 CCR2
 
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
   __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
 
-  commutation_rv = RIGHT_TIM->CNT;
+  commutation_lv = LEFT_TIM->CNT;
 
 #if 0
   int16_t dead;
@@ -358,5 +360,5 @@ void EXTI3_IRQHandler(void) {
     dead_time_r[1] = dead;
   }
 #endif
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }

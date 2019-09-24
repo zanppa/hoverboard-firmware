@@ -52,6 +52,10 @@ static uint8_t pattern_tick = 0;
 static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
 
 
+extern volatile int16_t dead_time_l[6];
+extern volatile int16_t dead_time_r[6];
+
+
 
 void init_controls(void)
 {
@@ -251,6 +255,25 @@ void TIM3_IRQHandler(void)
   //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale);
   motor_state[STATE_RIGHT].ctrl.amplitude = pwm_r_ramp;
 //#endif
+
+  // Dead time update for the one phase that is not measured
+  // TODO: Only right at the moment
+  // Right has measurement in V and W phases, so update U
+  dead_time_r[0] = 105;
+  dead_time_r[1] = 105;
+  dead_time_r[2] = 105;
+  if(motor_state[STATE_RIGHT].act.sector == 0 || motor_state[STATE_RIGHT].act.sector == 5)
+    dead_time_r[3] = -120;
+  else
+    dead_time_r[3] = -250;
+  if(motor_state[STATE_RIGHT].act.sector == 1 || motor_state[STATE_RIGHT].act.sector == 2)
+    dead_time_r[4] = -120;
+  else
+    dead_time_r[4] = -250;
+  if(motor_state[STATE_RIGHT].act.sector == 3 || motor_state[STATE_RIGHT].act.sector == 4)
+    dead_time_r[5] = -120;
+  else
+    dead_time_r[5] = -250;
 
 
   // Update buzzer
