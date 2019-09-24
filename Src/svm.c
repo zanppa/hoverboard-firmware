@@ -27,6 +27,8 @@ extern volatile motor_state_t motor_state[2];
 // RDSon measurement
 extern ADC_HandleTypeDef hadc1;
 extern uint16_t rdson_meas[4];
+extern uint16_t rdson_offset[4];
+volatile int16_t rdson[4];
 
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
@@ -127,8 +129,17 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
-  // Trigger ADC rdson measurement when we have 000 zero vector
-  hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
+  // Copy rdson measurements to variable when we have 111 zero vector
+  // This happens when we count down
+  if(TIM1->CR1 & TIM_CR1_DIR) {
+    rdson[0] = rdson_meas[0] - rdson_offset[0];
+    rdson[1] = rdson_meas[1] - rdson_offset[1];
+    rdson[2] = rdson_meas[2] - rdson_offset[2];
+    rdson[3] = rdson_meas[3] - rdson_offset[3];
+  } else {
+    // Trigger ADC rdson measurement when we have 000 zero vector
+    hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
+  }
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator

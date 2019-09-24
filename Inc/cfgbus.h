@@ -45,7 +45,11 @@
 	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) \
 	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
 	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      ) \
-	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"      )
+	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"         ) \
+	_ENTRY( rdsonlb        , uint16_t   , _U16     , false     , "Rdson,lB"          ) \
+	_ENTRY( rdsonlc        , uint16_t   , _U16     , false     , "Rdson,lC"          ) \
+	_ENTRY( rdsonra        , uint16_t   , _U16     , false     , "Rdson,rA"          ) \
+	_ENTRY( rdsonrb        , uint16_t   , _U16     , false     , "Rdson,rB"          )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

@@ -37,6 +37,7 @@ extern ADC_HandleTypeDef hadc3;
 
 extern volatile motor_state_t motor_state[2];
 extern volatile adc_buf_t analog_meas;
+extern volatile int16_t rdson[4];
 
 int main(void) {
 
@@ -123,6 +124,12 @@ int main(void) {
     act_speed = motor_state[STATE_RIGHT].act.period;
     act_speed = MOTOR_PERIOD_TO_MS / act_speed;
     //cfg.vars.speed_r = act_speed;
+
+    // Copy rdson measurement values to configbus
+    cfg.vars.rdsonra = rdson[0];
+    cfg.vars.rdsonrb = rdson[1];
+    cfg.vars.rdsonlb = rdson[2];
+    cfg.vars.rdsonlc = rdson[3];
   }
 }
 
