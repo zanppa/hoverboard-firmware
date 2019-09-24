@@ -156,6 +156,15 @@ is possible to measure both positive and negative current. Limitation is that th
 be conducting when the measurement is taken.
 
 ### Implementation
+The voltage measurements are connected to following pins.
+
+| Voltage             | Pin | ADC channel |
+|---------------------|:---:|:-----------:|
+| Left motor B phase  | PC4 | 14          |
+| Left motor C phase  | PC5 | 15          |
+| Right motor A phase | PA0 | 0           |
+| Right motor B phase | PC3 | 13          |
+
 ADC1 is used to measure all 4 phase voltages. ADC1 was selected since it is the only one which maps all 
 the pins to channels and has DMA capability. DMA 1 channel 1 is used for ADC1.
 
