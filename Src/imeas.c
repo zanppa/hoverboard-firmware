@@ -2,106 +2,66 @@
 
 #include "stm32f1xx_hal.h"
 
-static ADC_HandleTypeDef hadc2;
-static ADC_HandleTypeDef hadc3;
+static ADC_HandleTypeDef hadc1;
 
+uint16_t rdson_meas[4];
 
-// ADC2 init function. ADC2 is used to measure left motor
-// current and phase voltages
-void ADC2_init(void) {
+// ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
+void ADC1_init(void) {
   ADC_ChannelConfTypeDef sConfig;
 
-  __HAL_RCC_ADC2_CLK_ENABLE();
+  __HAL_RCC_ADC1_CLK_ENABLE();
 
-  hadc2.Instance                   = ADC2;
-  hadc2.Init.ScanConvMode          = ADC_SCAN_DISABLE;
-  hadc2.Init.ContinuousConvMode    = DISABLE;
-  hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
-  hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion       = 1;
-  HAL_ADC_Init(&hadc2);
+  hadc1.Instance                   = ADC1;
+  hadc1.Init.ScanConvMode          = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode    = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
+  // TODO: Could use timer 8 update (or underflow?) event as the source so software would not need to trigger ADC
+  //hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;	// Trigger ADC on timer8 update event (right timer)
+  hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion       = 4;	// 2 currents for both motors
+  HAL_ADC_Init(&hadc1);
 
-  // Sample about 3.5 us after switching
-  // Total conversion time 5.125 us
-  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
+  // Use a rather short sampling time...
+  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
 
-  // TODO: Check is this really left or right!
-  sConfig.Channel = ADC_CHANNEL_11; // Left motor shunt current
+  sConfig.Channel = ADC_CHANNEL_0;  // pa0 right a phase voltage
   sConfig.Rank    = 1;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_13;  // pc3 right b phase voltage
+  sConfig.Rank    = 2;
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_14;  // pc4 left b phase voltage
+  sConfig.Rank    = 3;
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_15;  // pc5 left c phase voltage
+  sConfig.Rank    = 4;
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+
+  // Enable DMA for ADC1 i.e. current sampling
+  // Values will be copied in the modulator
+  hadc1.Instance->CR2 |= ADC_CR2_DMA;
+
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  DMA1_Channel1->CCR   = 0;
+  DMA1_Channel1->CNDTR = 4;
+  DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
+  DMA1_Channel1->CMAR  = &rdson_meas[0];
+
+  // 32 bit peripheral to 16 bit memory --> only low 16 bits copied
+  // no end-of-conversion interrupt
+  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1;
+  DMA1_Channel1->CCR  |= DMA_CCR_EN;
 
   // Enable end of conversion interrupt
-  hadc2.Instance->CR1 |= ADC_CR1_EOCIE;
-  HAL_NVIC_SetPriority(ADC1_2_IRQn, 10, 0);
-  HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+  //hadc1.Instance->CR1 |= ADC_CR1_EOCIE; // Interrupt is not needed, will be handled in the timer update
+  //HAL_NVIC_SetPriority(ADC1_2_IRQn, 10, 0);
+  //HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
 
-  __HAL_ADC_ENABLE(&hadc2);
-}
-
-
-// ADC3 init function. ADC3 is used to measure right motor
-// current and phase voltages
-void ADC3_init(void) {
-  ADC_ChannelConfTypeDef sConfig;
-
-  __HAL_RCC_ADC3_CLK_ENABLE();
-
-  hadc3.Instance                   = ADC3;
-  hadc3.Init.ScanConvMode          = ADC_SCAN_DISABLE;
-  hadc3.Init.ContinuousConvMode    = DISABLE;
-  hadc3.Init.DiscontinuousConvMode = DISABLE;
-  hadc3.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
-  hadc3.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc3.Init.NbrOfConversion       = 1;
-  HAL_ADC_Init(&hadc3);
-
-  // Sample about 3.5 us after switching
-  // Total conversion time 5.125 us
-  sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES_5;
-
-  // TODO: Check is this really left or right!
-  sConfig.Channel = ADC_CHANNEL_10; // Right motor shunt current
-  sConfig.Rank    = 1;
-  HAL_ADC_ConfigChannel(&hadc3, &sConfig);
-
-  // Enable end of conversion interrupt
-  hadc3.Instance->CR1 |= ADC_CR1_EOCIE;
-  HAL_NVIC_SetPriority(ADC3_IRQn, 10, 0);
-  HAL_NVIC_EnableIRQ(ADC3_IRQn);
-
-  __HAL_ADC_ENABLE(&hadc3);
-}
-
-
-
-// TIM1 (left) capture/compare trigger handles launching
-// A/D conversion for one of the motors (ADC2)
-void TIM1_CC_IRQHandler(void) {
-  // Clear all capture/compare interrupt flags
-  TIM1->SR &= ~(TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF);
-
-  ADC2->CR2 |= ADC_CR2_SWSTART;
-}
-
-// TIM8 (right) capture/compare trigger handles launching
-// A/D conversion for the other motor (ADC3)
-void TIM8_CC_IRQHandler(void) {
-  TIM8->SR &= ~(TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF);
-
-  ADC3->CR2 |= ADC_CR2_SWSTART;
-}
-
-
-// Handle ADC2 end of conversion interrupt
-void ADC1_2_IRQHandler(void) {
-  // Read data register, which also clears the interrupt flag
-  uint16_t data = ADC2->DR;
-}
-
-
-// Handle ADC3 end of conversion interrupt
-void ADC3_IRQhandler(void) {
-  // Read data register, which also clears the interrupt flag
-  uint16_t data = ADC3->DR;
+  __HAL_ADC_ENABLE(&hadc1);
 }

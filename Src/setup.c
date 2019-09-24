@@ -191,7 +191,7 @@ void MX_TIM_Init(void) {
   // down to 1 and creates underflow event. Then it restarts.
   // pre-scaler = 0 and divier = 1 i.e.
   // the timer runs at crystal(?) frequency
-  htim_right.Instance               = RIGHT_TIM;
+  htim_right.Instance               = RIGHT_TIM;	// TIM8
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_right.Init.Period            = PWM_PERIOD;
@@ -392,6 +392,7 @@ void MX_ADC1_Init(void) {
   DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_TCIE | DMA_CCR_PL_1;
   DMA1_Channel1->CCR |= DMA_CCR_EN;
 
+  // End of conversion interrupt not generated
   // General ADC values run at a low priority
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 8, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
