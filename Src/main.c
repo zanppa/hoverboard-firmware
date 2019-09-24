@@ -31,7 +31,7 @@
 
 void SystemClock_Config(void);
 
-extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc3;
 //extern ADC_HandleTypeDef hadc2;
 
 extern volatile motor_state_t motor_state[2];
@@ -67,9 +67,9 @@ int main(void) {
 
   MX_TIM_Init();
 
-  ADC1_init();
-  HAL_ADC_Start(&hadc1);
-  ADC1_calibrate();
+  ADC3_init();
+  HAL_ADC_Start(&hadc3);
+  ADC3_calibrate();
 
   UART_Init(0, 1);	// Use only UART3 for modbus
 
