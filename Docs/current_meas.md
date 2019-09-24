@@ -134,3 +134,6 @@ first with long sampling time, and then sample the current.
 
 ![Current measurement method](current_sampling.png)
 
+ 
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

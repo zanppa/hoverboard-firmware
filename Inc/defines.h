@@ -35,57 +35,61 @@
 
 #define CTRL_TIM TIM3
 
-#define RIGHT_TIM TIM8
-#define RIGHT_TIM_BASE (TIM8_BASE)
-#define RIGHT_TIM_U CCR1
-#define RIGHT_TIM_UH_PIN GPIO_PIN_6
-#define RIGHT_TIM_UH_PORT GPIOC
-#define RIGHT_TIM_UL_PIN GPIO_PIN_7
-#define RIGHT_TIM_UL_PORT GPIOA
-#define RIGHT_TIM_V CCR2
-#define RIGHT_TIM_VH_PIN GPIO_PIN_7
-#define RIGHT_TIM_VH_PORT GPIOC
-#define RIGHT_TIM_VL_PIN GPIO_PIN_0
-#define RIGHT_TIM_VL_PORT GPIOB
-#define RIGHT_TIM_W CCR3
-#define RIGHT_TIM_WH_PIN GPIO_PIN_8
-#define RIGHT_TIM_WH_PORT GPIOC
-#define RIGHT_TIM_WL_PIN GPIO_PIN_1
-#define RIGHT_TIM_WL_PORT GPIOB
-
-#define LEFT_TIM TIM1
-#define LEFT_TIM_BASE (TIM1_BASE)
+#define LEFT_TIM TIM8
+#define LEFT_TIM_BASE (TIM8_BASE)
 #define LEFT_TIM_U CCR1
-#define LEFT_TIM_UH_PIN GPIO_PIN_8
-#define LEFT_TIM_UH_PORT GPIOA
-#define LEFT_TIM_UL_PIN GPIO_PIN_13
-#define LEFT_TIM_UL_PORT GPIOB
+#define LEFT_TIM_UH_PIN GPIO_PIN_6
+#define LEFT_TIM_UH_PORT GPIOC
+#define LEFT_TIM_UL_PIN GPIO_PIN_7
+#define LEFT_TIM_UL_PORT GPIOA
 #define LEFT_TIM_V CCR2
-#define LEFT_TIM_VH_PIN GPIO_PIN_9
-#define LEFT_TIM_VH_PORT GPIOA
-#define LEFT_TIM_VL_PIN GPIO_PIN_14
+#define LEFT_TIM_VH_PIN GPIO_PIN_7
+#define LEFT_TIM_VH_PORT GPIOC
+#define LEFT_TIM_VL_PIN GPIO_PIN_0
 #define LEFT_TIM_VL_PORT GPIOB
 #define LEFT_TIM_W CCR3
-#define LEFT_TIM_WH_PIN GPIO_PIN_10
-#define LEFT_TIM_WH_PORT GPIOA
-#define LEFT_TIM_WL_PIN GPIO_PIN_15
+#define LEFT_TIM_WH_PIN GPIO_PIN_8
+#define LEFT_TIM_WH_PORT GPIOC
+#define LEFT_TIM_WL_PIN GPIO_PIN_1
 #define LEFT_TIM_WL_PORT GPIOB
+
+#define RIGHT_TIM TIM1
+#define RIGHT_TIM_BASE (TIM1_BASE)
+#define RIGHT_TIM_U CCR1
+#define RIGHT_TIM_UH_PIN GPIO_PIN_8
+#define RIGHT_TIM_UH_PORT GPIOA
+#define RIGHT_TIM_UL_PIN GPIO_PIN_13
+#define RIGHT_TIM_UL_PORT GPIOB
+#define RIGHT_TIM_V CCR2
+#define RIGHT_TIM_VH_PIN GPIO_PIN_9
+#define RIGHT_TIM_VH_PORT GPIOA
+#define RIGHT_TIM_VL_PIN GPIO_PIN_14
+#define RIGHT_TIM_VL_PORT GPIOB
+#define RIGHT_TIM_W CCR3
+#define RIGHT_TIM_WH_PIN GPIO_PIN_10
+#define RIGHT_TIM_WH_PORT GPIOA
+#define RIGHT_TIM_WL_PIN GPIO_PIN_15
+#define RIGHT_TIM_WL_PORT GPIOB
 
 #define RIGHT_DC_CUR_PIN GPIO_PIN_0
 #define RIGHT_U_VOLT_PIN GPIO_PIN_0
 #define RIGHT_V_VOLT_PIN GPIO_PIN_3
+#define RIGHT_OC_PIN GPIO_PIN_6
 
 #define RIGHT_DC_CUR_PORT GPIOC
 #define RIGHT_U_VOLT_PORT GPIOA
 #define RIGHT_V_VOLT_PORT GPIOC
+#define RIGHT_OC_PORT GPIOA
 
 #define LEFT_DC_CUR_PIN GPIO_PIN_1
 #define LEFT_U_VOLT_PIN GPIO_PIN_4
 #define LEFT_V_VOLT_PIN GPIO_PIN_5
+#define LEFT_OC_PIN GPIO_PIN_12
 
 #define LEFT_DC_CUR_PORT GPIOC
 #define LEFT_U_VOLT_PORT GPIOC
 #define LEFT_V_VOLT_PORT GPIOC
+#define LEFT_OC_PORT GPIOB
 
 #define DCLINK_PIN GPIO_PIN_2
 #define DCLINK_PORT GPIOC
@@ -123,26 +127,46 @@
 #define MIN3(a, b, c) MIN(a, MIN(b, c))
 #define MAX3(a, b, c) MAX(a, MAX(b, c))
 
-
+// Structure that stores analog measurements
 typedef struct {
-  uint16_t rr1;
-  uint16_t rr2;
-  uint16_t rl1;
-  uint16_t rl2;
-  uint16_t dcr;
-  uint16_t dcl;
-  uint16_t vbat;
-  uint16_t temp;
+  uint16_t v_battery;
+  uint16_t v_switch;
+  uint16_t v_ref;
+  uint16_t temperature;
+  uint16_t analog_ref_1;
+  uint16_t analog_ref_2;
 } adc_buf_t;
 
-//adc startup offsets
+
+// Struct holding relevant state variables
+// (to be shared across modules)
 typedef struct {
-  int32_t rr1;
-  int32_t rr2;
-  int32_t rl1;
-  int32_t rl2;
-  int32_t dcr;
-  int32_t dcl;
-  int32_t vbat;
-  int32_t temp;
-} adc_offsets_t;
+  // Actual values
+  struct {
+    int16_t speed;
+    int16_t period;		// Period of hall-sensor sector changes in control ticks
+    uint8_t sector;		// Rotor sector from HALL sensors
+    uint16_t position;	// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
+    int16_t current[3];	// Current of phases A, B, C (p.u.)
+  } act;
+
+  // Reference(s)
+  struct {
+    int16_t value;	// Typically speed reference
+    uint8_t control_mode;
+  } ref;
+
+  // Control outputs to modulator
+  struct {
+    int16_t amplitude;	// Can also be < 0
+    uint16_t angle;		// Angle
+    int8_t speed;		// Speed in angle increments per modulator call
+    uint8_t enable;
+  } ctrl;
+} motor_state_t;
+
+#define STATE_LEFT 0
+#define STATE_RIGHT 1
+
+// Control modes
+#define CONTROL_SPEED 0

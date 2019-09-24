@@ -56,7 +56,7 @@ It should find the processor and halt it.
 
 Then you need to open telnet to interface with it:
 ```
-telnet localhost:4444
+telnet localhost 4444
 ```
 
 in that you can enter commands. To unlock the chip on first flashing, enter
@@ -72,9 +72,14 @@ reset
 ```
 If you run just `reset` the board should start. You can also run `reset halt` to halt it.
 
+If OpenOCD was running between flashings, run `reset halt` always before flashing. Also remember 
+to keep the power button pressed, or use a jumper on the connector. Otherwise the processor may 
+release the power supply during reset and/or flashing and everything will fail.
 
 ### Notes
 There is some more documentation on the main readme on how to unlock the chip and so on. Those 
 commands are run directly from OpenOCD command line, but I never got that to work, so I did 
 this with telnet.
 
+## Copyright
+Copyright (C) 2019 Lauri Peltonen

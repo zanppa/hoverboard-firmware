@@ -1,18 +1,28 @@
+/*
+Copyright (C) 2019 Lauri Peltonen
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include "stm32f1xx_hal.h"
 #include <math.h>
 #include "defines.h"
-#include "setup.h"
 #include "config.h"
-#include "cfgbus.h"
 #include "bldc.h"
 
-//#include "control.h" // Debug
 #include "math.h"
 #include "svm.h"
 
-// References for left and right motors
-volatile svm_ref_t svm_left = {0, 0};
-volatile svm_ref_t svm_right = {0, 0};
+extern volatile motor_state_t motor_state[2];
 
 // RDSon measurement
 extern ADC_HandleTypeDef hadc1;
@@ -38,44 +48,77 @@ static const uint8_t svm_mod_pattern[6][3] = {
 // length (modulation index) and angle in fixed point, return
 // vector legths relative to the PWM period in t0, t1 and t2
 // (t0 is half of the total zero vector length)
-static void calculate_modulator(uint16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
+static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint16_t *t1, uint16_t *t2) {
   uint16_t ta1;
   uint16_t ta2;
+  uint16_t tz;
+  uint16_t terr = 0;
 
+  // Clamp < 0 modulation index to zero
+  if(midx <= 0) midx = 0;
   // Clamp modulation index to 1.0
-  if(midx >= 4096) midx = 4096;
+  else if(midx >= 4096) midx = 4096;
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
-  angle = angle % FIXED_60DEG;
+  angle = angle % ANGLE_60DEG;
 
   // Calculate the vector times
   ta1 = fx_mulu(midx, array_sin(angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mulu(midx,  array_sin(FIXED_60DEG - angle));
+  ta2 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
-  (*t0) = (PWM_PERIOD - ta1 - ta2) / 2;
-  (*t1) = ta1;
-  (*t2) = ta2;
+  tz = (PWM_PERIOD - ta1 - ta2) / 2;
+
+  // Minimum pulse limitations
+/*  if(tz < SVM_SHORT_ZPULSE) {
+    terr = SVM_SHORT_ZPULSE - tz;
+    tz = SVM_SHORT_ZPULSE;
+  }
+
+  ta1 = CLAMP(ta1 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
+  ta2 = CLAMP(ta2 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
+*/
+
+  // Dead time compensation
+  // Downcounting -> Update values for next upcounting part (000 -> 111)
+/*
+  if(TIM1->CR1 & TIM_CR1_DIR) {
+    if(tz > SVM_DEAD_TIME_COMP)
+      tz -= SVM_DEAD_TIME_COMP;
+
+    if(ta1 > SVM_DEAD_TIME_COMP)
+      ta1 -= SVM_DEAD_TIME_COMP;
+  } else {
+    // Upcounting -> update for downcounting part (111 -> 000)
+    if(tz > SVM_DEAD_TIME_COMP)
+      tz -= SVM_DEAD_TIME_COMP;
+  }
+*/
+
+  *t0 = tz;
+  *t1 = ta1;
+  *t2 = ta2;
 }
 
 
 // Convert fixed point angle into sector number
 static inline uint8_t angle_to_sector(uint16_t angle) {
-  angle &= FIXED_MASK;
-  if(angle < FIXED_60DEG) return 5;
-  else if(angle < 2*FIXED_60DEG) return 0;
-  else if(angle < 3*FIXED_60DEG) return 1;
-  else if(angle < 4*FIXED_60DEG) return 2;
-  else if(angle < 5*FIXED_60DEG) return 3;
+  //angle &= FIXED_MASK;	// Changed to full circle = 16 bits
+  if(angle < ANGLE_60DEG) return 5;
+  else if(angle < ANGLE_120DEG) return 0;
+  else if(angle < ANGLE_180DEG) return 1;
+  else if(angle < ANGLE_240DEG) return 2;
+  else if(angle < ANGLE_300DEG) return 3;
   else return 4;
 }
 
 // Timer 1 update handles space vector modulation for both motors
 void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
+  uint16_t angle;
   uint8_t sector;
 
   // Clear the update interrupt flag
@@ -89,31 +132,35 @@ void TIM1_UP_IRQHandler() {
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator
-  sector = angle_to_sector(svm_left.angle);
-  calculate_modulator(svm_left.modulation_index, svm_left.angle, &t0, &t1, &t2);
+  motor_state[STATE_LEFT].ctrl.angle += motor_state[STATE_LEFT].ctrl.speed;
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
+  angle = motor_state[STATE_LEFT].ctrl.angle;
+  sector = angle_to_sector(angle);
+  calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
+
   // Since the timer compare is wrong way
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   else // Even sectors uses "left" vector first
-    *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-  *((uint32_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
-  sector = angle_to_sector(svm_right.angle);
-  calculate_modulator(svm_right.modulation_index, svm_right.angle, &t0, &t1, &t2);
+  motor_state[STATE_RIGHT].ctrl.angle += motor_state[STATE_RIGHT].ctrl.speed;
 
-  // TODO: Vectors are 111 -> Active 2 -> Active 1 -> 000 and back
+  angle = motor_state[STATE_RIGHT].ctrl.angle;
+  sector = angle_to_sector(angle);
+  calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
+
   // Since the timer compare is wrong way
-  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   else // Even sectors uses "left" vector first
-    *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-  *((uint32_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
   // Debug: LED off

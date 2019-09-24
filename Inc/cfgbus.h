@@ -21,26 +21,31 @@
 //FORMAT      | entry type | var name       | cfg_type | writeable | name string         |
 //--------------------------------------------------------------------------------------------------
 #define CFG_ENTRIES(_ENTRY) \
-        _ENTRY( magic          , uint16_t   , _U16     , false     , "Magic Value"       ) \
-        _ENTRY( nr_entries     , uint16_t   , _U16     , false     , "Nr Entries"        ) \
-        _ENTRY( dev_name[12]   , char       , _STR12   , false     , "Device Name"       ) \
-        _ENTRY( err_code       , uint16_t   , _U16     , true      , "Error Code"        ) \
-        _ENTRY( err_cnt        , uint16_t   , _U16     , true      , "Error Count"       ) \
-        _ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) \
-        _ENTRY( setpoint_l     , int16_t    , _I16     , true      , "PWM Setpoint-L"    ) \
-        _ENTRY( setpoint_r     , int16_t    , _I16     , true      , "PWM Setpoint-R"    ) \
-		    _ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) \
-	      _ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) \
-		    _ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer"            ) \
-        _ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) \
-        _ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
-        _ENTRY( tacho_l        , uint16_t   , _U16     , false     , "Tacho Left"        ) \
-        _ENTRY( tacho_r        , uint16_t   , _U16     , false     , "Tacho Right"       ) \
-        _ENTRY( pwm_l          , int32_t    , _I32     , false     , "PWM-Left"          ) \
-        _ENTRY( pwm_r          , int32_t    , _I32     , false     , "PWM-Right"         ) \
-        _ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \
-        _ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) \
-        _ENTRY( vbat           , float      , _FLT     , false     , "Battery Voltage"   )
+	_ENTRY( magic          , uint16_t   , _U16     , false     , "Magic Value"       ) \
+	_ENTRY( nr_entries     , uint16_t   , _U16     , false     , "Nr Entries"        ) \
+	_ENTRY( dev_name[12]   , char       , _STR12   , false     , "Device Name"       ) \
+	_ENTRY( err_code       , uint16_t   , _U16     , true      , "Error Code"        ) \
+	_ENTRY( err_cnt        , uint16_t   , _U16     , true      , "Error Count"       ) \
+	_ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) \
+	_ENTRY( setpoint_l     , int16_t    , _I16     , true      , "PWM Setpoint-L"    ) \
+	_ENTRY( setpoint_r     , int16_t    , _I16     , true      , "PWM Setpoint-R"    ) \
+	_ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) \
+	_ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) \
+	_ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer"            ) \
+	_ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) \
+	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
+	_ENTRY( spdref_l       , int16_t    , _I16     , true      , "Speed ref L"       ) \
+	_ENTRY( spdref_r       , int16_t    , _I16     , true      , "Speed ref R"       ) \
+	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) \
+	_ENTRY( pwm_r          , int16_t    , _I16     , false     , "PWM-Right"         ) \
+	_ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \
+	_ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) \
+	_ENTRY( vbat           , uint16_t   , _U16     , false     , "Battery Voltage"   ) \
+	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) \
+	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) \
+	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
+	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      ) \
+	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"      )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

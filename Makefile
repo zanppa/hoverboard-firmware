@@ -48,6 +48,7 @@ Src/stm32f1xx_it.c \
 Src/math.c \
 Src/arrays.c \
 Src/imeas.c \
+Src/adc.c \
 
 # ASM sources
 ASM_SOURCES =  \
