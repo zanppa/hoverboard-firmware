@@ -132,7 +132,7 @@ void ADC3_init(void) {
 }
 
 
-// This function samples ADC1 multiple times and
+// This function samples ADC3 multiple times and
 // averages the output to offset register(s)
 // ADC3 must be initialized first
 void ADC3_calibrate(void) {

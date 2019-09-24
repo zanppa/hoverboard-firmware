@@ -28,11 +28,12 @@
 #include "control.h"
 #include "eeprom.h"
 #include "adc.h"
+#include "imeas.h"
 
 void SystemClock_Config(void);
 
+extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc3;
-//extern ADC_HandleTypeDef hadc2;
 
 extern volatile motor_state_t motor_state[2];
 extern volatile adc_buf_t analog_meas;
@@ -67,9 +68,16 @@ int main(void) {
 
   MX_TIM_Init();
 
+  // Initialize generic measurements with ADC3
   ADC3_init();
   HAL_ADC_Start(&hadc3);
   ADC3_calibrate();
+
+  // Initialize Rds,on measurements with ADC1
+  ADC1_init();
+  HAL_ADC_Start(&hadc1);
+  ADC1_calibrate();
+
 
   UART_Init(0, 1);	// Use only UART3 for modbus
 

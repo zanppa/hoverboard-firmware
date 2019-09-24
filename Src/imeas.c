@@ -1,10 +1,16 @@
 // Current measurement in SVM mode
 
 #include "stm32f1xx_hal.h"
+#include "imeas.h"
+#include "config.h"
+#include "defines.h"
 
-static ADC_HandleTypeDef hadc1;
+#define RDSON_MEAS_COUNT	4
+
+ADC_HandleTypeDef hadc1;
 
 uint16_t rdson_meas[4];
+uint16_t rdson_offset[4];
 
 // ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
 void ADC1_init(void) {
@@ -20,7 +26,7 @@ void ADC1_init(void) {
   // TODO: Could use timer 8 update (or underflow?) event as the source so software would not need to trigger ADC
   //hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;	// Trigger ADC on timer8 update event (right timer)
   hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion       = 4;	// 2 currents for both motors
+  hadc1.Init.NbrOfConversion       = RDSON_MEAS_COUNT;	// 2 currents for both motors
   HAL_ADC_Init(&hadc1);
 
   // Use a rather short sampling time...
@@ -51,7 +57,7 @@ void ADC1_init(void) {
   DMA1_Channel1->CCR   = 0;
   DMA1_Channel1->CNDTR = 4;
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
-  DMA1_Channel1->CMAR  = &rdson_meas[0];
+  DMA1_Channel1->CMAR  = (uint32_t)&rdson_meas[0];
 
   // 32 bit peripheral to 16 bit memory --> only low 16 bits copied
   // no end-of-conversion interrupt
@@ -65,3 +71,38 @@ void ADC1_init(void) {
 
   __HAL_ADC_ENABLE(&hadc1);
 }
+
+
+// This function samples ADC1 multiple times and
+// averages the output to offset register(s)
+// ADC1 must be initialized first
+void ADC1_calibrate(void) {
+  uint32_t offsets[RDSON_MEAS_COUNT] = {0};
+
+  // Do internal ADC calibration
+  hadc1.Instance->CR2 |= ADC_CR2_CAL;
+  // Wait until internal calibration is finished
+  while(hadc1.Instance->CR2 & ADC_CR2_CAL);
+
+  // Calibrate zero point offsets
+  for(int i=0; i < ADC_OFFSET_SAMPLES; i++) {
+    // Clear DMA transfer complete flag
+    DMA2->ISR |= DMA_ISR_TCIF5;	// Channel 5
+    // Trigger conversion
+    hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
+
+    // Wait until DMA has finished transfer, Channel 5 end of transfer flag set
+    while(!(DMA2->ISR & DMA_ISR_TCIF5));
+
+    // Accumulate offsets
+    for(int j = 0; j < RDSON_MEAS_COUNT; j++)
+      offsets[j] += rdson_meas[j];
+  }
+
+  // Copy the final averaged offsets to the offset variable
+  for(int j = 0; j < RDSON_MEAS_COUNT; j++) {
+    offsets[j] /= ADC_OFFSET_SAMPLES;
+    rdson_offset[j] = offsets[j];
+  }
+}
+
