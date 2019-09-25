@@ -11,6 +11,7 @@ ADC_HandleTypeDef hadc1;
 
 uint16_t rdson_meas[4];
 uint16_t rdson_offset[4];
+static volatile uint8_t adc_conv_done = 0;
 
 // ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
 void ADC1_init(void) {
@@ -93,7 +94,8 @@ void ADC1_calibrate(void) {
     hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
 
     // Wait until DMA has finished transfer, Channel 5 end of transfer flag set
-    while(!(DMA2->ISR & DMA_ISR_TCIF1));
+    while(!adc_conv_done);
+    adc_conv_done = 0;
 
     // Accumulate offsets
     for(int j = 0; j < RDSON_MEAS_COUNT; j++)
@@ -107,3 +109,8 @@ void ADC1_calibrate(void) {
   }
 }
 
+// End of transfer interrupt handler for DMA1 channel 1 (Rds,on measurement)
+void DMA1_Channel1_IRQHandler(void) {
+  DMA1->IFCR |= DMA_IFCR_CGIF1;	// Clear all interrupt flags for channel 1
+  adc_conv_done = 1;
+}
