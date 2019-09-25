@@ -60,10 +60,10 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   angle = angle % ANGLE_60DEG;
 
   // Calculate the vector times
-  ta1 = fx_mulu(midx, array_sin(angle));
+  ta1 = fx_mul(midx, array_sin(angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
+  ta2 = fx_mul(midx,  array_sin(ANGLE_60DEG - angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
   tz = (PWM_PERIOD - ta1 - ta2) / 2;
