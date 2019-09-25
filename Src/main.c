@@ -32,7 +32,7 @@
 
 void SystemClock_Config(void);
 
-extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef adc_rdson;
 extern ADC_HandleTypeDef hadc3;
 
 extern volatile motor_state_t motor_state[2];
@@ -77,7 +77,7 @@ int main(void) {
 
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
-  HAL_ADC_Start(&hadc1);
+  HAL_ADC_Start(&adc_rdson);
   //ADC1_calibrate();
 
 

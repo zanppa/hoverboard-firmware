@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern volatile motor_state_t motor_state[2];
 
 // RDSon measurement
-extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef adc_rdson;
 extern uint16_t rdson_meas[4];
 extern uint16_t rdson_offset[4];
 volatile int16_t rdson[4];
@@ -138,7 +138,7 @@ void TIM1_UP_IRQHandler() {
     rdson[3] = rdson_meas[3] - rdson_offset[3];
   } else {
     // Trigger ADC rdson measurement when we have 000 zero vector
-    hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
+    adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
   }
 
 #ifdef LEFT_MOTOR_SVM
