@@ -91,11 +91,11 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = LEFT_DC_CUR_PIN;
   HAL_GPIO_Init(LEFT_DC_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_U_VOLT_PIN;
-  HAL_GPIO_Init(LEFT_U_VOLT_PORT, &GPIO_InitStruct);
-
   GPIO_InitStruct.Pin = LEFT_V_VOLT_PIN;
   HAL_GPIO_Init(LEFT_V_VOLT_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LEFT_W_VOLT_PIN;
+  HAL_GPIO_Init(LEFT_W_VOLT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = RIGHT_DC_CUR_PIN;
   HAL_GPIO_Init(RIGHT_DC_CUR_PORT, &GPIO_InitStruct);
