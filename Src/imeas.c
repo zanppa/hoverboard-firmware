@@ -19,7 +19,7 @@ void ADC1_init(void) {
   __HAL_RCC_ADC1_CLK_ENABLE();
 
   hadc1.Instance                   = ADC1;
-  hadc1.Init.ScanConvMode          = ADC_SCAN_DISABLE;
+  hadc1.Init.ScanConvMode          = ADC_SCAN_ENABLE;
   hadc1.Init.ContinuousConvMode    = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
@@ -55,13 +55,13 @@ void ADC1_init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   DMA1_Channel1->CCR   = 0;
-  DMA1_Channel1->CNDTR = 4;
+  DMA1_Channel1->CNDTR = RDSON_MEAS_COUNT;
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
   DMA1_Channel1->CMAR  = (uint32_t)&rdson_meas[0];
 
   // 32 bit peripheral to 16 bit memory --> only low 16 bits copied
   // no end-of-conversion interrupt
-  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1;
+  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
   DMA1_Channel1->CCR  |= DMA_CCR_EN;
 
   // Enable end of conversion interrupt
@@ -87,12 +87,13 @@ void ADC1_calibrate(void) {
   // Calibrate zero point offsets
   for(int i=0; i < ADC_OFFSET_SAMPLES; i++) {
     // Clear DMA transfer complete flag
-    DMA2->ISR |= DMA_ISR_TCIF5;	// Channel 5
+    DMA2->ISR |= DMA_ISR_TCIF1;	// Channel 1
+
     // Trigger conversion
     hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
 
     // Wait until DMA has finished transfer, Channel 5 end of transfer flag set
-    while(!(DMA2->ISR & DMA_ISR_TCIF5));
+    while(!(DMA2->ISR & DMA_ISR_TCIF1));
 
     // Accumulate offsets
     for(int j = 0; j < RDSON_MEAS_COUNT; j++)

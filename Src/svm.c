@@ -127,7 +127,7 @@ void TIM1_UP_IRQHandler() {
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
 
   // DEBUG: LED on
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   // Copy rdson measurements to variable when we have 111 zero vector
   // This happens when we count down
@@ -175,5 +175,5 @@ void TIM1_UP_IRQHandler() {
 #endif
 
   // Debug: LED off
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }

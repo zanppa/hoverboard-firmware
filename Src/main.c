@@ -62,6 +62,7 @@ int main(void) {
   SystemClock_Config();
 
   __HAL_RCC_DMA1_CLK_DISABLE();
+  __HAL_RCC_DMA2_CLK_DISABLE();
 
   MX_GPIO_Init();
 
@@ -77,7 +78,7 @@ int main(void) {
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
   HAL_ADC_Start(&hadc1);
-  ADC1_calibrate();
+  //ADC1_calibrate();
 
 
   UART_Init(0, 1);	// Use only UART3 for modbus
@@ -104,6 +105,7 @@ int main(void) {
   {
     //show user board is alive
     //led_update();
+    HAL_GPIO_WritePin(LED_PORT,LED_PIN, 1);
 
     //update cfg_bus communication
     mb_update();

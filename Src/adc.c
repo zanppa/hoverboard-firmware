@@ -198,8 +198,8 @@ void MX_ADC2_Init(void) {
 void DMA2_Channel4_5_IRQHandler() {
   uint8_t i;
 
-  // Clear interrupt flag
-  DMA2->IFCR = DMA_IFCR_CTCIF1;
+  // Clear interrupt flag of channel 5
+  DMA2->IFCR = DMA_IFCR_CTCIF5;
 
   // DEBUG: Toggle led in ADC/DMA
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
