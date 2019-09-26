@@ -37,7 +37,8 @@ extern ADC_HandleTypeDef hadc3;
 
 extern volatile motor_state_t motor_state[2];
 extern volatile adc_buf_t analog_meas;
-extern volatile int16_t rdson[4];
+extern volatile i_meas_t i_meas;
+extern volatile uint16_t rdson_offset[4];
 
 int main(void) {
 
@@ -78,7 +79,6 @@ int main(void) {
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
   HAL_ADC_Start(&adc_rdson);
-  //ADC1_calibrate();
 
 
   UART_Init(0, 1);	// Use only UART3 for modbus
@@ -95,6 +95,11 @@ int main(void) {
   motor_state[STATE_LEFT].ctrl.enable = 1;
   motor_state[STATE_RIGHT].ctrl.enable = 1;
 
+  // Rds,on measurement must be calibrated when modulator is running
+  // without load (0 reference)
+  ADC1_calibrate();
+
+
   //UARTRxEnable(UARTCh2, 1);
   UARTRxEnable(UARTCh3, 1);
 
@@ -105,7 +110,7 @@ int main(void) {
   {
     //show user board is alive
     //led_update();
-    HAL_GPIO_WritePin(LED_PORT,LED_PIN, 1);
+    //HAL_GPIO_WritePin(LED_PORT,LED_PIN, 1);
 
     //update cfg_bus communication
     mb_update();
@@ -128,10 +133,11 @@ int main(void) {
     //cfg.vars.speed_r = act_speed;
 
     // Copy rdson measurement values to configbus
-    cfg.vars.rdsonra = rdson[0];
-    cfg.vars.rdsonrb = rdson[1];
-    cfg.vars.rdsonlb = rdson[2];
-    cfg.vars.rdsonlc = rdson[3];
+    cfg.vars.rdsonla = i_meas.i_lA;
+    cfg.vars.rdsonlb = i_meas.i_lB;
+    cfg.vars.rdsonrb = i_meas.i_rB;
+    cfg.vars.rdsonrc = i_meas.i_rC;
+    cfg.vars.lboff = rdson_offset[0];
   }
 }
 

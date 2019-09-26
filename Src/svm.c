@@ -24,11 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern volatile motor_state_t motor_state[2];
 
-// RDSon measurement
+// RDSon measurement trigger
 extern ADC_HandleTypeDef adc_rdson;
-extern uint16_t rdson_meas[4];
-extern uint16_t rdson_offset[4];
-volatile int16_t rdson[4];
 
 // Map sectors to correct timer capture/compare registers to generate the modulation pattern
 // Array is [sector][vector] where vector states in which order the switches are turned.
@@ -129,15 +126,9 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
-  // Copy rdson measurements to variable when we have 111 zero vector
-  // This happens when we count down
-  if(TIM1->CR1 & TIM_CR1_DIR) {
-    rdson[0] = rdson_meas[0] - rdson_offset[0];
-    rdson[1] = rdson_meas[1] - rdson_offset[1];
-    rdson[2] = rdson_meas[2] - rdson_offset[2];
-    rdson[3] = rdson_meas[3] - rdson_offset[3];
-  } else {
+  if(!(TIM1->CR1 & TIM_CR1_DIR)) {
     // Trigger ADC rdson measurement when we have 000 zero vector
+    // TODO: Use automatic trigger from timer?
     adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
   }
 

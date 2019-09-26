@@ -9,8 +9,14 @@
 
 ADC_HandleTypeDef adc_rdson;
 
-uint16_t rdson_meas[4];
-uint16_t rdson_offset[4];
+// Rds,on measurement order:
+// Left A, Left B, Right B, Right C phases
+volatile uint16_t rdson_meas[4];
+volatile uint16_t rdson_offset[4];
+
+// Current measurement result structure
+volatile i_meas_t i_meas;
+
 static volatile uint8_t adc_conv_done = 0;
 
 // ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
@@ -30,22 +36,22 @@ void ADC1_init(void) {
   adc_rdson.Init.NbrOfConversion       = RDSON_MEAS_COUNT;	// 2 currents for both motors
   HAL_ADC_Init(&adc_rdson);
 
-  // Use a rather short sampling time...
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-  sConfig.Channel = ADC_CHANNEL_0;  // pa0 right a phase voltage
+  sConfig.Channel = ADC_CHANNEL_0;  // PA0 Left A phase voltage
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_13;  // pc3 right b phase voltage
+  sConfig.Channel = ADC_CHANNEL_13;  // PC3 Left B phase voltage
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_14;  // pc4 left b phase voltage
+  sConfig.Channel = ADC_CHANNEL_14;  // PC4 Right B phase voltage (Blue cable)
   sConfig.Rank    = 3;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_15;  // pc5 left c phase voltage
+  sConfig.Channel = ADC_CHANNEL_15;  // PC5 Right C phase voltage (Yellow cable)
   sConfig.Rank    = 4;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
@@ -64,6 +70,10 @@ void ADC1_init(void) {
   // no end-of-conversion interrupt
   DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
   DMA1_Channel1->CCR  |= DMA_CCR_EN;
+
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
 
   // Enable end of conversion interrupt
   //adc_rdson.Instance->CR1 |= ADC_CR1_EOCIE; // Interrupt is not needed, will be handled in the timer update
@@ -91,7 +101,8 @@ void ADC1_calibrate(void) {
     DMA2->ISR |= DMA_ISR_TCIF1;	// Channel 1
 
     // Trigger conversion
-    adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
+    // Conversion must be triggered by SVM so that it happens at correct point in modulation sequence
+    //adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
 
     // Wait until DMA has finished transfer, Channel 5 end of transfer flag set
     while(!adc_conv_done);
@@ -112,5 +123,14 @@ void ADC1_calibrate(void) {
 // End of transfer interrupt handler for DMA1 channel 1 (Rds,on measurement)
 void DMA1_Channel1_IRQHandler(void) {
   DMA1->IFCR |= DMA_IFCR_CGIF1;	// Clear all interrupt flags for channel 1
-  adc_conv_done = 1;
+  adc_conv_done = 1;	// This is used for calibration
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+
+  // Copy measurements to current measurement array taking into account
+  // the offsets
+  // The values are valid after the calibration is done
+  i_meas.i_lA = rdson_meas[0] - rdson_offset[0];
+  i_meas.i_lB = rdson_meas[1] - rdson_offset[1];
+  i_meas.i_rB = rdson_meas[2] - rdson_offset[2];
+  i_meas.i_rC = rdson_meas[3] - rdson_offset[3];
 }

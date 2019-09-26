@@ -66,6 +66,10 @@
 #define ADC_OFFSET_SAMPLES		1024
 
 
+// Current measurement using Rds,on
+#define I_MEAS_RDSON	1
+//#undef I_MEAS_RDSON
+
 
 // Sanity checks here
 
