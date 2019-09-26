@@ -50,7 +50,9 @@
 	_ENTRY( rdsonlb        , int16_t   , _I16     , false     , "Rdson,lB"          ) \
 	_ENTRY( rdsonrb        , int16_t   , _I16     , false     , "Rdson,rB"          ) \
 	_ENTRY( rdsonrc        , int16_t   , _I16     , false     , "Rdson,rC"          ) \
-	_ENTRY( lboff        , uint16_t   , _U16     , false     , "offset"          )
+	_ENTRY( lboff        , uint16_t   , _U16     , false     , "offset"          ) \
+	_ENTRY( r_id        , int16_t   , _I16     , false     , "R D cur"          ) \
+	_ENTRY( r_iq        , int16_t   , _I16     , false     , "R Q cur"          )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

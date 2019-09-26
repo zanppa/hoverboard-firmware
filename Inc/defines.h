@@ -112,21 +112,6 @@
 #define CHARGER_PIN GPIO_PIN_12
 #define CHARGER_PORT GPIOA
 
-#define ABS(a) (((a) < 0.0) ? -(a) : (a))
-#define LIMIT(x, lowhigh) (((x) > (lowhigh)) ? (lowhigh) : (((x) < (-lowhigh)) ? (-lowhigh) : (x)))
-#define SAT(x, lowhigh) (((x) > (lowhigh)) ? (1.0) : (((x) < (-lowhigh)) ? (-1.0) : (0.0)))
-#define SAT2(x, low, high) (((x) > (high)) ? (1.0) : (((x) < (low)) ? (-1.0) : (0.0)))
-#define STEP(from, to, step) (((from) < (to)) ? (MIN((from) + (step), (to))) : (MAX((from) - (step), (to))))
-#define DEG(a) ((a)*M_PI / 180.0)
-#define RAD(a) ((a)*180.0 / M_PI)
-#define SIGN(a) (((a) < 0.0) ? (-1.0) : (((a) > 0.0) ? (1.0) : (0.0)))
-#define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-#define SCALE(value, high, max) MIN(MAX(((max) - (value)) / ((max) - (high)), 0.0), 1.0)
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN3(a, b, c) MIN(a, MIN(b, c))
-#define MAX3(a, b, c) MAX(a, MAX(b, c))
-
 // Structure that stores analog measurements
 typedef struct {
   uint16_t v_battery;
@@ -143,10 +128,10 @@ typedef struct {
 typedef struct {
   // Actual values
   struct {
-    int16_t speed;
+    int16_t speed;		// Actual rotation speed in p.u.
     int16_t period;		// Period of hall-sensor sector changes in control ticks
     uint8_t sector;		// Rotor sector from HALL sensors
-    uint16_t position;	// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
+    uint16_t angle;		// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
     int16_t current[3];	// Current of phases A, B, C (p.u.)
   } act;
 
@@ -159,8 +144,8 @@ typedef struct {
   // Control outputs to modulator
   struct {
     int16_t amplitude;	// Can also be < 0
-    uint16_t angle;		// Angle
-    int8_t speed;		// Speed in angle increments per modulator call
+    uint16_t angle;		// Angle (or angle advance)
+    int8_t speed;		// Speed in angle increments per modulator call for FOC
     uint8_t enable;
   } ctrl;
 } motor_state_t;

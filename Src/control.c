@@ -2,7 +2,9 @@
  * control.c
  *
  *  Created on: May 6, 2018
- *      Author: tomvoc
+ *      Original author: tomvoc
+ *
+ * Copyright (C) 2019 Lauri Peltonen
  */
 
 #include "control.h"
@@ -13,6 +15,8 @@
 #include "svm.h"
 #include "math.h"
 #include "adc.h"
+#include "math.h"
+#include "imeas.h"
 
 #include <stm32f1xx_hal_gpio.h>
 
@@ -23,13 +27,12 @@ extern volatile adc_buf_t analog_meas;
 #define LED_PERIOD (300)  //ms
 
 // TODO: Move to setup.c and calculate there
-const uint16_t motor_nominal_counts = (3<<12);		// timer ticks/sector change at rated speed
-const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/1000);	// Control cycle runs at 1000 Hz
+const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (CONTROL_FREQ/1000.0);		// timer ticks/sector change at rated speed
+const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
-volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and convert to p.u.
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
-const uint16_t adc_battery_filt = FIXED_ONE / 10;		// Low-pass filter gain in fixed point
+const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -51,19 +54,9 @@ static uint8_t pattern_tick = 0;
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
 
+// Current measurement
+extern volatile i_meas_t i_meas;
 
-
-void init_controls(void)
-{
-
-}
-
-
-
-void update_controls(void)
-{
-
-}
 
 // Read left hall sensors and return corresponding sector
 uint8_t read_left_hall(void) {
@@ -90,13 +83,13 @@ void initialize_control_state(void) {
   sector = read_left_hall();
   motor_state[STATE_LEFT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_LEFT].ctrl.angle = sector * ANGLE_60DEG;
+  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;
   __enable_irq();
 
   sector = read_right_hall();
   motor_state[STATE_RIGHT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
+  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;
   __enable_irq();
 
 }
@@ -148,7 +141,7 @@ void TIM3_IRQHandler(void)
 
 #ifdef SVM_HALL_UPDATE
     __disable_irq();	// Angle is also updated by modulator
-    motor_state[STATE_LEFT].ctrl.angle = angle;
+    motor_state[STATE_LEFT].act.angle = angle;
     __enable_irq();
     motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
@@ -176,7 +169,7 @@ void TIM3_IRQHandler(void)
 
 #ifdef SVM_HALL_UPDATE
     __disable_irq();	// Angle is also updated by modulator
-    motor_state[STATE_RIGHT].ctrl.angle = angle;
+    motor_state[STATE_RIGHT].act.angle = angle;
     __enable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
@@ -195,7 +188,8 @@ void TIM3_IRQHandler(void)
 
   // Analog measurements (battery voltage, to be used in modulator)
   analog_meas.v_battery += ADC_BATTERY_OFFSET;
-  battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
+  //battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt_gain) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
+  battery_voltage_filt = FILTERU(analog_meas.v_battery << 4, battery_voltage_filt, adc_battery_filt_gain);
   voltage_scale = fx_mulu((battery_voltage_filt >> 4), adc_battery_to_pu);
 
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
@@ -206,22 +200,53 @@ void TIM3_IRQHandler(void)
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
-  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+//  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
 //  motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
-// Old way
-//  if(motor_state[STATE_LEFT].ctrl.angle >= 4090) motor_state[STATE_LEFT].ctrl.angle = 0;
-//  else motor_state[STATE_LEFT].ctrl.angle += 5;
-  //motor_state[STATE_LEFT].ctrl.amplitude = 3000;
+
+#ifdef LEFT_MOTOR_FOC
+  // Get the interpolated position and measured currents from exactly same time instants
+  __disable_irq();
+  int16_t ia = i_meas.i_lA;
+  int16_t ib = i_meas.i_lB;
+  uint16_t angle = motor_state[STATE_LEFT].act.angle;	// Estimated rotor position
+  __enable_irq();
+
+  // Transform to rotor coordinate frame
+  int16_t ialpha, ibeta;
+  int16_t id, iq;
+  clarke(ia, ib, &ialpha, &ibeta);
+  park(ialpha, ibeta, angle, &id, &iq);
+
+#endif
+
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
-  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+  //motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
 //  motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r; // DEBUG
-// Old way
-//  if(motor_state[STATE_RIGHT].ctrl.angle >= 4090) motor_state[STATE_RIGHT].ctrl.angle = 0;
-//  else motor_state[STATE_RIGHT].ctrl.angle += 5;
-  //motor_state[STATE_RIGHT].ctrl.amplitude = 3000;
+
+#ifdef RIGHT_MOTOR_FOC
+  // Get the interpolated position and measured currents from exactly same time instants
+  __disable_irq();
+  int16_t ib = i_meas.i_rB;
+  int16_t ic = i_meas.i_rC;
+  uint16_t angle = motor_state[STATE_RIGHT].act.angle;	// Estimated rotor position
+  __enable_irq();
+
+  int16_t ia = -ib - ic;		// For simplicity, we use ia and ib in the calculation
+
+  // Transform to rotor coordinate frame
+  int16_t ialpha, ibeta;
+  int16_t id, iq;
+  clarke(ia, ib, &ialpha, &ibeta);
+  park(ialpha, ibeta, angle, &id, &iq);
+
+  // Debug: Store id and iq to config bus
+  cfg.vars.r_id = id;
+  cfg.vars.r_iq = iq;
+#endif
+
 #endif
 
 
@@ -288,7 +313,12 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_RIGHT].act.sector = sector_r;
   motor_state[STATE_LEFT].act.speed = speed_l;
   motor_state[STATE_RIGHT].act.speed = speed_r;
-
+  motor_state[STATE_LEFT].act.current[0] = i_meas.i_lA;
+  motor_state[STATE_LEFT].act.current[1] = i_meas.i_lB;
+  motor_state[STATE_LEFT].act.current[2] = -i_meas.i_lA - i_meas.i_lB;
+  motor_state[STATE_RIGHT].act.current[0] = -i_meas.i_lB - i_meas.i_rC;
+  motor_state[STATE_RIGHT].act.current[1] = i_meas.i_rB;
+  motor_state[STATE_RIGHT].act.current[2] = i_meas.i_rC;
 
   // Update config array
   cfg.vars.pos_l = sector_l;

@@ -133,10 +133,11 @@ void TIM1_UP_IRQHandler() {
   }
 
 #ifdef LEFT_MOTOR_SVM
-  // Get the vector times from the modulator
-  motor_state[STATE_LEFT].ctrl.angle += motor_state[STATE_LEFT].ctrl.speed;
+  // Interpolate the rotor position
+  motor_state[STATE_LEFT].act.angle += motor_state[STATE_LEFT].ctrl.speed;
 
-  angle = motor_state[STATE_LEFT].ctrl.angle;
+  // Get the vector times from the modulator
+  angle = motor_state[STATE_LEFT].act.angle;
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
@@ -150,9 +151,11 @@ void TIM1_UP_IRQHandler() {
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
-  motor_state[STATE_RIGHT].ctrl.angle += motor_state[STATE_RIGHT].ctrl.speed;
+  // Interpolate the rotor position
+  motor_state[STATE_RIGHT].act.angle += motor_state[STATE_RIGHT].ctrl.speed;
 
-  angle = motor_state[STATE_RIGHT].ctrl.angle;
+  // Get the vector times from the modulator
+  angle = motor_state[STATE_RIGHT].act.angle;
   sector = angle_to_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
