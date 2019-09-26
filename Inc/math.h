@@ -14,10 +14,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// Fixed point number definitions
 #define FIXED_ONE		4096
 #define FIXED_SHIFT		12
 #define FIXED_MASK		0x0FFF
 
+// Angle definitions
 #define ANGLE_45DEG		8192
 #define ANGLE_60DEG		10922	// 10922.667
 #define ANGLE_90DEG		16384
@@ -27,6 +29,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define ANGLE_270DEG	49152
 #define ANGLE_300DEG	54613
 
+// Clarke transform
+#define ONE_PER_SQRT3	2365	// FIXED_ONE / sqrt(3)
+#define SQRT3_PER_2		3547	// FIXED_ONE * sqrt(3) / 2
+
 uint16_t fx_mulu(uint16_t a, uint16_t b);
 int16_t fx_mul(int16_t a, int16_t b);
 
@@ -34,3 +40,8 @@ uint16_t fx_divu(uint16_t a, uint16_t b);
 int16_t fx_div(int16_t a, int16_t b);
 
 int16_t array_sin(uint16_t angle);
+
+void clarke(int16_t a, int16_t b, int16_t *alpha, int16_t *beta);
+void inv_clarke(int16_t alpha, int16_t beta, int16_t *a, int16_t *b);
+void park(int16_t alpha, int16_t beta, uint16_t theta, int16_t *d, int16_t *q);
+void inv_park(int16_t d, int16_t q, uint16_t theta, int16_t *alpha, int16_t *beta);
