@@ -34,7 +34,7 @@
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
 #define SVM_HALL_UPDATE
-
+//#undef SVM_HALL_UPDATE
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
@@ -97,14 +97,18 @@
 #error config.h: Left motor FOC control requires SVM
 #endif
 
+/*
 #if defined(LEFT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
 #error config.h: Left motor FOC control requires SVM_HALL_UPDATE
 #endif
+*/
 
 #if defined(RIGHT_MOTOR_FOC) && !defined(RIGHT_MOTOR_SVM)
 #error config.h: Right motor FOC requires SVM
 #endif
 
+/*
 #if defined(RIGHT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
 #error config.h: Right motor FOC requires SVM_HALL_UPDATE
 #endif
+*/

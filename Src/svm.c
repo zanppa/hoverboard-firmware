@@ -137,7 +137,13 @@ void TIM1_UP_IRQHandler() {
   motor_state[STATE_LEFT].act.angle += motor_state[STATE_LEFT].ctrl.speed;
 
   // Get the vector times from the modulator
-  angle = motor_state[STATE_LEFT].act.angle;
+#ifdef LEFT_MOTOR_FOC
+  // Phase advance according to ctrl angle
+  angle = motor_state[STATE_LEFT].act.angle + motor_state[STATE_LEFT].ctrl.angle;
+#else
+  // In normal SVM control angle is directly the modulation angle
+  angle = motor_state[STATE_LEFT].ctrl.angle;
+#endif
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
@@ -155,7 +161,13 @@ void TIM1_UP_IRQHandler() {
   motor_state[STATE_RIGHT].act.angle += motor_state[STATE_RIGHT].ctrl.speed;
 
   // Get the vector times from the modulator
-  angle = motor_state[STATE_RIGHT].act.angle;
+#ifdef RIGHT_MOTOR_FOC
+  // Phase advance according to ctrl angle
+  angle = motor_state[STATE_RIGHT].act.angle + motor_state[STATE_RIGHT].ctrl.angle;;
+#else
+  // In normal SVM control angle is directly the modulation angle
+  angle = motor_state[STATE_RIGHT].ctrl.angle;
+#endif
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 

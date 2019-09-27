@@ -36,6 +36,18 @@ const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain 
 
 const uint16_t idq_filt_gain = FIXED_ONE / 100;	// Low pass filter id and iq
 
+// P and I terms for d and q axis current regulators for FOC
+// TODO: Ifdefs
+const uint16_t kp_id = 0;
+const uint16_t ki_id = 0;
+const uint16_t kp_iq = 0;
+const uint16_t ki_iq = 0;
+
+// Id and Iq error integrals
+static int16_t id_error_int = 0;
+static int16_t iq_error_int = 0;
+const int16_t idq_int_max = 200;	// TODO: What is a sane value...?
+
 volatile motor_state_t motor_state[2] = {0};
 
 // Buzzer tone control
@@ -213,7 +225,7 @@ void TIM3_IRQHandler(void)
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
-  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+//  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
 //  motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
 
 #ifdef LEFT_MOTOR_FOC
@@ -230,13 +242,32 @@ void TIM3_IRQHandler(void)
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
+  int16_t id_error = 0 - id;	// TODO: Add id reference (from field weakening)
+  int16_t iq_error = cfg.vars.setpoint_l - iq;
+
+  // Run the PI controllers
+  // First for D axis current which sets the angle advance
+  id_error_int = LIMIT(id_error_int + id_error, idq_int_max);
+  int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
+  angle_advance = fx_mul(angle_advance, kp_id);
+
+  // Then for Q axis current which sets the reference amplitude
+  iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
+  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int, ki_iq);
+  ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
+
+  // Apply references
+  motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
+  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance;
+
 #endif
 
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
-  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+//  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
 //  motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r; // DEBUG
 
 #ifdef RIGHT_MOTOR_FOC
@@ -261,13 +292,34 @@ void TIM3_IRQHandler(void)
   // Debug: Store id and iq to config bus
   cfg.vars.r_id = id;
   cfg.vars.r_iq = iq;
+
+  int16_t id_error = 0 - id;    // TODO: Add id reference (from field weakening)
+  int16_t iq_error = cfg.vars.setpoint_r - iq;
+
+  // Run the PI controllers
+  // First for D axis current which sets the angle advance
+  id_error_int = LIMIT(id_error_int + id_error, idq_int_max);
+  int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
+  angle_advance = fx_mul(angle_advance, kp_id);
+
+  // Then for Q axis current which sets the reference amplitude
+  iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
+  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int, ki_iq);
+  ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
+
+  // Apply references
+  motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
+  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance;
+
+
 #endif
 
 #endif
 
 
   // TODO: Move volatile(?) setpoints to local variables
-//#ifdef LEFT_MOTOR_BLDC
+#ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   setpoint_l_limit = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
@@ -278,9 +330,9 @@ void TIM3_IRQHandler(void)
 
   //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
   motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
-//#endif
+#endif
 
-//#ifdef RIGHT_MOTOR_BLDC
+#ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   setpoint_r_limit = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
@@ -291,7 +343,7 @@ void TIM3_IRQHandler(void)
 
   //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale);
   motor_state[STATE_RIGHT].ctrl.amplitude = pwm_r_ramp;
-//#endif
+#endif
 
 
   // Update buzzer
