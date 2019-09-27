@@ -34,6 +34,8 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
+const uint16_t idq_filt_gain = FIXED_ONE / 100;	// Low pass filter id and iq
+
 volatile motor_state_t motor_state[2] = {0};
 
 // Buzzer tone control
@@ -53,9 +55,11 @@ static uint8_t pattern_tick = 0;
 // Array to convert HALL sensor readings (order CBA, MSB first) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 //static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
-static const uint8_t hall_to_sector[8] = { 0, 0, 2, 1, 4, 5, 3, 0 };
+//static const uint8_t hall_to_sector[8] = { 0, 0, 2, 1, 4, 5, 3, 0 }; // Mod 1
+static const uint8_t hall_to_sector[8] = { 0, 2, 4, 3, 0, 1, 5, 0 };
+
 // HALL sensors			Sector
-// 		CBA	decimal		number
+// 		CBA	decimal		number (old)
 // A 	001	1			0
 // AB	011	3			1
 // B	010	2			2
@@ -152,7 +156,7 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].act.angle = angle;
     __enable_irq();
-    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
+    //motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
 
     motor_state[STATE_LEFT].act.period = speed_tick[0];
@@ -180,7 +184,7 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].act.angle = angle;
     __enable_irq();
-    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
+    //motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
 
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
@@ -209,7 +213,7 @@ void TIM3_IRQHandler(void)
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
-//  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
 //  motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
 
 #ifdef LEFT_MOTOR_FOC
@@ -232,7 +236,7 @@ void TIM3_IRQHandler(void)
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
-  //motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
 //  motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r; // DEBUG
 
 #ifdef RIGHT_MOTOR_FOC
@@ -250,6 +254,9 @@ void TIM3_IRQHandler(void)
   int16_t id, iq;
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
+
+  id = FILTER(id, cfg.vars.r_id, idq_filt_gain);
+  iq = FILTER(iq, cfg.vars.r_iq, idq_filt_gain);
 
   // Debug: Store id and iq to config bus
   cfg.vars.r_id = id;
@@ -334,6 +341,7 @@ void TIM3_IRQHandler(void)
   cfg.vars.pos_r = sector_r;
   cfg.vars.speed_l = motor_state[STATE_LEFT].act.period;//speed_l; // DEBUG
   cfg.vars.speed_r = motor_state[STATE_RIGHT].act.period; //speed_r;  // DEBUG
+  cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;
 
 
   // Copy ADC values to cfg array
