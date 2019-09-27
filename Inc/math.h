@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FIXED_MASK		0x0FFF
 
 // Angle definitions
+#define ANGLE_30DEG		5461	// 5461.333, half a sector
 #define ANGLE_45DEG		8192
 #define ANGLE_60DEG		10922	// 10922.667
 #define ANGLE_90DEG		16384

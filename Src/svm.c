@@ -34,12 +34,12 @@ extern ADC_HandleTypeDef adc_rdson;
 // CCR is uint32_t, this should be used like (uint_32t *)(TIM8+mod_pattern[0][0]) or something
 // Offsets should be CCR1=0x34, CCR2=0x38 and CCR3=0x3C so uint8_t is enough
 static const uint8_t svm_mod_pattern[6][3] = {
-  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W)},	// Was 0
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},	// Was 1
   {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U)},
   {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)}
 };
 
 
@@ -104,14 +104,14 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
 
 // Convert fixed point angle into sector number
-static inline uint8_t angle_to_sector(uint16_t angle) {
+static inline uint8_t angle_to_svm_sector(uint16_t angle) {
   //angle &= FIXED_MASK;	// Changed to full circle = 16 bits
-  if(angle < ANGLE_60DEG) return 5;
-  else if(angle < ANGLE_120DEG) return 0;
-  else if(angle < ANGLE_180DEG) return 1;
-  else if(angle < ANGLE_240DEG) return 2;
-  else if(angle < ANGLE_300DEG) return 3;
-  else return 4;
+  if(angle < ANGLE_60DEG) return 0;
+  else if(angle < ANGLE_120DEG) return 1;
+  else if(angle < ANGLE_180DEG) return 2;
+  else if(angle < ANGLE_240DEG) return 3;
+  else if(angle < ANGLE_300DEG) return 4;
+  else return 5;
 }
 
 // Timer 1 update handles space vector modulation for both motors
@@ -138,7 +138,7 @@ void TIM1_UP_IRQHandler() {
 
   // Get the vector times from the modulator
   angle = motor_state[STATE_LEFT].act.angle;
-  sector = angle_to_sector(angle);
+  sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // Since the timer compare is wrong way
@@ -156,7 +156,7 @@ void TIM1_UP_IRQHandler() {
 
   // Get the vector times from the modulator
   angle = motor_state[STATE_RIGHT].act.angle;
-  sector = angle_to_sector(angle);
+  sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // Since the timer compare is wrong way

@@ -50,9 +50,18 @@ static uint16_t speed_tick[2] = {0};
 static uint8_t buzzer_tone_tick = 0;
 static uint8_t pattern_tick = 0;
 
-// Array to convert HALL sensor readings (order ABC) to sector number
+// Array to convert HALL sensor readings (order CBA, MSB first) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
-static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
+//static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
+static const uint8_t hall_to_sector[8] = { 0, 0, 2, 1, 4, 5, 3, 0 };
+// HALL sensors			Sector
+// 		CBA	decimal		number
+// A 	001	1			0
+// AB	011	3			1
+// B	010	2			2
+// BC	110	6			3
+// C	100	4			4
+// CA	101	5			5
 
 // Current measurement
 extern volatile i_meas_t i_meas;
@@ -83,13 +92,13 @@ void initialize_control_state(void) {
   sector = read_left_hall();
   motor_state[STATE_LEFT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;
+  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;	// Assume we're in the middle of a sector
   __enable_irq();
 
   sector = read_right_hall();
   motor_state[STATE_RIGHT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;
+  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;	// Assume middle of a sector
   __enable_irq();
 
 }
@@ -131,7 +140,7 @@ void TIM3_IRQHandler(void)
   // Left motor speed
   if(sector_l != prev_sector_l) {
     speed_l = motor_nominal_counts / speed_tick[0];
-    uint16_t angle = sector_l * ANGLE_60DEG;
+    uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
     if(sector_l != ((prev_sector_l + 1) % 6)) {
       speed_l = -speed_l;
@@ -160,7 +169,7 @@ void TIM3_IRQHandler(void)
   // Right motor speed
   if(sector_r != prev_sector_r) {
     speed_r = motor_nominal_counts / speed_tick[1];
-    uint16_t angle = sector_r * ANGLE_60DEG;
+    uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
     if(sector_r != ((prev_sector_r + 1) % 6)) {
       speed_r = -speed_r;
