@@ -144,9 +144,9 @@ void TIM1_UP_IRQHandler() {
   // Since the timer compare is wrong way
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-  else // Even sectors uses "left" vector first
     *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  else // Even sectors uses "left" vector first
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
@@ -162,9 +162,9 @@ void TIM1_UP_IRQHandler() {
   // Since the timer compare is wrong way
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
-  else // Even sectors uses "left" vector first
     *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
+  else // Even sectors uses "left" vector first
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
