@@ -136,10 +136,11 @@ void DMA1_Channel1_IRQHandler(void) {
   // Copy measurements to current measurement array taking into account
   // the offsets
   // The values are valid after the calibration is done
-  i_meas.i_lA = (rdson_meas[0] - rdson_offset[0]) * rdson_to_i;
-  i_meas.i_lB = (rdson_meas[1] - rdson_offset[1]) * rdson_to_i;
-  i_meas.i_rB = (rdson_meas[2] - rdson_offset[2]) * rdson_to_i;
-  i_meas.i_rC = (rdson_meas[3] - rdson_offset[3]) * rdson_to_i;
+  // Measurement is from motor into inverter, while we want it the other way so it is inverted
+  i_meas.i_lA = (rdson_offset[0] - rdson_meas[0]) * rdson_to_i;
+  i_meas.i_lB = (rdson_offset[1] - rdson_meas[1]) * rdson_to_i;
+  i_meas.i_rB = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;
+  i_meas.i_rC = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
 
   adc_conv_done = 1;	// This is used for calibration
 }
