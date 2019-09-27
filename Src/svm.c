@@ -63,10 +63,10 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   angle = angle % ANGLE_60DEG;
 
   // Calculate the vector times
-  ta1 = fx_mulu(midx, array_sin(angle));
+  ta1 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
+  ta2 = fx_mulu(midx, array_sin(angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
   tz = (PWM_PERIOD - ta1 - ta2) / 2;
@@ -144,9 +144,9 @@ void TIM1_UP_IRQHandler() {
   // Since the timer compare is wrong way
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-  else // Even sectors uses "left" vector first
     *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+  else // Even sectors uses "left" vector first
+    *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
@@ -162,9 +162,9 @@ void TIM1_UP_IRQHandler() {
   // Since the timer compare is wrong way
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][0])) = t0;
   if(sector & 0x01) // Every odd sector uses "right" vector first
-    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
-  else // Even sectors uses "left" vector first
     *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t2;
+  else // Even sectors uses "left" vector first
+    *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
