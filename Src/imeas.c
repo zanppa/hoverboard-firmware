@@ -16,7 +16,7 @@ volatile uint16_t rdson_meas[4];
 volatile uint16_t rdson_offset[4];
 
 // Current measurement result structure
-volatile i_meas_t i_meas;
+volatile i_meas_t i_meas = {0};
 
 static volatile uint8_t adc_conv_done = 0;
 
@@ -131,14 +131,15 @@ void ADC1_calibrate(void) {
 // End of transfer interrupt handler for DMA1 channel 1 (Rds,on measurement)
 void DMA1_Channel1_IRQHandler(void) {
   DMA1->IFCR |= DMA_IFCR_CGIF1;	// Clear all interrupt flags for channel 1
-  adc_conv_done = 1;	// This is used for calibration
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   // Copy measurements to current measurement array taking into account
   // the offsets
   // The values are valid after the calibration is done
-  i_meas.i_lA = fx_mul((rdson_meas[0] - rdson_offset[0]), rdson_to_i);
-  i_meas.i_lB = fx_mul((rdson_meas[1] - rdson_offset[1]), rdson_to_i);
-  i_meas.i_rB = fx_mul((rdson_meas[2] - rdson_offset[2]), rdson_to_i);
-  i_meas.i_rC = fx_mul((rdson_meas[3] - rdson_offset[3]), rdson_to_i);
+  i_meas.i_lA = (rdson_meas[0] - rdson_offset[0]) * rdson_to_i;
+  i_meas.i_lB = (rdson_meas[1] - rdson_offset[1]) * rdson_to_i;
+  i_meas.i_rB = (rdson_meas[2] - rdson_offset[2]) * rdson_to_i;
+  i_meas.i_rC = (rdson_meas[3] - rdson_offset[3]) * rdson_to_i;
+
+  adc_conv_done = 1;	// This is used for calibration
 }
