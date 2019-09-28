@@ -34,19 +34,21 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
-const uint16_t idq_filt_gain = FIXED_ONE / 100;	// Low pass filter id and iq
+const uint16_t idq_filt_gain = FIXED_ONE / 300;	// Low pass filter id and iq
 
 // P and I terms for d and q axis current regulators for FOC
 // TODO: Ifdefs
-const uint16_t kp_id = 0;
-const uint16_t ki_id = 0;
-const uint16_t kp_iq = 0;
-const uint16_t ki_iq = 0;
+const uint16_t kp_id = 0.6 * FIXED_ONE; //2000;
+const uint16_t ki_id = 0.04 * FIXED_ONE; //2000; //1200;
+
+const uint16_t kp_iq = 0.6 * FIXED_ONE;
+const uint16_t ki_iq = 0.04 * FIXED_ONE; //1200;
 
 // Id and Iq error integrals
 static int16_t id_error_int = 0;
 static int16_t iq_error_int = 0;
-const int16_t idq_int_max = 200;	// TODO: What is a sane value...?
+const int16_t idq_int_max = 30000;	// TODO: What is a sane value...?
+const uint8_t int_divisor = 10;
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -108,13 +110,13 @@ void initialize_control_state(void) {
   sector = read_left_hall();
   motor_state[STATE_LEFT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;	// Assume we're in the middle of a sector
+  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG + ANGLE_30DEG;	// Assume we're in the middle of a sector
   __enable_irq();
 
   sector = read_right_hall();
   motor_state[STATE_RIGHT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;	// Assume middle of a sector
+  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG + ANGLE_30DEG;	// Assume middle of a sector
   __enable_irq();
 
 }
@@ -168,7 +170,7 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].act.angle = angle;
     __enable_irq();
-    //motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
+    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
 
     motor_state[STATE_LEFT].act.period = speed_tick[0];
@@ -196,7 +198,7 @@ void TIM3_IRQHandler(void)
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].act.angle = angle;
     __enable_irq();
-    //motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
+    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
 
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
@@ -247,9 +249,9 @@ void TIM3_IRQHandler(void)
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int = LIMIT(id_error_int + id_error, idq_int_max);
+  id_error_int = LIMIT(id_error_int + (id_error / int_divisor), idq_int_max);
   int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
-  angle_advance = fx_mul(angle_advance, kp_id);
+  angle_advance = fx_mul(angle_advance, kp_id) * 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
   iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
@@ -259,7 +261,8 @@ void TIM3_IRQHandler(void)
 
   // Apply references
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance;
+  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;	// Should start with 90 degree phase shift
+  // TODO: Apply 90 degrees positive or negative depending on reference polarity
 
 #endif
 
@@ -293,14 +296,18 @@ void TIM3_IRQHandler(void)
   cfg.vars.r_id = id;
   cfg.vars.r_iq = iq;
 
-  int16_t id_error = 0 - id;    // TODO: Add id reference (from field weakening)
+  int16_t id_error = id;    // TODO: Add id reference (from field weakening)
   int16_t iq_error = cfg.vars.setpoint_r - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int = LIMIT(id_error_int + id_error, idq_int_max);
+  id_error_int = LIMIT(id_error_int + (id_error/int_divisor), idq_int_max);
   int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
-  angle_advance = fx_mul(angle_advance, kp_id);
+  angle_advance = fx_mul(angle_advance, kp_id) * 8;
+
+  // Invert phase advance if speed is reverse
+  //if(speed_r < 0) angle_advance = -angle_advance;
+  // TODO: Should probably be the reference, not actual...
 
   // Then for Q axis current which sets the reference amplitude
   iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
@@ -310,7 +317,7 @@ void TIM3_IRQHandler(void)
 
   // Apply references
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance;
+  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;
 
 
 #endif
@@ -405,6 +412,8 @@ void TIM3_IRQHandler(void)
   cfg.vars.aref2 = analog_meas.analog_ref_2;
   cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
   cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
+  cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
+  cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
   cfg.vars.ref_scale = voltage_scale;
 
   control_tick++;
