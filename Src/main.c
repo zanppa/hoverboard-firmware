@@ -115,6 +115,10 @@ int main(void) {
     //update cfg_bus communication
     mb_update();
 
+    // Update references
+    // TODO: Select reference source (e.g. analog or modbus)
+    motor_state[STATE_LEFT].ref.value = cfg.vars.setpoint_l;
+    motor_state[STATE_RIGHT].ref.value = cfg.vars.setpoint_r;
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important

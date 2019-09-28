@@ -155,3 +155,5 @@ typedef struct {
 
 // Control modes
 #define CONTROL_SPEED 0
+#define CONTROL_TORQUE 1
+

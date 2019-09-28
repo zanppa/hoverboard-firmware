@@ -159,6 +159,7 @@ void TIM3_IRQHandler(void)
   uint16_t voltage_scale;
   int16_t speed_error;
   int16_t torque_ref;
+  uint8_t ctrl_mode;
 
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
@@ -250,17 +251,22 @@ void TIM3_IRQHandler(void)
   // Left motor
 
   // Speed control loop for left motor
-  speed_error = cfg.vars.setpoint_l - speed_l;
-  speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
-  torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
-  torque_ref = fx_mul(torque_ref, kp_speed);
+  ctrl_mode = motor_state[STATE_LEFT].ref.control_mode ;
+
+  if(ctrl_mode == CONTROL_SPEED) {
+    speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
+    speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
+    torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
+    torque_ref = fx_mul(torque_ref, kp_speed);
+  } else if(ctrl_mode == CONTROL_TORQUE) {
+    torque_ref = motor_state[STATE_LEFT].ref.value;
+  } else {
+    torque_ref = 0;
+  }
 
 
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
-// New way
-//  motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
-//  motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
 
 #ifdef LEFT_MOTOR_FOC
   // Get the interpolated position and measured currents from exactly same time instants
@@ -292,29 +298,55 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
 
+  // Apply DC voltage scaling
+  ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+
   // Apply references
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
   motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;	// Should start with 90 degree phase shift
   // TODO: Apply 90 degrees positive or negative depending on reference polarity
 
-#endif
+#else // LEFT_MOTOR_FOC
+  // TODO: U/f control for SVM without FOC?
+#endif // !LEFT_MOTOR_FOC
 
-#endif
+#endif // LEFT_MOTOR_SVM
+
+
+  // TODO: Move volatile(?) setpoints to local variables
+#ifdef LEFT_MOTOR_BLDC
+  // Torque (voltage) control of left motor in BLDC mode
+  setpoint_l_limit = CLAMP(torque_ref, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
+
+  pwm_diff = setpoint_l_limit - pwm_l_ramp;
+  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
+
+  pwm_l_ramp += pwm_diff;
+
+  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
+  motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
+#endif // LEFT_MOTOR_BLDC
+
+
 
   // ------------
   // Right motor
 
-  // Speed control loop for right motor
-  speed_error = cfg.vars.setpoint_r - speed_r;
-  speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
-  torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
-  torque_ref = fx_mul(torque_ref, kp_speed);
+  ctrl_mode = motor_state[STATE_RIGHT].ref.control_mode ;
 
+  if(ctrl_mode == CONTROL_SPEED) {
+    // Speed control loop for right motor
+    speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
+    speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
+    torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
+    torque_ref = fx_mul(torque_ref, kp_speed);
+  } else if(ctrl_mode == CONTROL_TORQUE) {
+    torque_ref = motor_state[STATE_RIGHT].ref.value;
+  } else {
+    torque_ref = 0;
+  }
 
 #ifdef RIGHT_MOTOR_SVM
-// New way
-//  motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
-//  motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r; // DEBUG
 
 #ifdef RIGHT_MOTOR_FOC
   // Get the interpolated position and measured currents from exactly same time instants
@@ -359,33 +391,23 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
 
+  // Apply DC voltage scaling
+  ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+
   // Apply references
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
   motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;
 
+#else // RIGHT_MOTOR_FOC
+  // TODO: U/f control for SVM without FOC?
+#endif // !RIGHT_MOTOR_FOC
 
-#endif
+#endif // RIGHT_MOTOR_SVM
 
-#endif
-
-
-  // TODO: Move volatile(?) setpoints to local variables
-#ifdef LEFT_MOTOR_BLDC
-  // Torque (voltage) control of left motor in BLDC mode
-  setpoint_l_limit = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
-
-  pwm_diff = setpoint_l_limit - pwm_l_ramp;
-  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
-
-  pwm_l_ramp += pwm_diff;
-
-  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
-  motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
-#endif
 
 #ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
-  setpoint_r_limit = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
+  setpoint_r_limit = CLAMP(torque_ref, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
   pwm_diff = setpoint_r_limit - pwm_r_ramp;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
