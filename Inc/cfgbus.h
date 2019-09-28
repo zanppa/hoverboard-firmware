@@ -55,7 +55,8 @@
 	_ENTRY( r_iq        , int16_t   , _I16     , false     , "R Q cur"          ) \
 	_ENTRY( r_angle        , uint16_t   , _U16     , false     , "R angle"          ) \
 	_ENTRY( l_angle_adv        , uint16_t   , _U16     , false     , "L angle adv"          ) \
-	_ENTRY( r_angle_adv        , uint16_t   , _U16     , false     , "R angle adv"          )
+	_ENTRY( r_angle_adv        , uint16_t   , _U16     , false     , "R angle adv"          ) \
+	_ENTRY( t_req_r        , int16_t   , _I16     , false     , "R torq req"          )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING

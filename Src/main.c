@@ -68,6 +68,9 @@ int main(void) {
   MX_GPIO_Init();
 
   initialize_control_state();
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
+
 
   MX_TIM_Init();
 

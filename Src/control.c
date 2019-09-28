@@ -62,12 +62,12 @@ const uint8_t int_divisor = 10;
 
 // ---------
 // Speed control parameters
-static uint16_t kp_speed = 0.3 * FIXED_ONE;
-static uint16_t ki_speed = 0.002 * FIXED_ONE;
+static uint16_t kp_speed = 1.2 * FIXED_ONE;
+static uint16_t ki_speed = 0.1 * FIXED_ONE;
 static int16_t speed_error_int_l = 0;
 static int16_t speed_error_int_r = 0;
-static const uint16_t speed_int_max = 5000;	// TODO: What is a sane value?
-static const uint16_t speed_int_divisor = 10;
+static const uint16_t speed_int_max = 20000;	// TODO: What is a sane value?
+static const uint16_t speed_int_divisor = 30;
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -180,7 +180,7 @@ void TIM3_IRQHandler(void)
 
   // Left motor speed
   if(sector_l != prev_sector_l) {
-    speed_l = motor_nominal_counts / speed_tick[0];
+    speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
     uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
     if(sector_l != ((prev_sector_l + 1) % 6)) {
@@ -200,7 +200,7 @@ void TIM3_IRQHandler(void)
     speed_tick[0] = 0;
   } else {
     speed_l = motor_state[STATE_LEFT].act.speed;
-    if(speed_tick[0] < 4095) speed_tick[0]++;
+    if(speed_tick[0] < 1000) speed_tick[0]++;	// If no sector change in 1 s assume stall
     else {
       speed_l = 0;	// Easy way but response time is long
       motor_state[STATE_LEFT].act.period = 0xFFFF;
@@ -209,7 +209,7 @@ void TIM3_IRQHandler(void)
 
   // Right motor speed
   if(sector_r != prev_sector_r) {
-    speed_r = motor_nominal_counts / speed_tick[1];
+    speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
     uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
     if(sector_r != ((prev_sector_r + 1) % 6)) {
@@ -228,7 +228,7 @@ void TIM3_IRQHandler(void)
     speed_tick[1] = 0;
   } else {
     speed_r = motor_state[STATE_RIGHT].act.speed;
-    if(speed_tick[1] < 4095) speed_tick[1]++;
+    if(speed_tick[1] < 1000) speed_tick[1]++; // if no sector change in 1 s assume stall
     else {
       speed_r = 0;	// Easy way but response time is long
       motor_state[STATE_RIGHT].act.period = 0xFFFF;
@@ -340,6 +340,9 @@ void TIM3_IRQHandler(void)
     speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
     torque_ref = fx_mul(torque_ref, kp_speed);
+
+    cfg.vars.t_req_r = torque_ref;
+
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
   } else {
@@ -464,8 +467,8 @@ void TIM3_IRQHandler(void)
   // Update config array
   cfg.vars.pos_l = sector_l;
   cfg.vars.pos_r = sector_r;
-  cfg.vars.speed_l = motor_state[STATE_LEFT].act.period;//speed_l; // DEBUG
-  cfg.vars.speed_r = motor_state[STATE_RIGHT].act.period; //speed_r;  // DEBUG
+  cfg.vars.speed_l = speed_l;
+  cfg.vars.speed_r = speed_r;
   cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;
 
 
