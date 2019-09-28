@@ -67,7 +67,7 @@ int main(void) {
 
   MX_GPIO_Init();
 
-  //initialize_control_state();
+  initialize_control_state();
 
   MX_TIM_Init();
 
