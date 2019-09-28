@@ -2,7 +2,12 @@
 
 This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of NiklasFauth's hoverboard-firmware-hack.
 
-Note that compared to that version, I have changed left/right sides because they didn't match my board's markings.
+Main purpose is to implement field oriented control with proper (sinusoidal) space vector modulation. At this point the basic 
+concepts are working but need more features (reference chains for example) and testing to be sure.
+
+Code here is heavily under development and most likely is not directly compatible with other people's version. And may break 
+at any time without prior notice as I develop the features :)
+
 
 ## Roadmap
  - [ ] Add documentation
@@ -13,16 +18,25 @@ Note that compared to that version, I have changed left/right sides because they
       - [x] [Current measurement](Docs/current_meas.md)
       - [ ] Control loops
  - [x] Add configs for Raspberry PI Zero W wireless flashing with OpenOCD
- - [ ] Re-organize code
+ - [x] Re-organize code
  - [ ] Implement mandatory features
       - [x] Space vector modulation (requires more testing and reference chain)
       - [ ] U/f control with IR compensation
-      - [ ] Better current measurement
-      - [ ] FOC
+      - [x] Better current measurement
+           - [x] [Lower branch transistor Rds,on measurement, in separate branch](https://github.com/zanppa/hoverboard-firmware/tree/imeas2)
+           - [ ] Shunt measurement synched to active vectors
+      - [x] [FOC (in separate branch)](https://github.com/zanppa/hoverboard-firmware/tree/foc)
+      - [ ] Speed/torque control mode, reference chains
+      - [ ] Selectable reference source (e.g. modbus or analog in)
  - [ ] Additional features
-      - [ ] Field weakening
+      - [ ] Field weakening (automatic)
       - [ ] Current limiting
+      - [ ] Overcurrent trips
+      - [x] Phase short circuit trip with shunt resistor
       - [ ] Overvoltage and undervoltage limits
+      - [ ] LED indications
+      - [ ] Buzzer indications
+      - [x] Figure out modbus and make example client (to be uploaded)
 
 
 ## TomTinkering's changes
