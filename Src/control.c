@@ -62,7 +62,12 @@ const uint8_t int_divisor = 10;
 
 // ---------
 // Speed control parameters
-
+static uint16_t kp_speed = 0.3 * FIXED_ONE;
+static uint16_t ki_speed = 0.002 * FIXED_ONE;
+static int16_t speed_error_int_l = 0;
+static int16_t speed_error_int_r = 0;
+static const uint16_t speed_int_max = 5000;	// TODO: What is a sane value?
+static const uint16_t speed_int_divisor = 10;
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -152,6 +157,9 @@ void TIM3_IRQHandler(void)
   uint8_t prev_sector_l, prev_sector_r;
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
+  int16_t speed_error;
+  int16_t torque_ref;
+
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
@@ -238,6 +246,16 @@ void TIM3_IRQHandler(void)
   voltage_scale = fx_divu(FIXED_ONE, voltage_scale);
 
 
+  // --------------
+  // Left motor
+
+  // Speed control loop for left motor
+  speed_error = cfg.vars.setpoint_l - speed_l;
+  speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
+  torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
+  torque_ref = fx_mul(torque_ref, kp_speed);
+
+
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
 // New way
@@ -259,7 +277,8 @@ void TIM3_IRQHandler(void)
   park(ialpha, ibeta, angle, &id, &iq);
 
   int16_t id_error = 0 - id;	// TODO: Add id reference (from field weakening)
-  int16_t iq_error = cfg.vars.setpoint_l - iq;
+  //int16_t iq_error = cfg.vars.setpoint_l - iq;
+  int16_t iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
@@ -281,6 +300,16 @@ void TIM3_IRQHandler(void)
 #endif
 
 #endif
+
+  // ------------
+  // Right motor
+
+  // Speed control loop for right motor
+  speed_error = cfg.vars.setpoint_r - speed_r;
+  speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
+  torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
+  torque_ref = fx_mul(torque_ref, kp_speed);
+
 
 #ifdef RIGHT_MOTOR_SVM
 // New way
@@ -311,7 +340,8 @@ void TIM3_IRQHandler(void)
   cfg.vars.r_iq = iq;
 
   int16_t id_error = id;    // TODO: Add id reference (from field weakening)
-  int16_t iq_error = cfg.vars.setpoint_r - iq;
+  //int16_t iq_error = cfg.vars.setpoint_r - iq;
+  int16_t iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
