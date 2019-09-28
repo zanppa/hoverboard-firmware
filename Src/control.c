@@ -34,6 +34,9 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
+// -----------
+// Torque control (FOC D and Q axis currents) parameters
+#if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
 const uint16_t idq_filt_gain = FIXED_ONE / 300;	// Low pass filter id and iq
 
 // P and I terms for d and q axis current regulators for FOC
@@ -45,10 +48,21 @@ const uint16_t kp_iq = 0.6 * FIXED_ONE;
 const uint16_t ki_iq = 0.04 * FIXED_ONE; //1200;
 
 // Id and Iq error integrals
-static int16_t id_error_int = 0;
-static int16_t iq_error_int = 0;
+#ifdef LEFT_MOTOR_FOC
+static int16_t id_error_int_l = 0;
+static int16_t iq_error_int_l = 0;
+#endif
+#ifdef RIGHT_MOTOR_FOC
+static int16_t id_error_int_r = 0;
+static int16_t iq_error_int_r = 0;
+#endif
 const int16_t idq_int_max = 30000;	// TODO: What is a sane value...?
 const uint8_t int_divisor = 10;
+#endif
+
+// ---------
+// Speed control parameters
+
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -249,13 +263,13 @@ void TIM3_IRQHandler(void)
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int = LIMIT(id_error_int + (id_error / int_divisor), idq_int_max);
-  int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
+  id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
+  int16_t angle_advance = id_error + fx_mul(id_error_int_l, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
-  iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
-  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int, ki_iq);
+  iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
+  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
 
@@ -301,8 +315,8 @@ void TIM3_IRQHandler(void)
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int = LIMIT(id_error_int + (id_error/int_divisor), idq_int_max);
-  int16_t angle_advance = id_error + fx_mul(id_error_int, ki_id);
+  id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
+  int16_t angle_advance = id_error + fx_mul(id_error_int_r, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;
 
   // Invert phase advance if speed is reverse
@@ -310,8 +324,8 @@ void TIM3_IRQHandler(void)
   // TODO: Should probably be the reference, not actual...
 
   // Then for Q axis current which sets the reference amplitude
-  iq_error_int = LIMIT(iq_error_int + iq_error, idq_int_max);
-  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int, ki_iq);
+  iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
+  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
 
