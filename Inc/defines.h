@@ -145,6 +145,8 @@ typedef struct {
   struct {
     int16_t amplitude;	// Can also be < 0
     uint16_t angle;		// Angle (or angle advance)
+    uint16_t angle_min;
+    uint16_t angle_max;
     int8_t speed;		// Speed in angle increments per modulator call for FOC
     uint8_t enable;
   } ctrl;
