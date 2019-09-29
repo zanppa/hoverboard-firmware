@@ -42,10 +42,10 @@ const uint16_t idq_filt_gain = FIXED_ONE / 300;	// Low pass filter id and iq
 // P and I terms for d and q axis current regulators for FOC
 // TODO: Ifdefs
 const uint16_t kp_id = 0.6 * FIXED_ONE; //2000;
-const uint16_t ki_id = 0.04 * FIXED_ONE; //2000; //1200;
+const uint16_t ki_id = 0.01 * FIXED_ONE; //2000; //1200;
 
 const uint16_t kp_iq = 0.6 * FIXED_ONE;
-const uint16_t ki_iq = 0.04 * FIXED_ONE; //1200;
+const uint16_t ki_iq = 0.08 * FIXED_ONE; //1200;
 
 // Id and Iq error integrals
 #ifdef LEFT_MOTOR_FOC
