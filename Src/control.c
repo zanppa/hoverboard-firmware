@@ -308,7 +308,7 @@ void TIM3_IRQHandler(void)
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
-  int16_t id_error = 0 - id;	// TODO: Add id reference (from field weakening)
+  int16_t id_error = id;	// TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
   int16_t iq_error = torque_ref - iq;
 
@@ -322,10 +322,12 @@ void TIM3_IRQHandler(void)
   iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
   int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
-  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+
+  // Apply limiter
+  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
 
   // Apply references
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
@@ -418,10 +420,12 @@ void TIM3_IRQHandler(void)
   iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
   int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
-  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+
+  // Apply limiter
+  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
 
   // Apply references
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
