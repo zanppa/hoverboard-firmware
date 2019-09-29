@@ -92,13 +92,13 @@ static uint8_t pattern_tick = 0;
 static const uint8_t hall_to_sector[8] = { 0, 2, 4, 3, 0, 1, 5, 0 };
 
 // HALL sensors			Sector
-// 		CBA	decimal		number (old)
-// A 	001	1			0
-// AB	011	3			1
-// B	010	2			2
-// BC	110	6			3
-// C	100	4			4
-// CA	101	5			5
+// 		CBA	decimal		number (old)	new
+// A 	001	1			0				2
+// AB	011	3			1				3
+// B	010	2			2				4
+// BC	110	6			3				5
+// C	100	4			4				0
+// CA	101	5			5				1
 
 // Current measurement
 extern volatile i_meas_t i_meas;
@@ -129,13 +129,13 @@ void initialize_control_state(void) {
   sector = read_left_hall();
   motor_state[STATE_LEFT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG + ANGLE_30DEG;	// Assume we're in the middle of a sector
+  motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume we're in the middle of a sector
   __enable_irq();
 
   sector = read_right_hall();
   motor_state[STATE_RIGHT].act.sector = sector;
   __disable_irq();
-  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG + ANGLE_30DEG;	// Assume middle of a sector
+  motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume middle of a sector
   __enable_irq();
 
 }
@@ -180,14 +180,19 @@ void TIM3_IRQHandler(void)
 
   // Left motor speed
   if(sector_l != prev_sector_l) {
+    // Sector has changed
     speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
     uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
+
+    // Calculate min and max angles in this sector
+    // To prevent the modulator angle estimation from exceeding the sector
+    motor_state[STATE_LEFT].ctrl.angle_min = angle;
+    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
 
     if(sector_l != ((prev_sector_l + 1) % 6)) {
       speed_l = -speed_l;
       angle += ANGLE_60DEG;
     }
-
 
 #ifdef SVM_HALL_UPDATE
     __disable_irq();	// Angle is also updated by modulator
@@ -199,7 +204,15 @@ void TIM3_IRQHandler(void)
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
   } else {
+    // Still inside the current sector
     speed_l = motor_state[STATE_LEFT].act.speed;
+
+    if(speed_tick[0] > motor_state[STATE_LEFT].act.period) {
+      // We should have passed the sector change, going slower than expected
+      // so update speed
+      speed_l = ((speed_l < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
+    }
+
     if(speed_tick[0] < 1000) speed_tick[0]++;	// If no sector change in 1 s assume stall
     else {
       speed_l = 0;	// Easy way but response time is long
@@ -207,10 +220,15 @@ void TIM3_IRQHandler(void)
     }
   }
 
+
   // Right motor speed
   if(sector_r != prev_sector_r) {
+    // Sector has changed
     speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
     uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
+
+    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
+    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
 
     if(sector_r != ((prev_sector_r + 1) % 6)) {
       speed_r = -speed_r;
@@ -227,7 +245,15 @@ void TIM3_IRQHandler(void)
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
   } else {
+    // Still inside the current sector
     speed_r = motor_state[STATE_RIGHT].act.speed;
+
+    if(speed_tick[1] > motor_state[STATE_RIGHT].act.period) {
+      // We should have passed the sector change, going slower than expected
+      // so update speed
+      speed_r = ((speed_r < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
+    }
+
     if(speed_tick[1] < 1000) speed_tick[1]++; // if no sector change in 1 s assume stall
     else {
       speed_r = 0;	// Easy way but response time is long
