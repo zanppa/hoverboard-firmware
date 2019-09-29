@@ -344,17 +344,21 @@ void TIM3_IRQHandler(void)
   // TODO: Move volatile(?) setpoints to local variables
 #ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
-  setpoint_l_limit = CLAMP(torque_ref, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
-  pwm_diff = setpoint_l_limit - pwm_l_ramp;
-  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
-
+  // Apply ramp
+  pwm_diff = torque_ref - pwm_l_ramp;
+  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
   pwm_l_ramp += pwm_diff;
 
-  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
-  motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
-#endif // LEFT_MOTOR_BLDC
+  // Scale ramped reference according to PWM period and DC voltage
+  torque_ref = fx_mul(pwm_l_ramp, PWM_PERIOD);
+  torque_ref = fx_mul(torque_ref, voltage_scale);
 
+  // Limit pwm value
+  setpoint_l_limit = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+
+  motor_state[STATE_LEFT].ctrl.amplitude = setpoint_l_limit;
+#endif // LEFT_MOTOR_BLDC
 
 
   // ------------
@@ -440,15 +444,21 @@ void TIM3_IRQHandler(void)
 
 #ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
-  setpoint_r_limit = CLAMP(torque_ref, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
-  pwm_diff = setpoint_r_limit - pwm_r_ramp;
-  pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
-
+  // Apply ramp
+  pwm_diff = torque_ref - pwm_r_ramp;
+  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
   pwm_r_ramp += pwm_diff;
 
-  //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale);
-  motor_state[STATE_RIGHT].ctrl.amplitude = pwm_r_ramp;
+  // Scale ramped reference according to PWM period and DC voltage
+  torque_ref = fx_mul(pwm_r_ramp, PWM_PERIOD);
+  torque_ref = fx_mul(torque_ref, voltage_scale);
+
+  // Limit pwm reference to maximum limits
+  setpoint_r_limit = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+
+  // Apply the reference
+  motor_state[STATE_RIGHT].ctrl.amplitude = setpoint_r_limit;
 #endif
 
 
