@@ -142,10 +142,15 @@ void initialize_control_state(void) {
 
 
 // Controller internal variables, e.g. limited and ramped references
+#ifdef LEFT_MOTOR_BLDC
 static int16_t setpoint_l_limit = 0;
-static int16_t setpoint_r_limit = 0;
 static int16_t pwm_l_ramp = 0;
+#endif
+#ifdef RIGHT_MOTOR_BLDC
+static int16_t setpoint_r_limit = 0;
 static int16_t pwm_r_ramp = 0;
+#endif
+
 static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
 
 //called 64000000/64000 = 1000 times per second
@@ -161,6 +166,15 @@ void TIM3_IRQHandler(void)
   int16_t torque_ref;
   uint8_t ctrl_mode;
 
+#if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
+  int16_t ia, ib;
+  uint16_t angle;
+  int16_t ialpha, ibeta;
+  int16_t id, iq;
+  int16_t id_error, iq_error;
+  int16_t angle_advance, ref_amplitude;
+  int8_t ref_sign;
+#endif
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
@@ -297,31 +311,31 @@ void TIM3_IRQHandler(void)
 #ifdef LEFT_MOTOR_FOC
   // Get the interpolated position and measured currents from exactly same time instants
   __disable_irq();
-  int16_t ia = i_meas.i_lA;
-  int16_t ib = i_meas.i_lB;
-  uint16_t angle = motor_state[STATE_LEFT].act.angle;	// Estimated rotor position
+  ia = i_meas.i_lA;
+  ib = i_meas.i_lB;
+  angle = motor_state[STATE_LEFT].act.angle;	// Estimated rotor position
   __enable_irq();
 
   // Transform to rotor coordinate frame
-  int16_t ialpha, ibeta;
-  int16_t id, iq;
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
-  int16_t id_error = id;	// TODO: Add id reference (from field weakening)
+  id_error = id;	// TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
-  int16_t iq_error = torque_ref - iq;
+  iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
   id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
-  int16_t angle_advance = id_error + fx_mul(id_error_int_l, ki_id);
+  angle_advance = id_error + fx_mul(id_error_int_l, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
   iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
-  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
+  ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+
+  ref_sign = SIGN(ref_amplitude);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -331,8 +345,8 @@ void TIM3_IRQHandler(void)
 
   // Apply references
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;	// Should start with 90 degree phase shift
-  // TODO: Apply 90 degrees positive or negative depending on reference polarity
+  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);	// Should start with 90 degree phase shift
+  // TODO: Angle advance polarity should change depending on speed direction
 
 #else // LEFT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
@@ -386,16 +400,14 @@ void TIM3_IRQHandler(void)
 #ifdef RIGHT_MOTOR_FOC
   // Get the interpolated position and measured currents from exactly same time instants
   __disable_irq();
-  int16_t ib = i_meas.i_rB;
+  ib = i_meas.i_rB;
   int16_t ic = i_meas.i_rC;
-  uint16_t angle = motor_state[STATE_RIGHT].act.angle;	// Estimated rotor position
+  angle = motor_state[STATE_RIGHT].act.angle;	// Estimated rotor position
   __enable_irq();
 
-  int16_t ia = -ib - ic;		// For simplicity, we use ia and ib in the calculation
+  ia = -ib - ic;		// For simplicity, we use ia and ib in the calculation
 
   // Transform to rotor coordinate frame
-  int16_t ialpha, ibeta;
-  int16_t id, iq;
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
@@ -406,14 +418,14 @@ void TIM3_IRQHandler(void)
   cfg.vars.r_id = id;
   cfg.vars.r_iq = iq;
 
-  int16_t id_error = id;    // TODO: Add id reference (from field weakening)
+  id_error = id;    // TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_r - iq;
-  int16_t iq_error = torque_ref - iq;
+  iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
   id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
-  int16_t angle_advance = id_error + fx_mul(id_error_int_r, ki_id);
+  angle_advance = id_error + fx_mul(id_error_int_r, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;
 
   // Invert phase advance if speed is reverse
@@ -422,8 +434,10 @@ void TIM3_IRQHandler(void)
 
   // Then for Q axis current which sets the reference amplitude
   iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
-  int16_t ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
+  ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+
+  ref_sign = SIGN(ref_amplitude);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -433,7 +447,8 @@ void TIM3_IRQHandler(void)
 
   // Apply references
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + ANGLE_90DEG;
+  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);
+  // TODO: Angle advance polarity should change depending on speed direction
 
 #else // RIGHT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
