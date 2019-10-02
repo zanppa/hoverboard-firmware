@@ -10,6 +10,22 @@
 
 #include "stm32f1xx_hal.h"
 
+// Fault types
+#define FAULT_OVERCURRENT		0x01	// Phase current exceeded set limit
+#define FAULT_SHORT				0x02	// Shunt current measurement triggered short circuit
+#define FAULT_OVERVOLTAGE		0x04	// Battery overvoltage
+#define FAULT_UNDERVOLTAGE		0x08	// Battery undervoltage
+#define FAULT_OVERTEMP			0x10	// Over temperature measured
+
+// Status bits
+#define STATUS_READY			0x01	// Booted up and intialized everything
+#define STATUS_RUN				0x02	// One or both motors are running
+#define STATUS_CURRENT_LIMIT	0x04	// One or both motors run at current limit
+#define STATUS_FIELD_WEAK		0x08	// One or both motors run at field weakening
+#define STATUS_OVERVOLTAGE_WARN	0x10
+#define STATUS_UNDERVOLTAGE_WARN	0x20
+
+
 void led_update(void);
 void update_controls(void);
 void init_controls(void);

@@ -31,6 +31,18 @@ volatile uint16_t dc_voltage = 4096;		// Fixed point in p.u. TODO: Use ADC and c
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt = FIXED_ONE / 10;		// Low-pass filter gain in fixed point
 
+uint16_t battery_volt_pu = 0;
+
+// Warning/trip values in fixed point per-unit values
+uint8_t fault_bits = 0;		// Fault type, 0=no fault
+const uint16_t ov_warn_pu = FIXED_ONE * OVERVOLTAGE_WARN / (2.45*MOTOR_VOLTS);
+const uint16_t ov_trip_pu = FIXED_ONE * OVERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
+const uint16_t uv_warn_pu = FIXED_ONE * UNDERVOLTAGE_WARN / (2.45*MOTOR_VOLTS);
+const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
+
+
+uint8_t status_bits = 0;	// Status bits
+
 volatile motor_state_t motor_state[2] = {0};
 
 // Buzzer tone control
@@ -224,11 +236,30 @@ void TIM3_IRQHandler(void)
   // Analog measurements (battery voltage, to be used in modulator)
   analog_meas.v_battery += ADC_BATTERY_OFFSET;
   battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
-  voltage_scale = fx_mulu((battery_voltage_filt >> 4), adc_battery_to_pu);
+  battery_volt_pu = fx_mulu((battery_voltage_filt >> 4), adc_battery_to_pu);
+
+  // Check voltage limits
+  // Only trip if everything is ready, e.g. voltage has been filtered long enough etc.
+  if(battery_volt_pu > ov_trip_pu && (status_bits & STATUS_READY)) {
+    do_fault(0x01 | 0x02);	// Trip both motors
+    fault_bits |= FAULT_OVERVOLTAGE;
+    // TODO: Buzzer tone & blink led
+  } else if(battery_volt_pu > ov_warn_pu) {
+    status_bits |= STATUS_OVERVOLTAGE_WARN;
+    // TODO: Buzzer & blink
+  } else if(battery_volt_pu < uv_trip_pu && (status_bits & STATUS_READY)) {
+    do_fault(0x01 | 0x02);
+    fault_bits |= FAULT_UNDERVOLTAGE;
+  } else if(battery_volt_pu < uv_warn_pu) {
+    status_bits |= STATUS_UNDERVOLTAGE_WARN;
+    // TODO: Buzzer & blink
+  } else {
+    status_bits &= ~(STATUS_OVERVOLTAGE_WARN | STATUS_UNDERVOLTAGE_WARN);
+  }
 
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
   // So we scale all references by battery_voltage / nominal voltage
-  voltage_scale = fx_divu(FIXED_ONE, voltage_scale);
+  voltage_scale = fx_divu(FIXED_ONE, battery_volt_pu);
 
 
   // Debug: rotate the SVM reference

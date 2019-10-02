@@ -35,6 +35,13 @@
 #undef SVM_HALL_UPDATE
 
 
+// Limits/warnings/faults
+#define OVERVOLTAGE_WARN	26		// Overvoltage warning level in volts
+#define OVERVOLTAGE_TRIP	28		// Overvoltage trip level in volts
+#define UNDERVOLTAGE_WARN	22		// Undervoltage warning level in volts
+#define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
+
+
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
 #define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
