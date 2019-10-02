@@ -14,6 +14,9 @@ void led_update(void);
 void update_controls(void);
 void init_controls(void);
 
+void do_fault(uint8_t sides);
+void clear_fault(uint8_t sides);
+
 void initialize_control_state(void);
 
 uint8_t read_left_hall(void);

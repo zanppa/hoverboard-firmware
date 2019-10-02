@@ -65,6 +65,34 @@ void update_controls(void)
 
 }
 
+// Fault (generate break) to selected motors
+// bit 0 = left (TIM8) bit 1 = right (TIM1)
+// This can be triggered by e.g. overcurrent event
+void do_fault(uint8_t sides) {
+  if(sides & 0x01) {
+    LEFT_TIM->EGR |= TIM_EGR_BG;
+  }
+
+  if(sides & 0x02) {
+    RIGHT_TIM->EGR |= TIM_EGR_BG;
+  }
+}
+
+// Clear fault (break) and enable motors
+// bit 0 = left (TIM8) bit 1 = right (TIM1)
+void clear_fault(uint8_t sides) {
+  if(sides & 0x01) {
+    LEFT_TIM->EGR &= ~TIM_EGR_BG;	// Clear break
+    LEFT_TIM->BDTR |= TIM_BDTR_MOE;	// Enable motor
+  }
+
+  if(sides & 0x02) {
+    RIGHT_TIM->EGR &= ~TIM_EGR_BG;	// Clear break
+    RIGHT_TIM->BDTR |= TIM_BDTR_MOE;	// Enable motor
+  }
+}
+
+
 // Read left hall sensors and return corresponding sector
 uint8_t read_left_hall(void) {
   uint8_t sector;
