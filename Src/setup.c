@@ -91,11 +91,11 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = LEFT_DC_CUR_PIN;
   HAL_GPIO_Init(LEFT_DC_CUR_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LEFT_U_VOLT_PIN;
-  HAL_GPIO_Init(LEFT_U_VOLT_PORT, &GPIO_InitStruct);
-
   GPIO_InitStruct.Pin = LEFT_V_VOLT_PIN;
   HAL_GPIO_Init(LEFT_V_VOLT_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LEFT_W_VOLT_PIN;
+  HAL_GPIO_Init(LEFT_W_VOLT_PORT, &GPIO_InitStruct);
 
   GPIO_InitStruct.Pin = RIGHT_DC_CUR_PIN;
   HAL_GPIO_Init(RIGHT_DC_CUR_PORT, &GPIO_InitStruct);
@@ -208,10 +208,9 @@ void MX_TIM_Init(void) {
   // down to 1 and creates underflow event. Then it restarts.
   // pre-scaler = 0 and divier = 1 i.e.
   // the timer runs at crystal(?) frequency
-  htim_right.Instance               = RIGHT_TIM;
+  htim_right.Instance               = RIGHT_TIM;	// TIM8
   htim_right.Init.Prescaler         = 0;
-  htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
-  //htim_right.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_right.Init.RepetitionCounter = 0;
@@ -245,7 +244,7 @@ void MX_TIM_Init(void) {
 
   htim_left.Instance               = LEFT_TIM;
   htim_left.Init.Prescaler         = 0;
-  htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED1;
+  htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_left.Init.Period            = PWM_PERIOD;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_left.Init.RepetitionCounter = 0;
@@ -312,17 +311,16 @@ void MX_TIM_Init(void) {
   RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;
 
   // Start the timers
-  // Start the left timer in interrupt mode (for svm)
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_left, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_left, TIM_CHANNEL_3);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_2);
   HAL_TIMEx_PWMN_Start(&htim_left, TIM_CHANNEL_3);
 
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim_right, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_right, TIM_CHANNEL_3);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_2);
   HAL_TIMEx_PWMN_Start(&htim_right, TIM_CHANNEL_3);

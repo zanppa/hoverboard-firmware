@@ -17,7 +17,7 @@
 #include <stm32f1xx_hal_gpio.h>
 
 // From adc.c
-extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc3;
 extern volatile adc_buf_t analog_meas;
 
 #define LED_PERIOD (300)  //ms
@@ -369,7 +369,7 @@ void TIM3_IRQHandler(void)
 
   control_tick++;
 
-  // Launch ADC1 so that at next call we
+  // Launch ADC3 so that at next call we
   // have fresh analog measurements
-  hadc1.Instance->CR2 |= ADC_CR2_SWSTART;
+  hadc3.Instance->CR2 |= ADC_CR2_SWSTART;
 }

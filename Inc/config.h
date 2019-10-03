@@ -2,10 +2,10 @@
 #include "stm32f1xx_hal.h"
 
 // Motor parameters
-#define MOTOR_VOLTS				15		// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
-#define MOTOR_SPEED				600		// Nominal speed rpm
-#define MOTOR_POLEPAIRS			15		// Polepairs, mechanical speed to electrical speed (15 electrical rounds/1 mechanical round)
-#define MOTOR_CUR				5		// TODO: [A] at rated load / phase (RMS)
+#define MOTOR_VOLTS				15.0	// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
+#define MOTOR_SPEED				600.0	// Nominal speed rpm
+#define MOTOR_POLEPAIRS			15.0	// Polepairs, mechanical speed to electrical speed (15 electrical rounds/1 mechanical round)
+#define MOTOR_CUR				5.0		// TODO: [A] at rated load / phase (RMS)
 #define MOTOR_CIRCUMFERENCE		0.534	// meters, motor outside circumference
 
 #define MOTOR_MIN_VOLTS			0.5		// Volts to apply at zero and low speed, to get the motor started (IR compensation)
@@ -72,6 +72,15 @@
 // How many times to sample ADC to get offsets
 #define ADC_OFFSET_SAMPLES		1024
 
+
+// Current measurement using Rds,on
+#define I_MEAS_RDSON	1
+//#undef I_MEAS_RDSON
+
+// Mosfet Rds,on, e.g. equivalent resistance in on-state
+// This is the equivalent value taking into account the voltage measurement
+// gain of about 2.5 ... 3 => if Rdson is about 0.0056 ohm, the value is 0.0056 * 3 = 0.017
+#define RDSON		0.017
 
 
 // Sanity checks here

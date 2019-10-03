@@ -1,8 +1,8 @@
 # Hoverboard firmware
 This document is part of the hoverboard firmware documentation.
 
-## Current measurement
-Operation of the current measurement is described here.
+## Current measurement with shunt resistor
+Operation of the current measurement with shunt resistor is described here.
 
 ### Electronics
 In the hoverboard electronics, both motors drivers contain current measurement. The 
@@ -47,20 +47,72 @@ For this method to work, three things must be guaranteed:
  * Two different active vectors are used
  * Current is sampled at a precise instant after change of vector
 
+### ADC selection
+The ADCs can sample following channels:
+
+ADC1
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+| 14 | Left B voltage   |
+| 15 | Left C voltage   |
+
+ADC2
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+| 14 | Left B voltage   |
+| 15 | Left C voltage   |
+
+ADC3
+
+| IN | Signal           |
+|----|------------------|
+| 0  | Right A voltage  |
+| 1  | Power SW voltage |
+| 2  | Left UART TX     |
+| 3  | Left UART RX     |
+| 10 | Right current    |
+| 11 | Left current     |
+| 12 | Battery voltage  |
+| 13 | Right B voltage  |
+
+Because ADCs 1 and 2 can sample all channels and ADC 3 everything but left motor 
+phase voltage, it was decided to use ADC1 for samplign all non-motor related 
+signals and ADCs 2 and 3 motor currents and phase voltages.
+
+However, it turns out only ADC1 and ADC3 can generate DMA request, so it is 
+only possible to sample single value from ADC2. As a result, both ADC2 and ADC3
+sample only the current and do not use DMA.
+
 ### Implementation
 The method described above is implemented in the firmware in following fashion.
 
-`ADC1` is used for left motor and `ADC2`for right motor.
+`ADC2` is used for left motor and `ADC3`for right motor.
 
 ADCs are set in scan mode and channels are defined according to following table.
 
-| Channel | Sampling time |  Source                  |
-|:-------:|:-------------:|--------------------------|
-| 0       | xx            | battery voltage          |
-| 1       | xx            | xx                       |
-| 2       | xx            | left/right motor current |
+| Position | Sampling time |  Source                  |
+|:--------:|:-------------:|--------------------------|
+| 1        | xx            | Motor current            |
 
-ADCs are set to use DMA mode and generate interrupt at end of conversion. In the interrupt 
+ADCs are set to generate an interrupt at end of conversion. In the interrupt 
 servicing routine, the current sign is corrected and value is copied to correct phase 
 current variable, depending on which voltage vector was active during sampling.
 
@@ -81,6 +133,59 @@ needs to wait some time before sampling. Easiest method to do this is to sample 
 first with long sampling time, and then sample the current.
 
 ![Current measurement method](current_sampling.png)
+
+
+## Current measurement with Rds,on
+Antoher way to measure current is by measuring voltage over the lower branch transistor Rds,on.
+
+### Electronics
+Both motors have voltage measurement over the lower leg transistor of two phases. The voltage measurement 
+is biased towards 3.3 V supply, has a gain of somewhere around 2.5 and measurement range, depending on the 
+op-amp type, probably around -500 ... 500 mV. This converts to about 0.5 ... 2.8 V for the ADC. If the 
+measured phase voltage goes higher, there is a diode clamping circuit to protect the op-amp. On negative 
+side the measurement voltage is not clamped.
+
+Since the MOSFET in on-state is effectively an resistor with a value of Rds,on, it is straightforward to 
+calculate current from the voltage measurement, if the resistance value is known. However, the resistance 
+is quite nonlinear, especially temperature has a large effect on the value. Rds,on measurement is often used
+to estimate the MOSFET temperature when the current is known, now we'd need to work around the temperature 
+effect.
+
+![Rds,on measurement method](./imeas_rdson.PNG)
+
+Since the voltage measurement also goes to negative, and as MOSFETs also conduct in reverse direction, it
+is possible to measure both positive and negative current. Limitation is that the bottom switch must 
+be conducting when the measurement is taken.
+
+### Implementation
+The voltage measurements are connected to following pins.
+
+| Voltage             | Pin | ADC channel |
+|---------------------|:---:|:-----------:|
+| Left motor B phase  | PC4 | 14          |
+| Left motor C phase  | PC5 | 15          |
+| Right motor A phase | PA0 | 0           |
+| Right motor B phase | PC3 | 13          |
+
+ADC1 is used to measure all 4 phase voltages. ADC1 was selected since it is the only one which maps all 
+the pins to channels and has DMA capability. DMA 1 channel 1 is used for ADC1.
+
+To make sure that the voltages are measured when bottom transistors are conducting, the measurement is 
+done during a 000 zero vector (all lower transistors on). With the selected modulation schemes using the 
+center-aligned mode (up/down counting) in the timers, the center of 000 zero vector is when the timer 
+transitions from downcounting to upcounting. The timer also can generate an interrupt at that point, which 
+then triggers the ADC.
+
+![Rds,on measurement timing](./imeas_rdson_timing.PNG)
+
+Sampling at the center of the zero vector has an additional benefit that it is (hopefully) far from 
+the switching instants which could cause noise in the measurement. And as the timers from PWM of both 
+motors are synchronized, it is possible to measure all voltages almost simultaneously with single trigger.
+
+The ADC scans all 4 voltages in series and transfers the values to a buffer. When the timer transitions from 
+upcounting to downcounting and triggers an interrupt again, the values are transferred to another variables. 
+At this point also DC (zero) offsets are subtracted from the measurement. The offsets are measured during 
+power-up.
 
 
  
