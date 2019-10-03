@@ -13,6 +13,7 @@
 #include "svm.h"
 #include "math.h"
 #include "adc.h"
+#include "imeas.h"
 
 #include <stm32f1xx_hal_gpio.h>
 
@@ -44,6 +45,9 @@ const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 uint8_t status_bits = 0;	// Status bits
 
 volatile motor_state_t motor_state[2] = {0};
+
+// Current measurement
+extern volatile i_meas_t i_meas;
 
 // Buzzer tone control
 volatile uint16_t buzzer_tone = 0x0; // No tone. This defines the tone(s) to play. 1 bit is 1 ms.
@@ -158,6 +162,8 @@ void TIM3_IRQHandler(void)
   uint8_t prev_sector_l, prev_sector_r;
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
+  int16_t ia_l, ib_l, ic_l;
+  int16_t ia_r, ib_r, ic_r;
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
@@ -230,6 +236,35 @@ void TIM3_IRQHandler(void)
       speed_r = 0;	// Easy way but response time is long
       motor_state[STATE_RIGHT].act.period = 0xFFFF;
     }
+  }
+
+  // Current measurement and overcurrent trips
+  // Left motor phase currents
+  ia_l = i_meas.i_lA;
+  ib_l = i_meas.i_lB;
+  ic_l = -ia_l - ib_l;
+
+  // Right motor phase currents
+  ib_r = i_meas.i_rB;
+  ic_r = i_meas.i_rC;
+  ia_r = -ib_r - ic_r;
+
+  // Check if currents exceed overcurrent limits
+  // and trip one (TODO: or both?) motors
+  if(ia_l > OVERCURRENT_TRIP || -ia_l < -OVERCURRENT_TRIP ||
+     ib_l > OVERCURRENT_TRIP || -ib_l < -OVERCURRENT_TRIP ||
+     ic_l > OVERCURRENT_TRIP || -ic_l < -OVERCURRENT_TRIP) {
+    do_fault(0x01);	// Trip left motor
+    fault_bits |= FAULT_OVERCURRENT;
+    // TODO: Buzzer + led
+  }
+
+  if(ia_r > OVERCURRENT_TRIP || -ia_r < -OVERCURRENT_TRIP ||
+     ib_r > OVERCURRENT_TRIP || -ib_r < -OVERCURRENT_TRIP ||
+     ic_r > OVERCURRENT_TRIP || -ic_r < -OVERCURRENT_TRIP) {
+    do_fault(0x02);	// Trip left motor
+    fault_bits |= FAULT_OVERCURRENT;
+    // TODO: Buzzer + led
   }
 
 

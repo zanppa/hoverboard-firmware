@@ -41,6 +41,7 @@
 #define UNDERVOLTAGE_WARN	22		// Undervoltage warning level in volts
 #define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
 
+#define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
