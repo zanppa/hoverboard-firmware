@@ -32,6 +32,7 @@ void init_controls(void);
 
 void do_fault(uint8_t sides);
 void clear_fault(uint8_t sides);
+void check_sc() ;
 
 void initialize_control_state(void);
 

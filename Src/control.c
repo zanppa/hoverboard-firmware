@@ -35,14 +35,14 @@ const uint16_t adc_battery_filt = FIXED_ONE / 10;		// Low-pass filter gain in fi
 uint16_t battery_volt_pu = 0;
 
 // Warning/trip values in fixed point per-unit values
-uint8_t fault_bits = 0;		// Fault type, 0=no fault
+volatile uint8_t fault_bits = 0;		// Fault type, 0=no fault
 const uint16_t ov_warn_pu = FIXED_ONE * OVERVOLTAGE_WARN / (2.45*MOTOR_VOLTS);
 const uint16_t ov_trip_pu = FIXED_ONE * OVERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 const uint16_t uv_warn_pu = FIXED_ONE * UNDERVOLTAGE_WARN / (2.45*MOTOR_VOLTS);
 const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 
 
-uint8_t status_bits = 0;	// Status bits
+volatile uint8_t status_bits = 0;	// Status bits
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -105,6 +105,17 @@ void clear_fault(uint8_t sides) {
   if(sides & 0x02) {
     RIGHT_TIM->EGR &= ~TIM_EGR_BG;	// Clear break
     RIGHT_TIM->BDTR |= TIM_BDTR_MOE;	// Enable motor
+  }
+}
+
+// Check if there has been a short circuit
+// This is indicated by the break interrupt flag in
+// timers
+// TODO: Does this go up also if BG bit is set in EGR?
+void check_sc() {
+  if((LEFT_TIM->SR & TIM_SR_BIF) || (RIGHT_TIM->SR & TIM_SR_BIF)) {
+    fault_bits |= FAULT_SHORT;
+    // TODO: Fault the other side as well?
   }
 }
 

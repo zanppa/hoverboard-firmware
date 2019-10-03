@@ -115,6 +115,8 @@ int main(void) {
     //update cfg_bus communication
     mb_update();
 
+    // Check for short circuit status
+    check_sc();
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important
