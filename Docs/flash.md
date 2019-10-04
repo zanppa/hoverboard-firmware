@@ -8,7 +8,7 @@ This document describes how to flash the firmware directly with Raspberry PI Zer
 The hoverboard circuit board has the SWD (single wire debug) pins as a debug points 
 next to the processor. You can see the pins in the following picture.
 
-![Hoverboard pinout](./pinout.png)
+![Hoverboard pinout](images/pinout.png)
 
 I've marked the pins with colors corresponding the pin function, from top to bottom: 
 `+3.3V`, `SWCLK`, `GND`, `SWDIO`. The `+3.3V` should not be used, as it flows backwards 
@@ -31,7 +31,7 @@ the default pins, but I ended up using these wafter trying a "native" interface 
 could not get to work. I didn't change the wiring, I rather modified the "sysfsgpio" config 
 that I got to work.
 
-![Raspberry PI debug pinout](./Raspberry_pi_zero_pinout_SWD.PNG)
+![Raspberry PI debug pinout](images//raspberry_pi_zero_pinout_swd.png)
 
 Basically just connect all the similarly named pins together. But do not connect the `+3.3V`!
 

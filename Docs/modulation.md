@@ -37,7 +37,7 @@ at the corners is the output switch states, given in ABC order. It can be seen t
 at corners of sectors 0 and 1 the B phase is high (1), which is similar to the BLDC modulation where 
 the B output was positive.
 
-![SVM hexagon](svm_hexagon.png)
+![SVM hexagon](images/svm_hexagon.png)
 
 The given voltage vector `Uref` can be realized using the neighboring corners and one or both zero 
 vectors. First, it is necessary to select the correct sector to know which vectors to use. The sector 
@@ -108,7 +108,7 @@ This has the downside that the voltage is distorted in sector changes as well as
 indices. Following figure shows how the actual voltage looks like compared to the ideal reference, with 3 different 
 modulation indices: 0.05, 0.6 and 0.85 (note that in this case 0.866 is maximum linear region).
 
-![Pulse limit distortion](./short_pulse_limits.png)
+![Pulse limit distortion](images/short_pulse_limits.png)
 
 At low modulation index the active pulse length limitation, forcing the usage of two short active pulses, distorts 
 the waveform. The same also affects sector changes where only one active vector would be needed.

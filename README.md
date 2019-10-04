@@ -77,7 +77,7 @@ Here are detailed build instructions for some finished projects.
 ---
 
 ### Hardware
-![Pinout](https://raw.githubusercontent.com/zanppa/hoverboard-firmware/master/Docs/pinout.png)
+![Pinout](Docs/images/pinout.png)
 
 The original Hardware supports two 4-pin cables that originally were connected to the two sensor boards. They break out GND, 12/15V and USART2&3 of the Hoverboard mainboard.
 Both USART2 & 3 can be used for UART and I2C, PA2&3 can be used as 12bit ADCs.
