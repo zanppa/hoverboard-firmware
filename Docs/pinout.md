@@ -39,8 +39,8 @@ function(s) used in the firmware.
 | Left Hall A                 | **I**/O   | 57         | **PB5**<br/>I2C1_SMBA / SPI3_MOSI / I2S3_SD<br/>TIM3_CH2 / SPI1_MOSI            |
 | Left Hall B                 | **I**/O   | 58         | **PB6**<br/>I2C1_SCL / TIM4_CH1<br/>USART1_TX                                   |
 | Left Hall C                 | **I**/O   | 59         | **PB7**<br/>I2C1_SDA / FSMC_NADV / TIM4_CH2<br/>USART1_RX                       |
-| Left phase B voltage        | **I**     | 24         | **PC4 (EXTI4)**<br/>ADC12_IN14                                                  |
-| Left phase C voltage        | **I**     | 25         | **PC5 (EXTI5-9)**<br/>ADC12_IN15                                                |
+| Left phase B voltage        | **I**     | 24         | PC4 (EXTI4)<br/>**ADC12_IN14**                                                  |
+| Left phase C voltage        | **I**     | 25         | PC5 (EXTI5-9)<br/>**ADC12_IN15**                                                |
 | Left current                | **I**     | 9          | PC1<br/>**ADC123_IN11**                                                         |
 | Left overcurrent            | **I**     | 33         | PB12<br/>SPI2_NSS/I2S2_WS / I2C2_SMBA / USART3_CK / **TIM1_BKIN**               |
 | Left UART TX                | I/**O**   | 16         | PA2<br/>USART2_TX / TIM5_CH3 / **ADC123_IN2** / TIM2_CH3                        |
@@ -48,8 +48,8 @@ function(s) used in the firmware.
 | Right Hall A                | **I**/O   | 53         | **PC12**<br/>UART5_TX / SDIO_CK<br/>USART3_CK                                   |
 | Right Hall B                | **I**/O   | 52         | **PC11**<br/>UART4_RX / SDIO_D3<br/>USART3_RX                                   |
 | Right Hall C                | **I**/O   | 51         | **PC10**<br/>UART4_TX / SDIO_D2<br/>USART3_TX                                   |
-| Right phase A voltage       | **I**     | 14         | **PA0 (EXTI0)**<br/>WKUP / USART2_CTS / ADC123_IN0 / TIM2_CH1_ETR / TIM5_CH1 / TIM8_ETR |
-| Right phase B voltage       | **I**     | 11         | **PC3 (EXTI3)**<br/>ADC123_IN13                                                 |
+| Right phase A voltage       | **I**     | 14         | PA0 (EXTI0)<br/>WKUP / USART2_CTS / **ADC123_IN0** / TIM2_CH1_ETR / TIM5_CH1 / TIM8_ETR |
+| Right phase B voltage       | **I**     | 11         | PC3 (EXTI3)<br/>**ADC123_IN13**                                                 |
 | Right current               | **I**     | 8          | PC0<br/>**ADC123_IN10**                                                         |
 | Right overcurrent           | **I**     | 22         | PA6<br/>SPI1_MISO / **TIM8_BKIN** / ADC12_IN6 / TIM3_CH1<br/>TIM1_BKIN          |
 | Right UART TX               | I/**O**   | 29         | PB10<br/>I2C2_SCL / **USART3_TX**<br/>TIM2_CH3                                  |
