@@ -169,13 +169,13 @@ downwards during high-to-low transition, those commutation delays show as negati
 
 Since the rotation speed was very slow, the current is in phase with the voltage. We can see that the low-to-high delay does 
 not vary much but is typically around 2 us. The high-to-low depends highly on the current polarity, when the phase is positive 
-the delay is about 2 us and when it is negative the delay is 4 us. It is expected that when current has certain polarity, 
-current  immediately commutates to the other branch diode when the transistor is turned off. For the inverse polarity, the 
-other  transistor must be turned on for the current to commutate from diode to it, and thus additional delay is introduced.
+the delay is about 2 us and when it is negative the delay is 4 us. It is expected that when current is out from the phase 
+(phase is positive, high), current  immediately commutates to the lower diode when the upper transistor is turned off. For
+negative current (into the phase, negative phase in this case as current is in phase with voltage), the lower transistor 
+must be turned on for the current to commutate from upper diode to it, and thus additional delay is introduced.
 
 There are some jumps up and down in the measured values, which might be caused by the (other) interrupt priorities delaying 
-the measurement, or other noise in the interrupt system, which is not very precise. Also, I would expect the delay length to be 
-other way regarding the phase polarity, I probably need to double check those...
+the measurement, or other noise in the interrupt system, which is not very precise. I would also expect the low-to-high transition delay to vary, but there is only some variation in the V phase and I'm not sure if it is only some artifact or not.
 
 
 
