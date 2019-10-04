@@ -151,7 +151,7 @@ is quite nonlinear, especially temperature has a large effect on the value. Rds,
 to estimate the MOSFET temperature when the current is known, now we'd need to work around the temperature 
 effect.
 
-![Rds,on measurement method](images//imeas_rdson.PNG)
+![Rds,on measurement method](images/imeas_rdson.png)
 
 Since the voltage measurement also goes to negative, and as MOSFETs also conduct in reverse direction, it
 is possible to measure both positive and negative current. Limitation is that the bottom switch must 
@@ -176,7 +176,7 @@ center-aligned mode (up/down counting) in the timers, the center of 000 zero vec
 transitions from downcounting to upcounting. The timer also can generate an interrupt at that point, which 
 then triggers the ADC.
 
-![Rds,on measurement timing](images//imeas_rdson_timing.PNG)
+![Rds,on measurement timing](images/imeas_rdson_timing.png)
 
 Sampling at the center of the zero vector has an additional benefit that it is (hopefully) far from 
 the switching instants which could cause noise in the measurement. And as the timers from PWM of both 
