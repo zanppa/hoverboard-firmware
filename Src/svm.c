@@ -126,11 +126,13 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
+#ifdef I_MEAS_RDSON
   if(!(TIM1->CR1 & TIM_CR1_DIR)) {
     // Trigger ADC rdson measurement when we have 000 zero vector
     // TODO: Use automatic trigger from timer?
     adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
   }
+#endif
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator

@@ -77,10 +77,11 @@ int main(void) {
   HAL_ADC_Start(&hadc3);
   ADC3_calibrate();
 
+#ifdef I_MEAS_RDSON
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
   HAL_ADC_Start(&adc_rdson);
-
+#endif
 
 #if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
 
@@ -106,9 +107,11 @@ int main(void) {
   motor_state[STATE_LEFT].ctrl.enable = 1;
   motor_state[STATE_RIGHT].ctrl.enable = 1;
 
+#ifdef I_MEAS_RDSON
   // Rds,on measurement must be calibrated when modulator is running
   // without load (0 reference)
   ADC1_calibrate();
+#endif
 
 
   control_timer_init();
