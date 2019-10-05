@@ -7,7 +7,8 @@
 #include "config.h"
 #include "bldc.h"
 
-//uint8_t enable = 0;
+// RDSon measurement trigger
+extern ADC_HandleTypeDef adc_rdson;
 
 extern volatile motor_state_t motor_state[2];
 
@@ -29,6 +30,16 @@ void TIM8_UP_IRQHandler() {
 
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
+
+// If only BLDC modulation is used, trigger rdson measurement here
+#if defined(I_MEAS_RDSON) && defined(LEFT_MOTOR_BLDC) && defined(RIGHT_MOTOR_BLDC)
+  if(!(TIM8->CR1 & TIM_CR1_DIR)) {
+    // Trigger ADC rdson measurement when we have 000 zero vector
+    // TODO: Use automatic trigger from timer?
+    adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
+  }
+#endif
+
 
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;
