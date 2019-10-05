@@ -18,7 +18,7 @@ volatile uint16_t rdson_offset[4];
 // Current measurement result structure
 volatile i_meas_t i_meas;
 
-static volatile uint8_t adc_conv_done = 0;
+static volatile uint8_t rdson_adc_conv_done = 0;
 
 // Convert ADC measurement value (after offset compensation) to P.U. current value
 // volts = value * 3.3 / 4096
@@ -113,8 +113,8 @@ void ADC1_calibrate(void) {
     //adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
 
     // Wait until DMA has finished transfer, Channel 5 end of transfer flag set
-    while(!adc_conv_done);
-    adc_conv_done = 0;
+    while(!rdson_adc_conv_done);
+    rdson_adc_conv_done = 0;
 
     // Accumulate offsets
     for(int j = 0; j < RDSON_MEAS_COUNT; j++)
@@ -141,5 +141,5 @@ void DMA1_Channel1_IRQHandler(void) {
   i_meas.i_rB = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;
   i_meas.i_rC = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
 
-  adc_conv_done = 1;	// This is used for calibration
+  rdson_adc_conv_done = 1;	// This is used for calibration
 }
