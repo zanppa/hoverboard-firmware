@@ -1,3 +1,4 @@
+#include "config.h"
 #include "cfgbus.h"
 #include "modbus.h"
 #include "uart.h"
@@ -15,7 +16,6 @@ uint16_t (*CfgLoad)(volatile uint16_t *data, uint16_t len)  = &ee_load;
 #undef MIN
 #endif
 
-#define CFG_BUS_UART (UARTCh3)
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 //DO NOT TOUCH, used to generate cfg struct, entry list, and count number of entries

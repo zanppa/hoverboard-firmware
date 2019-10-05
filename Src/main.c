@@ -28,6 +28,7 @@
 #include "control.h"
 #include "eeprom.h"
 #include "adc.h"
+#include "math.h"
 #include "imeas.h"
 
 void SystemClock_Config(void);
@@ -81,10 +82,20 @@ int main(void) {
   HAL_ADC_Start(&adc_rdson);
 
 
-  UART_Init(0, 1);	// Use only UART3 for modbus
+#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
+
+#ifdef LEFT_SENSOR_MODBUS
+  UART_Init(0, 1);	// Use UART3 for modbus
+#else
+  UART_Init(1, 0);	// Use UART2
+#endif
 
   ee_init();
   CfgInit();
+
+  UARTRxEnable(CFG_BUS_UART, 1);
+#endif
+
 
   // Enable power latch
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
@@ -100,9 +111,6 @@ int main(void) {
   ADC1_calibrate();
 
 
-  //UARTRxEnable(UARTCh2, 1);
-  UARTRxEnable(UARTCh3, 1);
-
   control_timer_init();
 
 
@@ -112,11 +120,13 @@ int main(void) {
     //led_update();
     //HAL_GPIO_WritePin(LED_PORT,LED_PIN, 1);
 
-    //update cfg_bus communication
-    mb_update();
-
     // Check for short circuit status
     check_sc();
+
+#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
+    //update cfg_bus communication
+    mb_update();
+#endif
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important
@@ -126,12 +136,12 @@ int main(void) {
     v_battery = (v_battery - ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
     //cfg.vars.v_battery = v_battery;
 
-    float act_speed = motor_state[STATE_LEFT].act.period;
-    act_speed = MOTOR_PERIOD_TO_MS / act_speed;
+    float act_speed = motor_state[STATE_LEFT].act.speed;
+    act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
     //cfg.vars.speed_l = act_speed;
 
-    act_speed = motor_state[STATE_RIGHT].act.period;
-    act_speed = MOTOR_PERIOD_TO_MS / act_speed;
+    act_speed = motor_state[STATE_RIGHT].act.speed;
+    act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
     //cfg.vars.speed_r = act_speed;
 
     // Copy rdson measurement values to configbus
