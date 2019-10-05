@@ -34,6 +34,9 @@ void do_fault(uint8_t sides);
 void clear_fault(uint8_t sides);
 void check_sc() ;
 
+void disable_motors(uint8_t sides);
+void enable_motors(uint8_t sides);
+
 void initialize_control_state(void);
 
 uint8_t read_left_hall(void);

@@ -120,6 +120,35 @@ void check_sc() {
 }
 
 
+// Disable one or both motor PWM outputs
+// bit 0 = left, bit 1 = right
+void disable_motors(uint8_t sides) {
+  if(sides & 0x01) {
+    LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;	// Disable output
+    motor_state[STATE_LEFT].ctrl.enable = 0;
+  }
+
+  if(sides & 0x02) {
+    RIGHT_TIM->BDTR &= ~TIM_BDTR_MOE;	// Enable output
+    motor_state[STATE_RIGHT].ctrl.enable = 0;
+  }
+}
+
+// Enable one or both motor PWM outputs
+// bit 0 = left, bit 1 = right
+void enable_motors(uint8_t sides) {
+  if(sides & 0x01) {
+    LEFT_TIM->BDTR |= TIM_BDTR_MOE;	// Disable output
+    motor_state[STATE_LEFT].ctrl.enable = 1;
+  }
+
+  if(sides & 0x02) {
+    RIGHT_TIM->BDTR |= TIM_BDTR_MOE;	// Enable output
+    motor_state[STATE_RIGHT].ctrl.enable = 1;
+  }
+}
+
+
 // Read left hall sensors and return corresponding sector
 uint8_t read_left_hall(void) {
   uint8_t sector;
