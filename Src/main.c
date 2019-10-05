@@ -41,7 +41,11 @@ extern volatile adc_buf_t analog_meas;
 extern volatile i_meas_t i_meas;
 extern volatile uint16_t rdson_offset[4];
 
+extern volatile uint8_t generic_adc_conv_done;
+
 int main(void) {
+  //uint16_t button_time = 0;
+
 
   HAL_Init();
   __HAL_RCC_AFIO_CLK_ENABLE();
@@ -62,6 +66,10 @@ int main(void) {
   HAL_NVIC_SetPriority(PendSV_IRQn, 0, 0);
 
   SystemClock_Config();
+
+  // Initialize control modes
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_ANGLE;
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
@@ -98,14 +106,7 @@ int main(void) {
 #endif
 
 
-  // Enable power latch
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
-
   //HAL_ADC_Start(&hadc2);
-
-  // Enable both motor drivers
-  motor_state[STATE_LEFT].ctrl.enable = 1;
-  motor_state[STATE_RIGHT].ctrl.enable = 1;
 
 #ifdef I_MEAS_RDSON
   // Rds,on measurement must be calibrated when modulator is running
@@ -113,9 +114,16 @@ int main(void) {
   ADC1_calibrate();
 #endif
 
-
   control_timer_init();
 
+  // Power button must be pressed twice and held for power on
+  // TODO: To be implemented
+
+  // Enable power latch
+  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
+
+  // Enable both motor drivers
+  enable_motors(0x01 | 0x02);
 
   while(1)
   {

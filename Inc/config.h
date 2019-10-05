@@ -12,6 +12,10 @@
 //#define RIGHT_SENSOR_MODBUS		// Enable modbus (UART2)
 #define RIGHT_SENSOR_ANALOG			// Enable analog inputs
 
+// Configure power button operation
+#define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
+//#define POWER_BUTTON_ESTOP		// Emergency stop opeartion: Must be pressed for power on, release for shutdown
+
 
 // =============================
 // Motor parameters

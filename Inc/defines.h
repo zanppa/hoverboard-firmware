@@ -169,4 +169,6 @@ typedef struct {
 #define STATE_RIGHT 1
 
 // Control modes
-#define CONTROL_SPEED 0
+#define CONTROL_SPEED 		0
+#define CONTROL_TORQUE 		1
+#define CONTROL_ANGLE 		2

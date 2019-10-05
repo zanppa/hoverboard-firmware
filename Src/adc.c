@@ -20,6 +20,8 @@
 ADC_HandleTypeDef hadc3;
 volatile adc_buf_t analog_meas;
 
+volatile uint8_t generic_adc_conv_done = 0;
+
 static volatile uint16_t adc_raw_data[ADC_MAX_CH] = {0};	// Max 16 conversions
 
 // Pointers to where to store analog variables
@@ -207,5 +209,8 @@ void DMA2_Channel4_5_IRQHandler() {
   // Copy data from ADC DMA buffer to variables
   for(i=0; i<ADC_MAX_CH; i++)
     if(adc_map[i]) *(adc_map[i]) = adc_raw_data[i];
+
+  // Mark ADC conversion done
+  generic_adc_conv_done = 1;
 }
 
