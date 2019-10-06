@@ -67,31 +67,31 @@ static uint8_t pattern_tick = 0;
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 //static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
 #if defined(HALL_GBYGBY)
-static const uint8_t hall_to_sector[8] = { 0, 1, 5, 0, 3, 2, 4, 0 };
+static const uint8_t hall_to_sector[8] = { 0, 2, 0, 1, 4, 3, 5, 0 };
 #elif defined(HALL_GBYBGY)
-static const uint8_t hall_to_sector[8] = { 0, 1, 3, 2, 5, 0, 4, 0 };
+static const uint8_t hall_to_sector[8] = { 0, 2, 4, 3, 0, 1, 5, 0 };
 #endif
 
 // HALL mapping (original sector order)
 // When board wire colors and motor wire colors match
 // 			Phases			HALLs
 //	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
-//	5		1	0	0		0	1	0		010	2
-//	0		1	1	0		0	1	1		011	3
-//	1		0	1	0		0	0	1		001	1
-//	2		0	1	1		1	0	1		101	5
-//	3		0	0	1		1	0	0		100	4
-//	4		1	0	1		1	1	0		110	6
+//	0		1	0	0		0	1	0		010	2
+//	1		1	1	0		0	1	1		011	3
+//	2		0	1	0		0	0	1		001	1
+//	3		0	1	1		1	0	1		101	5
+//	4		0	0	1		1	0	0		100	4
+//	5		1	0	1		1	1	0		110	6
 
 // When board side has green and blue switched
 // 			Phases			HALLs
 //	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
-//	5		1	0	0		1	0	0		100	4
-//	0		1	1	0		1	0	1		101	5
-//	1		0	1	0		0	0	1		001	1
-//	2		0	1	1		0	1	1		011	3
-//	3		0	0	1		0	1	0		010	2
-//	4		1	0	1		1	1	0		110	6
+//	0		1	0	0		1	0	0		100	4
+//	1		1	1	0		1	0	1		101	5
+//	2		0	1	0		0	0	1		001	1
+//	3		0	1	1		0	1	1		011	3
+//	4		0	0	1		0	1	0		010	2
+//	5		1	0	1		1	1	0		110	6
 
 
 void init_controls(void)
