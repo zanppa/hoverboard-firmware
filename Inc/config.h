@@ -33,8 +33,8 @@
 // Control methods
 
 // Left motor
-#define LEFT_MOTOR_BLDC			// Use BLDC for left motor
-//#define LEFT_MOTOR_SVM		// Use SVM for left motor
+//#define LEFT_MOTOR_BLDC			// Use BLDC for left motor
+#define LEFT_MOTOR_SVM		// Use SVM for left motor
 
 // Right motor
 //#define RIGHT_MOTOR_BLDC		// BLDC for right motor
@@ -62,6 +62,10 @@
 
 // =============================
 // Other parameters
+
+// HALL sensor wiring
+//#define HALL_GBYGBY					// Motor wiring U:Green, V:Blue, W:Yellow, board U:G, V:B, W:Y
+#define HALL_GBYBGY						// Motor wiring U:Green, V:Blue, W:Yellow, board U:B, V:G, W:Y (blue/green crossed in connector)
 
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
