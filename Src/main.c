@@ -106,15 +106,9 @@ int main(void) {
 #endif
 
 
-  //HAL_ADC_Start(&hadc2);
-
-#ifdef I_MEAS_RDSON
-  // Rds,on measurement must be calibrated when modulator is running
-  // without load (0 reference)
-  ADC1_calibrate();
-#endif
-
   control_timer_init();
+
+  //HAL_ADC_Start(&hadc2);
 
   // Power button must be pressed twice and held for power on
   // TODO: To be implemented
@@ -124,6 +118,13 @@ int main(void) {
 
   // Enable both motor drivers
   enable_motors(0x01 | 0x02);
+
+#ifdef I_MEAS_RDSON
+  // Rds,on measurement must be calibrated when modulator is running
+  // without load (0 reference)
+  ADC1_calibrate();
+#endif
+
 
   while(1)
   {
