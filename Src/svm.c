@@ -106,12 +106,12 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 // Convert fixed point angle into sector number
 static inline uint8_t angle_to_sector(uint16_t angle) {
   //angle &= FIXED_MASK;	// Changed to full circle = 16 bits
-  if(angle < ANGLE_60DEG) return 5;
-  else if(angle < ANGLE_120DEG) return 0;
-  else if(angle < ANGLE_180DEG) return 1;
-  else if(angle < ANGLE_240DEG) return 2;
-  else if(angle < ANGLE_300DEG) return 3;
-  else return 4;
+  if(angle < ANGLE_60DEG) return 0;
+  else if(angle < ANGLE_120DEG) return 1;
+  else if(angle < ANGLE_180DEG) return 2;
+  else if(angle < ANGLE_240DEG) return 3;
+  else if(angle < ANGLE_300DEG) return 4;
+  else return 5;
 }
 
 // Timer 1 update handles space vector modulation for both motors
