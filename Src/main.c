@@ -76,9 +76,9 @@ int main(void) {
 
   MX_GPIO_Init();
 
+  // Initialize control state, e.g. rotor position
+  // according to hall sensors and so forth
   initialize_control_state();
-
-  MX_TIM_Init();
 
   // Initialize generic measurements with ADC3
   ADC3_init();
@@ -91,27 +91,16 @@ int main(void) {
   HAL_ADC_Start(&adc_rdson);
 #endif
 
-#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
-
-#ifdef LEFT_SENSOR_MODBUS
-  UART_Init(0, 1);	// Use UART3 for modbus
-#else
-  UART_Init(1, 0);	// Use UART2
-#endif
-
-  ee_init();
-  CfgInit();
-
-  UARTRxEnable(CFG_BUS_UART, 1);
-#endif
-
-
+  // Initialize control timer
   control_timer_init();
 
-  //HAL_ADC_Start(&hadc2);
+  // Initialize PWM timers
+  MX_TIM_Init();
 
   // Power button must be pressed twice and held for power on
   // TODO: To be implemented
+
+
 
   // Enable power latch
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
@@ -124,6 +113,25 @@ int main(void) {
   // without load (0 reference)
   ADC1_calibrate();
 #endif
+
+
+  // Initialize UART for modbus
+  // do this last so that we don't accidentally update the reference...
+#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
+
+#ifdef LEFT_SENSOR_MODBUS
+  UART_Init(0, 1);	// Use UART3 for modbus
+#else
+  UART_Init(1, 0);	// Use UART2
+#endif
+
+  // Initialize EEPROM and config bus
+  ee_init();
+  CfgInit();
+
+  UARTRxEnable(CFG_BUS_UART, 1);
+#endif
+
 
 
   while(1)
