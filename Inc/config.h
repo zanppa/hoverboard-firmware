@@ -82,6 +82,20 @@
 // How many times to sample ADC to get offsets
 #define ADC_OFFSET_SAMPLES		1024
 
+// Power button pressed threshold
+// The measurement has a gain of about 0.06 until battery voltage is 21 V, then the gain drops
+// gradually to about 0.04.
+// Power button threshold of about 18 V (required for supply to operate properly) is about 1340 in ADC units
+#define ADC_POWERSW_THRESHOLD	1340
+
+// Power switch time that it is allowed to be in off-state before next press (in control timer units)
+#define POWERSW_OFF_TIMER		1000
+// Power switch time that it has to be pressed the second time before we really turn on
+#define POWERSW_ON_TIMER		2000
+
+// E-stop powerbutton sample count before emergency shutdown
+#define POWERSW_ESTOP_SAMPLES	3
+
 // Mosfet Rds,on, e.g. equivalent resistance in on-state
 // This is the equivalent value taking into account the voltage measurement
 // gain of about 2.5 ... 3 => if Rdson is about 0.0056 ohm, the value is 0.0056 * 3 = 0.017

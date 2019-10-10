@@ -43,9 +43,62 @@ extern volatile uint16_t rdson_offset[4];
 
 extern volatile uint8_t generic_adc_conv_done;
 
+// Disable motors, release power latch and wait forever
+void power_off(void) {
+  disable_motors(0x01 | 0x02);
+  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 0);
+  while(1);
+}
+
+// Check that the power button is pressed in correct sequence,
+// power off if not
+void wait_power_on_sequence(void) {
+  uint16_t sw_timer;
+
+  // Power button must be pressed twice and held for power on
+  // Wait until power button reaches threshold, if not then when button
+  // is released we shut down immediately
+  while(analog_meas.v_switch < ADC_POWERSW_THRESHOLD);
+  // Wait until power button is released
+  while(analog_meas.v_switch > ADC_POWERSW_THRESHOLD);
+
+  // Release timer
+  sw_timer = POWERSW_OFF_TIMER;
+  while(sw_timer) {
+    if(analog_meas.v_switch > ADC_POWERSW_THRESHOLD)
+      break;
+
+    while(!generic_adc_conv_done);
+    generic_adc_conv_done = 0;
+    sw_timer--;
+  }
+  if(!sw_timer)		// Button was not re-pressed sono enough
+    power_off();
+
+  // Button has to be pressed long enough the second time
+  sw_timer = POWERSW_ON_TIMER;
+  while(sw_timer) {
+    if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD)
+      break;
+    while(!generic_adc_conv_done);
+    generic_adc_conv_done = 0;
+    sw_timer--;
+  }
+  if(sw_timer)	// Released too early
+    power_off();
+
+  // Sequence was done correctly, can power up
+}
+
 int main(void) {
   //uint16_t button_time = 0;
 
+#if defined(POWER_BUTTON_ESTOP)
+  uint8_t powersw_samples = 0;
+#elif defined(POWER_BUTTON_NORMAL)
+  uint8_t powersw_state = 0;
+  uint16_t powersw_timer = 0;
+#endif
 
   HAL_Init();
   __HAL_RCC_AFIO_CLK_ENABLE();
@@ -97,10 +150,10 @@ int main(void) {
   // Initialize PWM timers
   MX_TIM_Init();
 
-  // Power button must be pressed twice and held for power on
-  // TODO: To be implemented
-
-
+#ifdef POWER_BUTTON_NORMAL
+  // Check the power-up sequence
+  wait_power_on_sequence();
+#endif
 
   // Enable power latch
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
@@ -133,7 +186,6 @@ int main(void) {
 #endif
 
 
-
   while(1)
   {
     //show user board is alive
@@ -147,6 +199,26 @@ int main(void) {
     //update cfg_bus communication
     mb_update();
 #endif
+
+    // Check power button presses
+    if(generic_adc_conv_done) {
+      generic_adc_conv_done = 0;
+
+#ifdef POWER_BUTTON_ESTOP
+      if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
+        // Power button released
+        powersw_samples++;
+      } else {
+        powersw_samples = 0;
+      }
+
+      if(powersw_samples > POWERSW_ESTOP_SAMPLES) {
+        // Emergency shutdown (or normal in some cases)
+        disable_motors(0x01 | 0x02);
+        power_off();
+      }
+#endif
+    }
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important
