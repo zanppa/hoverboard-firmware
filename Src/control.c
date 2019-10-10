@@ -3,6 +3,8 @@
  *
  *  Created on: May 6, 2018
  *      Author: tomvoc
+ *
+ * Modified by Lauri Peltonen, 2019
  */
 
 #include "control.h"
