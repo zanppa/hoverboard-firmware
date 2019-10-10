@@ -98,7 +98,10 @@ void do_fault(uint8_t sides) {
 
 // Clear fault (break) and enable motors
 // bit 0 = left (TIM8) bit 1 = right (TIM1)
+// TODO: Does not make sense to not reset both...
 void clear_fault(uint8_t sides) {
+  fault_bits = 0;
+
   if(sides & 0x01) {
     LEFT_TIM->EGR &= ~TIM_EGR_BG;	// Clear break
     LEFT_TIM->BDTR |= TIM_BDTR_MOE;	// Enable motor
