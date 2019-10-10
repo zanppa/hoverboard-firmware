@@ -93,8 +93,14 @@
 // Power switch time that it has to be pressed the second time before we really turn on
 #define POWERSW_ON_TIMER		2000
 
+// Speed limit for normal power off, in fixed point per unit
+#define POWEROFF_SPEED_LIMIT	200		// About 5 % of rated speed
+
 // E-stop powerbutton sample count before emergency shutdown
 #define POWERSW_ESTOP_SAMPLES	3
+
+// How long power button must be pressed for fault reset
+#define POWERSW_FAULT_RESET		3000	// About 3 seconds
 
 // Mosfet Rds,on, e.g. equivalent resistance in on-state
 // This is the equivalent value taking into account the voltage measurement

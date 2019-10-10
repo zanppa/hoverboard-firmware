@@ -49,6 +49,7 @@ Src/math.c \
 Src/arrays.c \
 Src/imeas.c \
 Src/adc.c \
+Src/powersw.c \
 
 # ASM sources
 ASM_SOURCES =  \
