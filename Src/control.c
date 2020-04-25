@@ -333,8 +333,12 @@ void TIM3_IRQHandler(void)
   } else if(battery_volt_pu < uv_warn_pu) {
     status_bits |= STATUS_UNDERVOLTAGE_WARN;
     // TODO: Buzzer & blink
-  } else {
+  } else { // Remove alarm bits
     status_bits &= ~(STATUS_OVERVOLTAGE_WARN | STATUS_UNDERVOLTAGE_WARN);
+
+    // Check that filtered DC link voltage is high enough and indicate ready state
+    if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
+      status_bits |= STATUS_READY;
   }
 
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
