@@ -307,7 +307,7 @@ void TIM3_IRQHandler(void)
   if(ia_r > OVERCURRENT_TRIP || -ia_r < -OVERCURRENT_TRIP ||
      ib_r > OVERCURRENT_TRIP || -ib_r < -OVERCURRENT_TRIP ||
      ic_r > OVERCURRENT_TRIP || -ic_r < -OVERCURRENT_TRIP) {
-    do_fault(0x02);	// Trip left motor
+    do_fault(0x02);	// Trip right motor
     fault_bits |= FAULT_OVERCURRENT;
     // TODO: Buzzer + led
   }
