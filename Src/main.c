@@ -68,6 +68,10 @@ int main(void) {
 
   SystemClock_Config();
 
+  // Enable power latch here so that the board keeps
+  // powered on during initialization
+  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
+
   // Initialize control modes
   motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
   motor_state[STATE_RIGHT].ref.control_mode = CONTROL_ANGLE;
@@ -102,9 +106,6 @@ int main(void) {
   // Check the power-up sequence
   powersw_on_sequence();
 #endif
-
-  // Enable power latch
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
 
   // Enable both motor drivers
   enable_motors(0x01 | 0x02);
