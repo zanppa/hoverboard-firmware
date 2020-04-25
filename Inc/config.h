@@ -33,8 +33,8 @@
 // Control methods
 
 // Left motor
-#define LEFT_MOTOR_BLDC			// Use BLDC for left motor
-//#define LEFT_MOTOR_SVM		// Use SVM for left motor
+//#define LEFT_MOTOR_BLDC			// Use BLDC for left motor
+#define LEFT_MOTOR_SVM		// Use SVM for left motor
 
 // Right motor
 //#define RIGHT_MOTOR_BLDC		// BLDC for right motor
@@ -108,6 +108,14 @@
 #define RDSON		0.017
 
 
+// ============================
+// Datalogger
+#define ENABLE_DATALOGGER		1
+#define DATALOGGER_MAX			0xFF		// Maximum value of dataloggger, should be power of 2. Size is this + 1
+#define DATALOGGER_TYPE			uint32_t	// Type of the variables the datalogger can store
+#define DATALOGGER_COUNT_TYPE	uint8_t
+
+
 // =============================
 // Feature configuration
 
@@ -118,6 +126,7 @@
 #ifdef RIGHT_SENSOR_MODBUS
 #define CFG_BUS_UART (UARTCh2)
 #endif
+
 
 
 

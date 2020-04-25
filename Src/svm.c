@@ -43,6 +43,11 @@ static const uint8_t svm_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
 };
 
+#if defined(DATALOGGER_ENABLE)
+extern DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1];
+extern DATALOGGER_COUNT_TYPE datalogger_write_offset;
+#endif
+
 
 // Calculate the timer values given the desired voltage vector
 // length (modulation index) and angle in fixed point, return
@@ -135,6 +140,25 @@ void TIM1_UP_IRQHandler() {
     adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
   }
 #endif
+
+// If BLDC is not used and datalogger is enabled, do the capture here, on 111 zero vector
+#if defined(DATALOGGER_ENABLE) && !(defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC))
+  if((TIM8->CR1 & TIM_CR1_DIR)) {
+    // Falling counter --> current measurement is valid etc
+    if(datalogger_trigger) {
+      // Store values
+      if(datalogger_var0) datalogger[datalogger_write_offset][0] = (DATALOGGER_TYPE)*datalogger_var0;
+      if(datalogger_var1) datalogger[datalogger_write_offset][1] = (DATALOGGER_TYPE)*datalogger_var1;
+      if(datalogger_var2) datalogger[datalogger_write_offset][2] = (DATALOGGER_TYPE)*datalogger_var2;
+      if(datalogger_var3) datalogger[datalogger_write_offset][3] = (DATALOGGER_TYPE)*datalogger_var3;
+
+      datalogger_write_offset = (datalogger_write_offset + 1) && DATALOGGER_MAX;
+      if(!datalogger_write_offset)
+        datalogger_trigger = 0;     // Disable writing when buffer is fulle
+    }
+  }
+#endif
+
 
 #ifdef LEFT_MOTOR_SVM
   // Get the vector times from the modulator

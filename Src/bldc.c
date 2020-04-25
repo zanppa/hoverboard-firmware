@@ -37,6 +37,11 @@ static const uint8_t bldc_mod_pattern[6][3] = {
   {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)}
 };
 
+#if defined(DATALOGGER_ENABLE)
+extern DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1];
+extern DATALOGGER_COUNT_TYPE datalogger_write_offset;
+#endif
+
 // Timer 8 handler updates the BLDC PWM references
 // This timer runs at twise the switching frequency
 void TIM8_UP_IRQHandler() {
@@ -55,6 +60,23 @@ void TIM8_UP_IRQHandler() {
   }
 #endif
 
+// If BLDC is used and datalogger is enabled, do the capture here, on 111 zero vector
+#if defined(DATALOGGER_ENABLE) && (defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC))
+  if((TIM8->CR1 & TIM_CR1_DIR)) {
+    // Falling counter --> current measurement is valid etc
+    if(datalogger_trigger) {
+      // Store values
+      if(datalogger_var0) datalogger[datalogger_write_offset][0] = (DATALOGGER_TYPE)*datalogger_var0;
+      if(datalogger_var1) datalogger[datalogger_write_offset][1] = (DATALOGGER_TYPE)*datalogger_var1;
+      if(datalogger_var2) datalogger[datalogger_write_offset][2] = (DATALOGGER_TYPE)*datalogger_var2;
+      if(datalogger_var3) datalogger[datalogger_write_offset][3] = (DATALOGGER_TYPE)*datalogger_var3;
+
+      datalogger_write_offset = (datalogger_write_offset + 1) && DATALOGGER_MAX;
+      if(!datalogger_write_offset)
+        datalogger_trigger = 0;		// Disable writing when buffer is fulle
+    }
+  }
+#endif
 
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;
