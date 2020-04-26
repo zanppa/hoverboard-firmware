@@ -52,6 +52,13 @@
 
 
 // =============================
+// Reference source
+#define REFERENCE_MODBUS			// Use modbus for references
+//#define REFERENCE_ADC				// Use analog inputs for reference
+
+
+
+// =============================
 // Limits/warnings/faults
 
 #define OVERVOLTAGE_WARN	26		// Overvoltage warning level in volts

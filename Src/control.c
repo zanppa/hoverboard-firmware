@@ -210,6 +210,7 @@ void TIM3_IRQHandler(void)
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
   int16_t ia_r, ib_r, ic_r;
+  int16_t ref_l, ref_r;
 
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
@@ -347,20 +348,34 @@ void TIM3_IRQHandler(void)
   voltage_scale = fx_divu(FIXED_ONE, battery_volt_pu);
 
 
+#if defined(REFERENCE_MODBUS)
+  ref_l = cfg.vars.spdref_l;
+  ref_r = cfg.vars.spdref_r;
+#elif defined(REFERENCE_ADC)
+  // ADC output is 0...4095, scale it to -4096 ... 4095
+  // TODO: Add some configuration (offset, gain) to these?
+  ref_l = (analog_meas.analog_ref_1 - 2048) * 2;
+  ref_r = (analog_meas.analog_ref_2 - 2048) * 2;
+#else
+  ref_l = 0
+  ref_r = 0
+#endif
+
+
   // Debug: rotate the SVM reference
 #ifdef LEFT_MOTOR_SVM
   if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_SPEED) {
-    motor_state[STATE_LEFT].ctrl.speed = cfg.vars.spdref_l;
+    motor_state[STATE_LEFT].ctrl.speed = ref_l;
   } else if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE) {
-    motor_state[STATE_LEFT].ctrl.angle = cfg.vars.spdref_l;  // DEBUG
+    motor_state[STATE_LEFT].ctrl.angle = ref_l;  // DEBUG
   }
 #endif
 
 #ifdef RIGHT_MOTOR_SVM
   if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_SPEED) {
-    motor_state[STATE_RIGHT].ctrl.speed = cfg.vars.spdref_r;
+    motor_state[STATE_RIGHT].ctrl.speed = ref_r;
   } else if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE) {
-    motor_state[STATE_RIGHT].ctrl.angle = cfg.vars.spdref_r;  // DEBUG
+    motor_state[STATE_RIGHT].ctrl.angle = ref_r;  // DEBUG
   }
 #endif
 
