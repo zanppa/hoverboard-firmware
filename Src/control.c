@@ -384,26 +384,28 @@ void TIM3_IRQHandler(void)
 //#ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   setpoint_l_limit = CLAMP(cfg.vars.setpoint_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
+//  setpoint_l_limit = CLAMP(ref_l, -cfg.vars.max_pwm_l, cfg.vars.max_pwm_l);
 
   pwm_diff = setpoint_l_limit - pwm_l_ramp;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   pwm_l_ramp += pwm_diff;
 
-  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale);
+  //motor_state[STATE_LEFT].ctrl.amplitude = fx_mul(pwm_l_ramp, voltage_scale); // TODO: Check and fix
   motor_state[STATE_LEFT].ctrl.amplitude = pwm_l_ramp;
 //#endif
 
 //#ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
   setpoint_r_limit = CLAMP(cfg.vars.setpoint_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
+  //setpoint_r_limit = CLAMP(ref_r, -cfg.vars.max_pwm_r, cfg.vars.max_pwm_r);
 
   pwm_diff = setpoint_r_limit - pwm_r_ramp;
   pwm_diff = CLAMP(pwm_diff, -cfg.vars.rate_limit, cfg.vars.rate_limit);
 
   pwm_r_ramp += pwm_diff;
 
-  //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale);
+  //motor_state[STATE_RIGHT].ctrl.amplitude = fx_mul(pwm_r_ramp, voltage_scale); // TODO: Check and fix
   motor_state[STATE_RIGHT].ctrl.amplitude = pwm_r_ramp;
 //#endif
 
