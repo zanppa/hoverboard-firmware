@@ -16,6 +16,7 @@
 #include "math.h"
 #include "adc.h"
 #include "imeas.h"
+#include "uartscope.h"
 
 #include <stm32f1xx_hal_gpio.h>
 
@@ -446,6 +447,22 @@ void TIM3_IRQHandler(void)
   cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
   cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
   cfg.vars.ref_scale = voltage_scale;
+
+#if defined(LEFT_SENSOR_SCOPE) || defined(RIGHT_SENSOR_SCOPE)
+  // Scope, send every other tick (start bits & 2 stop bits included)
+  // To send start, 8 data, stop = (2+8) x 16 bits every 2 ms, we need (2+8) * (16+3) / 2e-3 = 95000 bps
+  // so 115200 bps should be enough to send this data every 2 ms
+  if(control_tick & 1) {
+    scope_set_data(0, ia_l);
+    scope_set_data(1, ib_l);
+    scope_set_data(2, ia_r);
+    scope_set_data(3, ib_r);
+    scope_set_data(4, analog_meas.v_battery);
+    scope_set_data(5, speed_l);
+    scope_set_data(6, speed_r);
+    scope_set_data(7, 0);
+  }
+#endif
 
   control_tick++;
 

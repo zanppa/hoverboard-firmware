@@ -7,10 +7,12 @@
 
 // Configure which feature is enabled on the right sensor board connection
 #define LEFT_SENSOR_MODBUS			// Enable modbus (UART3)
+// #define LEFT_SENSOR_SCOPE		// Enable uart scope on left sensor (UART3)
 
 // Configure which feature is enabled on the left sensor board connection
 //#define RIGHT_SENSOR_MODBUS		// Enable modbus (UART2)
-#define RIGHT_SENSOR_ANALOG			// Enable analog inputs
+// #define RIGHT_SENSOR_ANALOG			// Enable analog inputs
+#define RIGHT_SENSOR_SCOPE		// Enable uart scope on right sensor (UART2)
 
 // Configure power button operation
 #define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
@@ -119,6 +121,13 @@
 #define CFG_BUS_UART (UARTCh2)
 #endif
 
+#ifdef RIGHT_SENSOR_SCOPE
+#define SCOPE_UART UARTCh2
+#endif
+
+#ifdef LEFT_SENSOR_SCOPE
+#define SCOPE_UART UARTCh3
+#endif
 
 
 // =============================
@@ -150,5 +159,24 @@
 
 // Only one side can handle config bus (modbus)
 #if defined(LEFT_SENSOR_MODBUS) && defined(RIGHT_SENSOR_MODBUS)
-#error config.h: Only onse sensor configuration can have modbus enabled
+#error config.h: Only one sensor configuration can have modbus enabled
+#endif
+
+// Only one side can be scope
+#if defined(LEFT_SENSOR_SCOPE) && defined(RIGHT_SENSOR_SCOPE)
+#error config.h: Only one sensor can have scope enabled
+#endif
+
+// Check overlapping features
+#if defined(LEFT_SENSOR_MODBUS) && defined(LEFT_SENSOR_SCOPE)
+#error config.h: Left sensor can only have one feature enabled, not modbus and scope
+#endif
+#if defined(RIGHT_SENSOR_MODBUS) && defined(RIGHT_SENSOR_SCOPE)
+#error config.h: Right sensor can only have one feature enabled, not modbus and scope
+#endif
+#if defined(RIGHT_SENSOR_MODBUS) && defined(RIGHT_SENSOR_ANALOG)
+#error config.h: Right sensor can only have one feature enabled, not modbus and analog
+#endif
+#if defined(RIGHT_SENSOR_SCOPE) && defined(RIGHT_SENSOR_ANALOG)
+#error config.h: Right sensor can only have one feature enabled, not scope and analog
 #endif
