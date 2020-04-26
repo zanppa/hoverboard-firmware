@@ -53,9 +53,9 @@
 
 // =============================
 // Reference source
-#define REFERENCE_MODBUS			// Use modbus for references
-//#define REFERENCE_ADC				// Use analog inputs for reference
-
+//#define REFERENCE_MODBUS			// Use modbus for references
+#define REFERENCE_ADC				// Use analog inputs for reference
+#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
 
 
 // =============================
@@ -186,4 +186,11 @@
 #endif
 #if defined(RIGHT_SENSOR_SCOPE) && defined(RIGHT_SENSOR_ANALOG)
 #error config.h: Right sensor can only have one feature enabled, not scope and analog
+#endif
+
+#if defined(REFERENCE_MODBUS) && defined(REFERENCE_ADC)
+#error config.h: Only one reference source can be selected
+#endif
+#if defined(REFERENCE_ADC_DIFF) && !defined(REFERENCE_ADC)
+#warning config.h: Adc differential reference selected without ADC reference
 #endif

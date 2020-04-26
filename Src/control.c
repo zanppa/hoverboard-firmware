@@ -352,14 +352,23 @@ void TIM3_IRQHandler(void)
   ref_l = cfg.vars.spdref_l;
   ref_r = cfg.vars.spdref_r;
 #elif defined(REFERENCE_ADC)
+#if defined(REFERENCE_ADC_DIFF)
+  // This is simple and results in -8192 ... 8191 range
+  // TODO: Add scaling and offset and deadband?
+  ref_l = analog_meas.analog_ref_1 + analog_meas.analog_ref_2;
+  ref_r = analog_meas.analog_ref_2 - analog_meas.analog_ref_2;
+  ref_l = (ref_l - 4096) * 2;
+  ref_r = (ref_r - 4096) * 2;
+#else // REFERENCE_ADC_DIFF
   // ADC output is 0...4095, scale it to -4096 ... 4095
-  // TODO: Add some configuration (offset, gain) to these?
+  // TODO: Add some configuration (offset, gain, deadband) to these?
   ref_l = (analog_meas.analog_ref_1 - 2048) * 2;
   ref_r = (analog_meas.analog_ref_2 - 2048) * 2;
-#else
+#endif // REFERENCE_ADC_DIFF
+#else // REFERENCE_ADC
   ref_l = 0
   ref_r = 0
-#endif
+#endif // REFERENCE_ADC
 
 
   // Debug: rotate the SVM reference
