@@ -572,7 +572,7 @@ void TIM3_IRQHandler(void)
 
   if(ctrl_mode == CONTROL_SPEED) {
     // Speed control loop for right motor
-#if defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
+#if defined(RIGHT_MOTOR_SVM) && !defined(RIGHT_MOTOR_FOC)
     // SVM --> F/U control so reference is the speed reference
 #else
     // FOC and BLCD --> run PI controller
