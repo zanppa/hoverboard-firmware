@@ -2,7 +2,8 @@
 This document is part of the hoverboard firmware documentation.
 
 ## Current measurement with Rds,on
-Antoher way to measure current is by measuring voltage over the lower branch transistor Rds,on.
+One way to measure current is by measuring voltage over the lower branch transistor, utilizing its
+parasitic resistance Rds,on.
 
 ### Electronics
 Both motors have voltage measurement over the lower leg transistor of two phases. The voltage measurement 
