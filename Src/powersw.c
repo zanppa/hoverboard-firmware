@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "defines.h"
 #include "powersw.h"
 #include "control.h"
+#include "math.h"
 
 // Power switch voltage is an analog measurement
 extern volatile adc_buf_t analog_meas;
