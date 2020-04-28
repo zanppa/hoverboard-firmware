@@ -32,7 +32,7 @@ volatile uint16_t rdson_meas[4];
 volatile uint16_t rdson_offset[4];
 
 // Current measurement result structure
-volatile i_meas_t i_meas;
+volatile i_meas_t i_meas = {0};
 
 static volatile uint8_t rdson_adc_conv_done = 0;
 
@@ -152,6 +152,7 @@ void DMA1_Channel1_IRQHandler(void) {
   // Copy measurements to current measurement array taking into account
   // the offsets
   // The values are valid after the calibration is done
+  // Measurement is from motor into inverter, while we want it the other way so it is inverted
   i_meas.i_lA = (rdson_offset[0] - rdson_meas[0]) * rdson_to_i;
   i_meas.i_lB = (rdson_offset[1] - rdson_meas[1]) * rdson_to_i;
   i_meas.i_rB = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;

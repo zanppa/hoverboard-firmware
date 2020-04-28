@@ -11,8 +11,8 @@
 
 // Configure which feature is enabled on the left sensor board connection
 //#define RIGHT_SENSOR_MODBUS		// Enable modbus (UART2)
-// #define RIGHT_SENSOR_ANALOG			// Enable analog inputs
-#define RIGHT_SENSOR_SCOPE		// Enable uart scope on right sensor (UART2)
+#define RIGHT_SENSOR_ANALOG			// Enable analog inputs
+// #define RIGHT_SENSOR_SCOPE		// Enable uart scope on right sensor (UART2)
 
 // Configure power button operation
 #define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
@@ -35,21 +35,27 @@
 // Control methods
 
 // Left motor
-#define LEFT_MOTOR_BLDC			// Use BLDC for left motor
-//#define LEFT_MOTOR_SVM		// Use SVM for left motor
+// What control method to use for which motor
+#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+//#define LEFT_MOTOR_SVM			// Use SVM for left motor
+//#define LEFT_MOTOR_FOC			/ Use field oriented control for left motor (requires SVM also)
 
 // Right motor
 //#define RIGHT_MOTOR_BLDC		// BLDC for right motor
 #define RIGHT_MOTOR_SVM			// SVM for right motor
-
-// For space vector modulation, update reference angle
-// and speed from hall sensor data
-//#define SVM_HALL_UPDATE	1
+#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
 // Current measurement using Rds,on
 #define I_MEAS_RDSON
 
+// Update SVM reference position from HALL sensors or not, this is required by FOC
+#define SVM_HALL_UPDATE
+//#undef SVM_HALL_UPDATE
+
+// Controller parameters
+#define CONTROL_FREQ	1000		// Controller is run at this rate
+#define CONTROL_PERIOD	(64000000 / CONTROL_FREQ)
 
 // =============================
 // Reference source
@@ -194,3 +200,23 @@
 #if defined(REFERENCE_ADC_DIFF) && !defined(REFERENCE_ADC)
 #warning config.h: Adc differential reference selected without ADC reference
 #endif
+
+#if defined(LEFT_MOTOR_FOC) && !defined(LEFT_MOTOR_SVM)
+#error config.h: Left motor FOC control requires SVM
+#endif
+
+/*
+#if defined(LEFT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
+#error config.h: Left motor FOC control requires SVM_HALL_UPDATE
+#endif
+*/
+
+#if defined(RIGHT_MOTOR_FOC) && !defined(RIGHT_MOTOR_SVM)
+#error config.h: Right motor FOC requires SVM
+#endif
+
+/*
+#if defined(RIGHT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
+#error config.h: Right motor FOC requires SVM_HALL_UPDATE
+#endif
+*/

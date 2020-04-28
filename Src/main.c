@@ -84,6 +84,9 @@ int main(void) {
   // Initialize control state, e.g. rotor position
   // according to hall sensors and so forth
   initialize_control_state();
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
+
 
   // Initialize generic measurements with ADC3
   ADC3_init();
@@ -155,9 +158,13 @@ int main(void) {
     // Check if power button was pressed long for fault reset
     if(powersw_fault_reset()) clear_fault(0x01 | 0x02);		// Reset all faults
 
-
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
+
+    // Update references
+    // TODO: Select reference source (e.g. analog or modbus)
+    // motor_state[STATE_LEFT].ref.value = cfg.vars.setpoint_l;
+    // motor_state[STATE_RIGHT].ref.value = cfg.vars.setpoint_r;
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important

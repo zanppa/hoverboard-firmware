@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "string.h"
 #include "defines.h"
+#include "math.h"
 
 volatile uint8_t uart2_rx[UART2_RX_FIFO_SIZE]={0};
 uint8_t uart2_tx[UART2_TX_FIFO_SIZE]={0};

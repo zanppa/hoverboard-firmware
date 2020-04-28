@@ -34,15 +34,15 @@ extern ADC_HandleTypeDef adc_rdson;
 // This works as long as left and right use same channel mapping (CCR1=U etc.)
 // CCR is uint32_t, this should be used like (uint_32t *)(TIM8+mod_pattern[0][0]) or something
 // Offsets should be CCR1=0x34, CCR2=0x38 and CCR3=0x3C so uint8_t is enough
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
 static const uint8_t svm_mod_pattern[6][3] = {
-  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)},
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W)},	// Was 0
+  {offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U)},	// Was 1
   {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_U)},
   {offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)},
-  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_V), offsetof(TIM_TypeDef, LEFT_TIM_W)}
+  {offsetof(TIM_TypeDef, LEFT_TIM_U), offsetof(TIM_TypeDef, LEFT_TIM_W), offsetof(TIM_TypeDef, LEFT_TIM_V)}
 };
-
 
 // Calculate the timer values given the desired voltage vector
 // length (modulation index) and angle in fixed point, return
@@ -52,7 +52,7 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   uint16_t ta1;
   uint16_t ta2;
   uint16_t tz;
-  uint16_t terr = 0;
+  //uint16_t terr = 0;
 
   // Clamp < 0 modulation index to zero
   if(midx <= 0) midx = 0;
@@ -64,10 +64,10 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   angle = angle % ANGLE_60DEG;
 
   // Calculate the vector times
-  ta1 = fx_mul(midx, array_sin(angle));
+  ta1 = fx_mulu(midx,  array_sin(ANGLE_60DEG - angle));
   ta1 = fx_mulu(ta1, PWM_PERIOD);
 
-  ta2 = fx_mul(midx,  array_sin(ANGLE_60DEG - angle));
+  ta2 = fx_mulu(midx, array_sin(angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
   tz = (PWM_PERIOD - ta1 - ta2) / 2;
@@ -102,24 +102,28 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   *t1 = ta1;
   *t2 = ta2;
 }
+#endif
 
 
 // Convert fixed point angle into sector number
-static inline uint8_t angle_to_sector(uint16_t angle) {
+static inline uint8_t angle_to_svm_sector(uint16_t angle) {
   //angle &= FIXED_MASK;	// Changed to full circle = 16 bits
-  if(angle < ANGLE_60DEG) return 5;
-  else if(angle < ANGLE_120DEG) return 0;
-  else if(angle < ANGLE_180DEG) return 1;
-  else if(angle < ANGLE_240DEG) return 2;
-  else if(angle < ANGLE_300DEG) return 3;
-  else return 4;
+  if(angle < ANGLE_60DEG) return 0;
+  else if(angle < ANGLE_120DEG) return 1;
+  else if(angle < ANGLE_180DEG) return 2;
+  else if(angle < ANGLE_240DEG) return 3;
+  else if(angle < ANGLE_300DEG) return 4;
+  else return 5;
 }
 
 // Timer 1 update handles space vector modulation for both motors
 void TIM1_UP_IRQHandler() {
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
   uint16_t t0, t1, t2;
   uint16_t angle;
   uint8_t sector;
+  uint16_t angle_min, angle_max;
+#endif
 
   // Clear the update interrupt flag
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
@@ -137,11 +141,34 @@ void TIM1_UP_IRQHandler() {
 #endif
 
 #ifdef LEFT_MOTOR_SVM
-  // Get the vector times from the modulator
-  motor_state[STATE_LEFT].ctrl.angle += motor_state[STATE_LEFT].ctrl.speed;
+  // Interpolate the rotor position
+  angle = motor_state[STATE_LEFT].act.angle + motor_state[STATE_LEFT].ctrl.speed;
 
+  angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
+  angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
+
+  // Check that the new angle is inside the sector limits
+  if(angle_min < angle_max) {
+    // Normal situation
+    angle = CLAMP(angle, angle_min, angle_max);
+  } else {
+    // Sector 0, angle 0 is inside the sector
+      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+  }
+
+  motor_state[STATE_LEFT].act.angle = angle;
+
+
+  // Get the vector times from the modulator
+#ifdef LEFT_MOTOR_FOC
+  // Phase advance according to ctrl angle
+  angle += motor_state[STATE_LEFT].ctrl.angle;
+#else
+  // In normal SVM control angle is directly the modulation angle
   angle = motor_state[STATE_LEFT].ctrl.angle;
-  sector = angle_to_sector(angle);
+#endif
+  sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // Since the timer compare is wrong way
@@ -153,11 +180,36 @@ void TIM1_UP_IRQHandler() {
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
 #endif
 
-#ifdef RIGHT_MOTOR_SVM
-  motor_state[STATE_RIGHT].ctrl.angle += motor_state[STATE_RIGHT].ctrl.speed;
 
+
+#ifdef RIGHT_MOTOR_SVM
+  // Interpolate the rotor position
+  angle = motor_state[STATE_RIGHT].act.angle + motor_state[STATE_RIGHT].ctrl.speed;
+
+  angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
+  angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
+
+  // Check that the new angle is inside the sector limits
+  if(angle_min < angle_max) {
+    // Normal situation
+    angle = CLAMP(angle, angle_min, angle_max);
+  } else {
+    // Sector 0, angle 0 is inside the sector
+      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+  }
+
+  motor_state[STATE_RIGHT].act.angle = angle;
+
+  // Get the vector times from the modulator
+#ifdef RIGHT_MOTOR_FOC
+  // Phase advance according to ctrl angle
+  angle += motor_state[STATE_RIGHT].ctrl.angle;
+#else
+  // In normal SVM control angle is directly the modulation angle
   angle = motor_state[STATE_RIGHT].ctrl.angle;
-  sector = angle_to_sector(angle);
+#endif
+  sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
   // Since the timer compare is wrong way

@@ -70,3 +70,43 @@ int16_t array_sin(uint16_t angle) {
   else if(angle < ANGLE_270DEG) return -sine;
   else return -inv_sine;
 }
+
+// Following math is from Texas Instruments BPRA048
+// Clarke & Park transforms on the TMS320C2xx
+
+// Clarke transform
+// Trasform balanced currents a, b to alpha, beta
+// assuming a + b + c = 0
+void clarke(int16_t a, int16_t b, int16_t *alpha, int16_t *beta) {
+  int16_t b2;
+
+  *alpha = a;
+
+  b2 = a + 2*b;
+  *beta = fx_mul(ONE_PER_SQRT3, b2);	// beta = 1/sqrt(3) * a + 2/sqrt(3) * b
+}
+
+// Inverse clarke transform
+void inv_clarke(int16_t alpha, int16_t beta, int16_t *a, int16_t *b) {
+  *a = alpha;
+  *b = -alpha/2 + fx_mul(SQRT3_PER_2, beta);
+}
+
+// Park transform
+// Transform current alpha and beta to rotating frame d, q given angle theta
+void park(int16_t alpha, int16_t beta, uint16_t theta, int16_t *d, int16_t *q) {
+  int16_t sine = array_sin(theta);
+  int16_t cosine = array_sin(theta + ANGLE_90DEG);
+
+  *d = fx_mul(alpha, cosine) + fx_mul(beta, sine);
+  *q = fx_mul(-alpha, sine) + fx_mul(beta, cosine);
+}
+
+// Inverse park transform
+void inv_park(int16_t d, int16_t q, uint16_t theta, int16_t *alpha, int16_t *beta) {
+  int16_t sine = array_sin(theta);
+  int16_t cosine = array_sin(theta + ANGLE_90DEG);
+
+  *alpha = fx_mul(d, cosine) - fx_mul(q, sine);
+  *beta = fx_mul(d, sine) + fx_mul(q, cosine);
+}

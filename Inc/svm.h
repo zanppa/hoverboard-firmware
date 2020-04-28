@@ -14,9 +14,3 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-// This struct holds the references for space vector modulation
-typedef struct {
-  uint16_t modulation_index;
-  uint16_t angle;
-} svm_ref_t;

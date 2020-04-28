@@ -171,7 +171,7 @@ void control_timer_init(void)
   htim_control.Instance               = CTRL_TIM;
   htim_control.Init.Prescaler         = 0;
   htim_control.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  htim_control.Init.Period            = 0xFA00;
+  htim_control.Init.Period            = CONTROL_PERIOD;
   htim_control.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   htim_control.Init.RepetitionCounter = 0;
   htim_control.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
