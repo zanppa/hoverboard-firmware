@@ -52,14 +52,14 @@ const uint16_t ki_iq = 0.08 * FIXED_ONE; //1200;
 #ifdef LEFT_MOTOR_FOC
 static int16_t id_error_int_l = 0;
 static int16_t iq_error_int_l = 0;
-#endif
+#endif // LEFT_MOTOR_FOC
 #ifdef RIGHT_MOTOR_FOC
 static int16_t id_error_int_r = 0;
 static int16_t iq_error_int_r = 0;
-#endif
+#endif // RIGHT_MOTOR_FOC
 const int16_t idq_int_max = 30000;	// TODO: What is a sane value...?
 const uint8_t int_divisor = 10;
-#endif
+#endif // LEFT_MOTOR_FOC || RIGHT_MOTOR_FOC
 
 // ---------
 // Speed control parameters
@@ -530,8 +530,14 @@ void TIM3_IRQHandler(void)
 #else // LEFT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
   if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_SPEED) {
+#if defined(IR_MINIMUM_VOLTAGE)
+    motor_state[STATE_LEFT].ctrl.amplitude = MAX(ABS(motor_state[STATE_LEFT].ref.value), IR_MINIMUM_VOLTAGE);
+#else
+    motor_state[STATE_LEFT].ctrl.amplitude = ABS(motor_state[STATE_LEFT].ref.value);
+#endif // IR_MINIMUM_VOLTAGE
     motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value;
   } else if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE) {
+    motor_state[STATE_LEFT].ctrl.speed = 0;
     motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;  // DEBUG
   }
 #endif // !LEFT_MOTOR_FOC
@@ -637,8 +643,14 @@ void TIM3_IRQHandler(void)
   // TODO: U/f control for SVM without FOC?
 
   if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_SPEED) {
+#if defined(IR_MINIMUM_VOLTAGE)
+    motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
+#else
+    motor_state[STATE_RIGHT].ctrl.amplitude = ABS(motor_state[STATE_RIGHT].ref.value);
+#endif // IR_MNINMUM_VOLTAGE
     motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value;
   } else if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE) {
+    motor_state[STATE_RIGHT].ctrl.speed = 0;
     motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;  // DEBUG
   }
 #endif // !RIGHT_MOTOR_FOC

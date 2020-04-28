@@ -147,6 +147,7 @@ void TIM1_UP_IRQHandler() {
   angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
   angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
 
+#ifdef LEFT_MOTOR_FOC
   // Check that the new angle is inside the sector limits
   if(angle_min < angle_max) {
     // Normal situation
@@ -156,6 +157,7 @@ void TIM1_UP_IRQHandler() {
       if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
       else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
   }
+#endif
 
   motor_state[STATE_LEFT].act.angle = angle;
 
@@ -186,6 +188,7 @@ void TIM1_UP_IRQHandler() {
   // Interpolate the rotor position
   angle = motor_state[STATE_RIGHT].act.angle + motor_state[STATE_RIGHT].ctrl.speed;
 
+#ifdef RIGHT_MOTOR_FOC
   angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
   angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
 
@@ -198,6 +201,7 @@ void TIM1_UP_IRQHandler() {
       if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
       else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
   }
+#endif
 
   motor_state[STATE_RIGHT].act.angle = angle;
 

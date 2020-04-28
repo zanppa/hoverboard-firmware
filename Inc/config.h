@@ -154,6 +154,9 @@
 #define MOTOR_NOMINAL_PERIOD	(1000.0 * 60.0 / (MOTOR_SPEED * MOTOR_POLEPAIRS * 6.0))
 #define MOTOR_VOLTS_PER_HZ		(MOTOR_VOLTS * 60.0 / (MOTOR_SPEED * MOTOR_POLEPAIRS))
 
+// IR compensation (for SVM, U/F modulation). Sets the minimum voltage applied at low speeds, fixed point per unit
+#define IR_MINIMUM_VOLTAGE		200		// Approximately 5 %
+
 #define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
 
 #define SVM_LONG_PULSE (PWM_PERIOD - SVM_SHORT_PULSE - SVM_SHORT_ZPULSE)	// Maximum pulse length
