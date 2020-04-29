@@ -144,10 +144,10 @@ void TIM1_UP_IRQHandler() {
   // Interpolate the rotor position
   angle = motor_state[STATE_LEFT].act.angle + motor_state[STATE_LEFT].ctrl.speed;
 
+#ifdef LEFT_MOTOR_FOC
   angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
   angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
 
-#ifdef LEFT_MOTOR_FOC
   // Check that the new angle is inside the sector limits
   if(angle_min < angle_max) {
     // Normal situation
@@ -167,8 +167,9 @@ void TIM1_UP_IRQHandler() {
   // Phase advance according to ctrl angle
   angle += motor_state[STATE_LEFT].ctrl.angle;
 #else
-  // In normal SVM control angle is directly the modulation angle
-  angle = motor_state[STATE_LEFT].ctrl.angle;
+  // In SVM angle mode, the control angle is directly the modulation angle
+  if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE)
+    angle = motor_state[STATE_LEFT].ctrl.angle;
 #endif
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
@@ -210,8 +211,9 @@ void TIM1_UP_IRQHandler() {
   // Phase advance according to ctrl angle
   angle += motor_state[STATE_RIGHT].ctrl.angle;
 #else
-  // In normal SVM control angle is directly the modulation angle
-  angle = motor_state[STATE_RIGHT].ctrl.angle;
+  // In SVM angle mode, the control angle is directly the modulation angle
+  if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE)
+    angle = motor_state[STATE_RIGHT].ctrl.angle;
 #endif
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
