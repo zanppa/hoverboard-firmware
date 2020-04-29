@@ -302,22 +302,24 @@ void TIM3_IRQHandler(void)
     speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
     uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
-    // Calculate min and max angles in this sector
-    // To prevent the modulator angle estimation from exceeding the sector
-    motor_state[STATE_LEFT].ctrl.angle_min = angle;
-    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
-
     if(sector_l != ((prev_sector_l + 1) % 6)) {
       speed_l = -speed_l;
       angle += ANGLE_60DEG;
     }
 
+    __disable_irq();
+
+    // Calculate min and max angles in this sector
+    // To prevent the modulator angle estimation from exceeding the sector
+    motor_state[STATE_LEFT].ctrl.angle_min = angle;
+    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
+
 #ifdef FOC_HALL_UPDATE
-    __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].act.angle = angle;
-    __enable_irq();
     motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
+
+    __enable_irq();
 
     motor_state[STATE_LEFT].act.period = speed_tick[0];
     speed_tick[0] = 0;
@@ -345,20 +347,23 @@ void TIM3_IRQHandler(void)
     speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
     uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
-    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
-    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
-
     if(sector_r != ((prev_sector_r + 1) % 6)) {
       speed_r = -speed_r;
       angle += ANGLE_60DEG;
     }
 
+    __disable_irq();
+
+    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
+    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
+
+
 #ifdef FOC_HALL_UPDATE
-    __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].act.angle = angle;
-    __enable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
+
+    __enable_irq();
 
     motor_state[STATE_RIGHT].act.period = speed_tick[1];
     speed_tick[1] = 0;
@@ -533,22 +538,28 @@ void TIM3_IRQHandler(void)
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
 
   // Apply references
+  __disable_irq();
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
   motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);	// Should start with 90 degree phase shift
   // TODO: Angle advance polarity should change depending on speed direction
+  __enable_irq();
 
 #else // LEFT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
   if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_SPEED) {
+    __disable_irq();
 #if defined(IR_MINIMUM_VOLTAGE)
     motor_state[STATE_LEFT].ctrl.amplitude = MAX(ABS(motor_state[STATE_LEFT].ref.value), IR_MINIMUM_VOLTAGE);
 #else
     motor_state[STATE_LEFT].ctrl.amplitude = ABS(motor_state[STATE_LEFT].ref.value);
 #endif // IR_MINIMUM_VOLTAGE
     motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value;
+    __enable_irq();
   } else if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE) {
+    __disable_irq();
     motor_state[STATE_LEFT].ctrl.speed = 0;
     motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;  // DEBUG
+    __enable_irq();
   }
 #endif // !LEFT_MOTOR_FOC
 
@@ -570,7 +581,9 @@ void TIM3_IRQHandler(void)
   // Limit pwm value
   setpoint_l_limit = LIMIT(torque_ref, cfg.vars.max_pwm_l);
 
+  __disable_irq();
   motor_state[STATE_LEFT].ctrl.amplitude = setpoint_l_limit;
+  __enable_irq();
 #endif // LEFT_MOTOR_BLDC
 
 
@@ -645,23 +658,30 @@ void TIM3_IRQHandler(void)
   ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
 
   // Apply references
+  __disable_irq();
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
   motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);
   // TODO: Angle advance polarity should change depending on speed direction
+  __enable_irq();
 
 #else // RIGHT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
 
   if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_SPEED) {
+    __disable_irq();
+
 #if defined(IR_MINIMUM_VOLTAGE)
     motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
 #else
     motor_state[STATE_RIGHT].ctrl.amplitude = ABS(motor_state[STATE_RIGHT].ref.value);
 #endif // IR_MNINMUM_VOLTAGE
     motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value;
+    __enable_irq();
   } else if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE) {
+    __disable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = 0;
     motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;  // DEBUG
+    __enable_irq();
   }
 #endif // !RIGHT_MOTOR_FOC
 
@@ -684,7 +704,9 @@ void TIM3_IRQHandler(void)
   setpoint_r_limit = LIMIT(torque_ref, cfg.vars.max_pwm_r);
 
   // Apply the reference
+  __disable_irq();
   motor_state[STATE_RIGHT].ctrl.amplitude = setpoint_r_limit;
+  __enable_irq();
 #endif // RIGHT_MOTOR_BLDC
 
 
