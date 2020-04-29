@@ -73,8 +73,8 @@ int main(void) {
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
 
   // Initialize control modes
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_ANGLE;
-  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_ANGLE;
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
