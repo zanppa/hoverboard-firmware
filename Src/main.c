@@ -68,12 +68,8 @@ int main(void) {
 
   SystemClock_Config();
 
-  // Enable power latch here so that the board keeps
-  // powered on during initialization
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
-
   // Initialize control modes
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
   motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
 
   __HAL_RCC_DMA1_CLK_DISABLE();
@@ -81,12 +77,15 @@ int main(void) {
 
   MX_GPIO_Init();
 
+  // Enable power latch here so that the board keeps
+  // powered on during initialization
+  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
+
   // Initialize control state, e.g. rotor position
   // according to hall sensors and so forth
   initialize_control_state();
   motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
   motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
-
 
   // Initialize generic measurements with ADC3
   ADC3_init();
@@ -152,8 +151,10 @@ int main(void) {
     mb_update();
 #endif
 
+#if 0
     // Check if user requested power off
     powersw_off_sequence();
+#endif
 
     // Check if power button was pressed long for fault reset
     if(powersw_fault_reset()) clear_fault(0x01 | 0x02);		// Reset all faults
