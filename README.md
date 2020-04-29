@@ -23,17 +23,18 @@ at any time without prior notice as I develop the features :)
       - [x] Space vector modulation (requires more testing and reference chain)
       - [ ] U/f control with IR compensation
       - [x] Better current measurement
-           - [x] [Lower branch transistor Rds,on measurement, in separate branch](https://github.com/zanppa/hoverboard-firmware/tree/imeas2)
+           - [x] Lower branch transistor Rds,on measurement
            - [ ] Shunt measurement synched to active vectors
-      - [x] [FOC (in separate branch)](https://github.com/zanppa/hoverboard-firmware/tree/foc)
-      - [ ] Speed/torque control mode, reference chains
-      - [ ] Selectable reference source (e.g. modbus or analog in)
+      - [x] FOC (field oriented control)
+      - [x] Speed/torque control mode, reference chains
+      - [x] Selectable reference source (modbus or analog inputs)
  - [ ] Additional features
       - [ ] Field weakening (automatic)
       - [ ] Current limiting
-      - [ ] Overcurrent trips
+      - [x] Overcurrent trips
       - [x] Phase short circuit trip with shunt resistor
       - [ ] Overvoltage and undervoltage limits
+      - [x] Overvoltage and undervoltage trips/warnings
       - [ ] LED indications
       - [ ] Buzzer indications
       - [x] Figure out modbus and make example client (to be uploaded)
@@ -138,9 +139,9 @@ If the board draws more than 100mA in idle, it's probably broken.
 
 If the motors do something, but don't rotate smooth and quietly, try to use an alternative phase mapping. Usually, color-correct mapping (blue to blue, green to green, yellow to yellow) works fine. However, some hoverboards have a different layout then others, and this might be the reason your motor isn't spinning.
 
-Nunchuck not working: Use the right one of the 2 types of nunchucks. Use i2c pullups.
+~~Nunchuck not working: Use the right one of the 2 types of nunchucks. Use i2c pullups.~~
 
-Nunchuck or PPM working bad: The i2c bus and PPM signal are very sensitive to emv distortions of the motor controller. They get stronger the faster you are. Keep cables short, use shielded cable, use ferrits, stabilize voltage in nunchuck or reviever, add i2c pullups. To many errors leads to very high accelerations which triggers the protection board within the battery to shut everything down.
+~~Nunchuck or PPM working bad: The i2c bus and PPM signal are very sensitive to emv distortions of the motor controller. They get stronger the faster you are. Keep cables short, use shielded cable, use ferrits, stabilize voltage in nunchuck or reviever, add i2c pullups. To many errors leads to very high accelerations which triggers the protection board within the battery to shut everything down.~~
 
 Most robust way for input is to use the ADC and potis. It works well even on 1m unshielded cable. Solder ~100k Ohm resistors between ADC-inputs and gnd directly on the mainboard. Use potis as pullups to 3.3V.
 
@@ -150,8 +151,8 @@ Most robust way for input is to use the ADC and potis. It works well even on 1m 
 ## Examples and links
 
 Have a look at the config.h in the Inc directory. That's where you configure to firmware to match your project.
-Currently supported: Wii Nunchuck, analog potentiometer and PPM-Sum signal from a RC remote.
-A good example of control via UART, eg. from an Arduino or raspberryPi, can be found here:
+Currently supported: ~~Wii Nunchuck̃~~, analog potentiometer, modbus ~~and PPM-Sum signal from a RC remote~~.
+~~A good example of control via UART, eg. from an Arduino or raspberryPi, can be found here:~~
 https://github.com/p-h-a-i-l/hoverboard-firmware-hack
 
 If you need additional features like a boost button, have a look at the while(1) loop in the main.c
