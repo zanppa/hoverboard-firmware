@@ -242,14 +242,10 @@ void initialize_control_state(void) {
 
 
 // Controller internal variables, e.g. limited and ramped references
-#ifdef LEFT_MOTOR_BLDC
-static int16_t setpoint_l_limit = 0;
-static int16_t pwm_l_ramp = 0;
-#endif
-#ifdef RIGHT_MOTOR_BLDC
-static int16_t setpoint_r_limit = 0;
-static int16_t pwm_r_ramp = 0;
-#endif
+static int16_t ref_l_limit = 0;
+static int16_t ref_l_ramp = 0;
+static int16_t ref_r_limit = 0;
+static int16_t ref_r_ramp = 0;
 
 static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
 
@@ -452,8 +448,8 @@ void TIM3_IRQHandler(void)
   }
 
 #if defined(REFERENCE_MODBUS)
-  motor_state[STATE_LEFT].ref.value = cfg.vars.setpoint_l;
-  motor_state[STATE_RIGHT].ref.value = cfg.vars.setpoint_r;
+  ref_l = cfg.vars.setpoint_l;
+  ref_r = cfg.vars.setpoint_r;
   //  ref_l = cfg.vars.spdref_l;
   // ref_r = cfg.vars.spdref_r;
 #elif defined(REFERENCE_ADC)
@@ -464,20 +460,27 @@ void TIM3_IRQHandler(void)
   ref_r = analog_meas.analog_ref_2 - analog_meas.analog_ref_2;
   ref_l = (ref_l - 4096) * 2;
   ref_r = (ref_r - 4096) * 2;
-  motor_state[STATE_LEFT].ref.value = ref_l;
-  motor_state[STATE_RIGHT].ref.value = ref_r;
 #else // REFERENCE_ADC_DIFF
   // ADC output is 0...4095, scale it to -4096 ... 4095
   // TODO: Add some configuration (offset, gain, deadband) to these?
   ref_l = (analog_meas.analog_ref_1 - 2048) * 2;
   ref_r = (analog_meas.analog_ref_2 - 2048) * 2;
-  motor_state[STATE_LEFT].ref.value = ref_l;
-  motor_state[STATE_RIGHT].ref.value = ref_r;
 #endif // REFERENCE_ADC_DIFF
 #else // REFERENCE_ADC
-  motor_state[STATE_LEFT].ref.value = 0;
-  motor_state[STATE_RIGHT].ref.value = 0;
+  ref_l = 0;
+  ref_r = 0;
 #endif // REFERENCE_ADC
+
+  // Apply ramps to references
+  pwm_diff = ref_l - ref_l_ramp;
+  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
+  ref_l_ramp += pwm_diff;
+  motor_state[STATE_LEFT].ref.value = ref_l_ramp;
+
+  pwm_diff = ref_r - ref_r_ramp;
+  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
+  ref_r_ramp += pwm_diff;
+  motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
 
 
   // --------------
@@ -567,20 +570,15 @@ void TIM3_IRQHandler(void)
 #ifdef LEFT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
 
-  // Apply ramp
-  pwm_diff = torque_ref - pwm_l_ramp;
-  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
-  pwm_l_ramp += pwm_diff;
-
   // Scale ramped reference according to PWM period and DC voltage
-  torque_ref = fx_mul(pwm_l_ramp, PWM_PERIOD);
+  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
   torque_ref = fx_mul(torque_ref, voltage_scale);
 
   // Limit pwm value
-  setpoint_l_limit = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+  ref_l_limit = LIMIT(torque_ref, cfg.vars.max_pwm_l);
 
   __disable_irq();
-  motor_state[STATE_LEFT].ctrl.amplitude = setpoint_l_limit;
+  motor_state[STATE_LEFT].ctrl.amplitude = ref_l_limit;
   __enable_irq();
 #endif // LEFT_MOTOR_BLDC
 
@@ -599,8 +597,6 @@ void TIM3_IRQHandler(void)
     speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
     torque_ref = fx_mul(torque_ref, kp_speed);
-
-    cfg.vars.t_req_r = torque_ref;
 #endif
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
@@ -687,23 +683,20 @@ void TIM3_IRQHandler(void)
 #ifdef RIGHT_MOTOR_BLDC
   // Torque (voltage) control of left motor in BLDC mode
 
-  // Apply ramp
-  pwm_diff = torque_ref - pwm_r_ramp;
-  pwm_diff = LIMIT(pwm_diff, cfg.vars.rate_limit);
-  pwm_r_ramp += pwm_diff;
-
   // Scale ramped reference according to PWM period and DC voltage
-  torque_ref = fx_mul(pwm_r_ramp, PWM_PERIOD);
+  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
   torque_ref = fx_mul(torque_ref, voltage_scale);
 
   // Limit pwm reference to maximum limits
-  setpoint_r_limit = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+  ref_r_limit = LIMIT(torque_ref, cfg.vars.max_pwm_r);
 
   // Apply the reference
   __disable_irq();
-  motor_state[STATE_RIGHT].ctrl.amplitude = setpoint_r_limit;
+  motor_state[STATE_RIGHT].ctrl.amplitude = ref_r_limit;
   __enable_irq();
 #endif // RIGHT_MOTOR_BLDC
+
+  cfg.vars.t_req_r = torque_ref;
 
 
   // Update buzzer
