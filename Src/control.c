@@ -280,9 +280,9 @@ void TIM3_IRQHandler(void)
   int8_t ref_sign;
 #endif
 
-//#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
+#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
-//#endif
+#endif
 
   CTRL_TIM->SR = 0;
 
@@ -312,7 +312,7 @@ void TIM3_IRQHandler(void)
       angle += ANGLE_60DEG;
     }
 
-#ifdef SVM_HALL_UPDATE
+#ifdef FOC_HALL_UPDATE
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_LEFT].act.angle = angle;
     __enable_irq();
@@ -353,7 +353,7 @@ void TIM3_IRQHandler(void)
       angle += ANGLE_60DEG;
     }
 
-#ifdef SVM_HALL_UPDATE
+#ifdef FOC_HALL_UPDATE
     __disable_irq();	// Angle is also updated by modulator
     motor_state[STATE_RIGHT].act.angle = angle;
     __enable_irq();
@@ -445,7 +445,6 @@ void TIM3_IRQHandler(void)
     if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
       status_bits |= STATUS_READY;
   }
-
 
 #if defined(REFERENCE_MODBUS)
   motor_state[STATE_LEFT].ref.value = cfg.vars.setpoint_l;

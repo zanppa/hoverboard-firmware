@@ -50,8 +50,7 @@
 #define I_MEAS_RDSON
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
-#define SVM_HALL_UPDATE
-//#undef SVM_HALL_UPDATE
+//#define FOC_HALL_UPDATE
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
