@@ -487,10 +487,8 @@ void TIM3_IRQHandler(void)
   ctrl_mode = motor_state[STATE_LEFT].ref.control_mode;
 
   if(ctrl_mode == CONTROL_SPEED) {
-#if defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
-    // SVM --> F/U control so reference is the speed reference
-#else
-    // FOC and BLCD --> run PI controller
+#if defined(LEFT_MOTOR_BLDC) || defined(LEFT_MOTOR_FOC)
+    // FOC and BLCD in speed control mode --> run PI controller
     speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
     speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
@@ -595,10 +593,8 @@ void TIM3_IRQHandler(void)
 
   if(ctrl_mode == CONTROL_SPEED) {
     // Speed control loop for right motor
-#if defined(RIGHT_MOTOR_SVM) && !defined(RIGHT_MOTOR_FOC)
-    // SVM --> F/U control so reference is the speed reference
-#else
-    // FOC and BLCD --> run PI controller
+#if defined(RIGHT_MOTOR_BLDC) || defined(RIGHT_MOTOR_FOC)
+    // FOC and BLCD in speed mode --> run PI controller
     speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
     speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
