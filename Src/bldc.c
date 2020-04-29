@@ -65,8 +65,8 @@ void TIM8_UP_IRQHandler() {
   ampl = motor_state[STATE_LEFT].ctrl.amplitude;
   ampl = CLAMP(ampl, BLDC_SHORT_PULSE - (PWM_PERIOD/2), (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
 
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) + ampl;
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl;
   *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
 #endif
 
@@ -75,8 +75,8 @@ void TIM8_UP_IRQHandler() {
   ampl = motor_state[STATE_RIGHT].ctrl.amplitude;
   ampl = CLAMP(ampl, BLDC_SHORT_PULSE - (PWM_PERIOD/2), (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
 
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) + ampl;
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl;
   *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
 #endif
 }

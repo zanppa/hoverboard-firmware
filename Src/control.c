@@ -104,20 +104,33 @@ static uint8_t pattern_tick = 0;
 // Array to convert HALL sensor readings (order CBA, MSB first) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 //static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
-//static const uint8_t hall_to_sector[8] = { 0, 0, 2, 1, 4, 5, 3, 0 }; // Mod 1
+#if defined(HALL_GBYGBY)
+static const uint8_t hall_to_sector[8] = { 0, 2, 0, 1, 4, 3, 5, 0 };
+#elif defined(HALL_GBYBGY)
 static const uint8_t hall_to_sector[8] = { 0, 2, 4, 3, 0, 1, 5, 0 };
+#endif
 
-// HALL sensors			Sector
-// 		CBA	decimal		number (old)	new
-// A 	001	1			0				2
-// AB	011	3			1				3
-// B	010	2			2				4
-// BC	110	6			3				5
-// C	100	4			4				0
-// CA	101	5			5				1
+// HALL mapping (original sector order)
+// When board wire colors and motor wire colors match
+// 			Phases			HALLs
+//	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
+//	0		1	0	0		0	1	0		010	2
+//	1		1	1	0		0	1	1		011	3
+//	2		0	1	0		0	0	1		001	1
+//	3		0	1	1		1	0	1		101	5
+//	4		0	0	1		1	0	0		100	4
+//	5		1	0	1		1	1	0		110	6
 
-// Current measurement
-extern volatile i_meas_t i_meas;
+// When board side has green and blue wires switched
+// 			Phases			HALLs
+//	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
+//	0		1	0	0		1	0	0		100	4
+//	1		1	1	0		1	0	1		101	5
+//	2		0	1	0		0	0	1		001	1
+//	3		0	1	1		0	1	1		011	3
+//	4		0	0	1		0	1	0		010	2
+//	5		1	0	1		1	1	0		110	6
+
 
 
 // Fault (generate break) to selected motors
@@ -267,9 +280,9 @@ void TIM3_IRQHandler(void)
   int8_t ref_sign;
 #endif
 
-#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
+//#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
-#endif
+//#endif
 
   CTRL_TIM->SR = 0;
 
@@ -400,7 +413,6 @@ void TIM3_IRQHandler(void)
     // TODO: Buzzer + led
   }
 
-
   // Analog measurements (battery voltage, to be used in modulator)
   analog_meas.v_battery += ADC_BATTERY_OFFSET;
   //battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt_gain) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
@@ -410,7 +422,6 @@ void TIM3_IRQHandler(void)
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
   // So we scale all references by battery_voltage / nominal voltage
   voltage_scale = fx_divu(FIXED_ONE, battery_volt_pu);
-
 
   // Check voltage limits
   // Only trip if everything is ready, e.g. voltage has been filtered long enough etc.
