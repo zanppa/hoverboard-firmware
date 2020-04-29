@@ -18,7 +18,7 @@
 
 //USE _STRxx FOR STRING ENTRIES of size xx!!!
 //--------------------------------------------------------------------------------------------------
-//FORMAT      | entry type | var name       | cfg_type | writeable | name string         |
+//FORMAT  | var name       | entry type | cfg_type | writeable | name string         |
 //--------------------------------------------------------------------------------------------------
 #define CFG_ENTRIES(_ENTRY) \
 	_ENTRY( magic          , uint16_t   , _U16     , false     , "Magic Value"       ) \
