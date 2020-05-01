@@ -131,8 +131,8 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
-// If either motor uses SVM, trigger RDSon measurement here
-#if defined(I_MEAS_RDSON) && (defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM))
+// Trigger RDSon measurement here
+#if defined(I_MEAS_RDSON)
   if(!(TIM1->CR1 & TIM_CR1_DIR)) {
     // Trigger ADC rdson measurement when we have 000 zero vector
     // TODO: Use automatic trigger from timer?
