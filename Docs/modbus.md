@@ -2,7 +2,8 @@
 This document is part of the hoverboard firmware documentation.
 
 ## Modbus
-This document describes the modbus communication
+This document describes the modbus communication which was implemented by 
+[TomTinkering](https://github.com/TomTinkering/hoverboard-firmware-hack).
 
 ### Configuration
 Modbus can be enabled form `Inc/config.h` by defining either `LEFT_SENSOR_MODBUS` 
