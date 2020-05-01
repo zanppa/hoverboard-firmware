@@ -81,7 +81,8 @@ The configuration bus implementation supports writing the registers to eeprom so
 survive hoverboard reset. The store is triggered by writing the magic value to the first (0th) 
 register.
 
-The configuration should be loaded when the board is booted, but is not yet implemented.
+The configuration should be loaded when the board is booted. In case of read error, all values 
+are set to zero.
 
 
 ## Copyright
