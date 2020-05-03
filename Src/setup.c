@@ -109,7 +109,7 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = DCLINK_PIN;
   HAL_GPIO_Init(DCLINK_PORT, &GPIO_InitStruct);
 
-  // Left side UART used as analog input references
+  // Left side UART used as analog input references or UART
   GPIO_InitStruct.Pin = GPIO_PIN_2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   GPIO_InitStruct.Pin = GPIO_PIN_3;
@@ -287,7 +287,6 @@ void MX_TIM_Init(void) {
   //RIGHT_TIM->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
   // Timer 1 interrupt is used for SVM if one motor uses it
-#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
   TIM1->DIER |= TIM_DIER_UIE;
   TIM1->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
@@ -295,16 +294,13 @@ void MX_TIM_Init(void) {
   // than current measurement
   HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-#endif
 
-#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   // Timer 8 interrupt is used for BLDC
   TIM8->DIER |= TIM_DIER_UIE;
   TIM8->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Clear update disable
 
   HAL_NVIC_SetPriority(TIM8_UP_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
-#endif
 
   // Disable outputs
   LEFT_TIM->BDTR &= ~TIM_BDTR_MOE;
