@@ -32,6 +32,8 @@ const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (CONTROL_FREQ/1000.
 const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
+#define SPEED_SCALE 50		// Debug: Scale from reference to speed
+
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
@@ -276,9 +278,9 @@ void TIM3_IRQHandler(void)
   int8_t ref_sign;
 #endif
 
-#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
+//#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t pwm_diff;
-#endif
+//#endif
 
   CTRL_TIM->SR = 0;
 
@@ -396,6 +398,7 @@ void TIM3_IRQHandler(void)
   ia_r = -ib_r - ic_r;
   ic_l = -ia_l - ib_l;
 
+#if 0
   // Check if currents exceed overcurrent limits
   // and trip one (TODO: or both?) motors
   if(ia_l > OVERCURRENT_TRIP || -ia_l < -OVERCURRENT_TRIP ||
@@ -413,6 +416,7 @@ void TIM3_IRQHandler(void)
     fault_bits |= FAULT_OVERCURRENT;
     // TODO: Buzzer + led
   }
+#endif
 
   // Analog measurements (battery voltage, to be used in modulator)
   analog_meas.v_battery += ADC_BATTERY_OFFSET;
@@ -423,7 +427,9 @@ void TIM3_IRQHandler(void)
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
   // So we scale all references by battery_voltage / nominal voltage
   voltage_scale = fx_divu(FIXED_ONE, battery_volt_pu);
+  //voltage_scale = fx_div(FIXED_ONE, battery_volt_pu);
 
+#if 0
   // Check voltage limits
   // Only trip if everything is ready, e.g. voltage has been filtered long enough etc.
   if(battery_volt_pu > ov_trip_pu && (status_bits & STATUS_READY)) {
@@ -446,6 +452,7 @@ void TIM3_IRQHandler(void)
     if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
       status_bits |= STATUS_READY;
   }
+#endif
 
 #if defined(REFERENCE_MODBUS)
   ref_l = cfg.vars.setpoint_l;
@@ -482,7 +489,6 @@ void TIM3_IRQHandler(void)
   ref_r_ramp += pwm_diff;
   motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
 
-
   // --------------
   // Left motor
 
@@ -490,22 +496,24 @@ void TIM3_IRQHandler(void)
   ctrl_mode = motor_state[STATE_LEFT].ref.control_mode;
 
   if(ctrl_mode == CONTROL_SPEED) {
-#if defined(LEFT_MOTOR_BLDC) || defined(LEFT_MOTOR_FOC)
     // FOC and BLCD in speed control mode --> run PI controller
     speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
-    speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
+    //speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
+    speed_error_int_l += speed_error / speed_int_divisor;
+    speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
     torque_ref = fx_mul(torque_ref, kp_speed);
-#endif
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_LEFT].ref.value;
   } else {
     torque_ref = 0;
   }
 
+  //torque_ref = motor_state[STATE_LEFT].ref.value;
+  cfg.vars.t_req_l = torque_ref;
 
-#ifdef LEFT_MOTOR_SVM
-#ifdef LEFT_MOTOR_FOC
+
+#if defined(LEFT_MOTOR_FOC)
   // Get the interpolated position and measured currents from exactly same time instants
   ia = ia_l;
   ib = ib_l;
@@ -521,12 +529,16 @@ void TIM3_IRQHandler(void)
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
+  //id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
+  id_error_int_l += id_error / int_divisor;
+  id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
   angle_advance = id_error + fx_mul(id_error_int_l, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
-  iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
+  //iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
+  iq_error_int_l += iq_error;
+  iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
   ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
 
@@ -545,29 +557,22 @@ void TIM3_IRQHandler(void)
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-#else // LEFT_MOTOR_FOC
+#elif defined(LEFT_MOTOR_SVM)
   // TODO: U/f control for SVM without FOC?
-  if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_SPEED) {
+  if(ctrl_mode == CONTROL_SPEED) {
     __disable_irq();
-#if defined(IR_MINIMUM_VOLTAGE)
     motor_state[STATE_LEFT].ctrl.amplitude = MAX(ABS(motor_state[STATE_LEFT].ref.value), IR_MINIMUM_VOLTAGE);
-#else
-    motor_state[STATE_LEFT].ctrl.amplitude = ABS(motor_state[STATE_LEFT].ref.value);
-#endif // IR_MINIMUM_VOLTAGE
-    motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value;
+    motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value / SPEED_SCALE;
     __enable_irq();
-  } else if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE) {
+  } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.speed = 0;
     motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;  // DEBUG
+    motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 4;
     __enable_irq();
   }
-#endif // !LEFT_MOTOR_FOC
 
-#endif // LEFT_MOTOR_SVM
-
-  // TODO: Move volatile(?) setpoints to local variables
-#ifdef LEFT_MOTOR_BLDC
+#elif defined(LEFT_MOTOR_BLDC)
   // Torque (voltage) control of left motor in BLDC mode
 
   // Scale ramped reference according to PWM period and DC voltage
@@ -584,6 +589,7 @@ void TIM3_IRQHandler(void)
 
 
 
+
   // ------------
   // Right motor
 
@@ -591,21 +597,24 @@ void TIM3_IRQHandler(void)
 
   if(ctrl_mode == CONTROL_SPEED) {
     // Speed control loop for right motor
-#if defined(RIGHT_MOTOR_BLDC) || defined(RIGHT_MOTOR_FOC)
     // FOC and BLCD in speed mode --> run PI controller
     speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
-    speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
+    //speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
+    speed_error_int_r += speed_error / speed_int_divisor;
+    speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
     torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
     torque_ref = fx_mul(torque_ref, kp_speed);
-#endif
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
   } else {
     torque_ref = 0;
   }
 
-#ifdef RIGHT_MOTOR_SVM
-#ifdef RIGHT_MOTOR_FOC
+  //torque_ref = motor_state[STATE_RIGHT].ref.value;
+  cfg.vars.t_req_r = torque_ref;
+
+
+#if defined(RIGHT_MOTOR_FOC)
   // Get the interpolated position and measured currents from exactly same time instants
   ia = ia_r;		// For simplicity, we use ia and ib in the calculation
   ib = ib_r;
@@ -628,7 +637,9 @@ void TIM3_IRQHandler(void)
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
+  //id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
+  id_error_int_r += id_error/int_divisor;
+  id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
   angle_advance = id_error + fx_mul(id_error_int_r, ki_id);
   angle_advance = fx_mul(angle_advance, kp_id) * 8;
 
@@ -637,7 +648,9 @@ void TIM3_IRQHandler(void)
   // TODO: Should probably be the reference, not actual...
 
   // Then for Q axis current which sets the reference amplitude
-  iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
+  //iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
+  iq_error_int_r += iq_error;
+  iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
   ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
 
@@ -656,31 +669,23 @@ void TIM3_IRQHandler(void)
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-#else // RIGHT_MOTOR_FOC
+#elif defined(RIGHT_MOTOR_SVM) // RIGHT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
 
-  if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_SPEED) {
+  if(ctrl_mode == CONTROL_SPEED) {
     __disable_irq();
-
-#if defined(IR_MINIMUM_VOLTAGE)
     motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
-#else
-    motor_state[STATE_RIGHT].ctrl.amplitude = ABS(motor_state[STATE_RIGHT].ref.value);
-#endif // IR_MNINMUM_VOLTAGE
-    motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value;
+    motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value / SPEED_SCALE;
     __enable_irq();
-  } else if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE) {
+  } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = 0;
     motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;  // DEBUG
+    motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 4;
     __enable_irq();
   }
-#endif // !RIGHT_MOTOR_FOC
 
-#endif // RIGHT_MOTOR_SVM
-
-
-#ifdef RIGHT_MOTOR_BLDC
+#elif defined(RIGHT_MOTOR_BLDC)
   // Torque (voltage) control of left motor in BLDC mode
 
   // Scale ramped reference according to PWM period and DC voltage
@@ -695,8 +700,6 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_RIGHT].ctrl.amplitude = ref_r_limit;
   __enable_irq();
 #endif // RIGHT_MOTOR_BLDC
-
-  cfg.vars.t_req_r = torque_ref;
 
 
   // Update buzzer
@@ -775,6 +778,7 @@ void TIM3_IRQHandler(void)
     scope_set_data(5, speed_l);
     scope_set_data(6, speed_r);
     scope_set_data(7, 0);
+    scope_send();
   }
 #endif
 

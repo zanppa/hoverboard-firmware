@@ -84,8 +84,6 @@ int main(void) {
   // Initialize control state, e.g. rotor position
   // according to hall sensors and so forth
   initialize_control_state();
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
-  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
 
   // Initialize generic measurements with ADC3
   ADC3_init();
@@ -119,20 +117,19 @@ int main(void) {
 #endif
 
 
-  // Initialize UART for modbus
-  // do this last so that we don't accidentally update the reference...
-#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
-
-#ifdef LEFT_SENSOR_MODBUS
+  // Initialize UARTs
+#if defined(LEFT_SENSOR_MODBUS) || defined(LEFT_SENSOR_SCOPE)
   UART_Init(0, 1);	// Use UART3 for modbus
-#else
+#endif
+#if defined(RIGHT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_SCOPE)
   UART_Init(1, 0);	// Use UART2
 #endif
 
+  // Initialize modbus
   // Initialize EEPROM and config bus
   ee_init();
   CfgInit();
-
+#if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
   UARTRxEnable(CFG_BUS_UART, 1);
 #endif
 

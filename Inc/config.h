@@ -50,7 +50,7 @@
 #define I_MEAS_RDSON
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
-//#define FOC_HALL_UPDATE
+#define FOC_HALL_UPDATE
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
@@ -131,11 +131,9 @@
 
 #ifdef LEFT_SENSOR_MODBUS
 #define CFG_BUS_UART (UARTCh3)
-#endif
-
-#ifdef RIGHT_SENSOR_MODBUS
-#define CFG_BUS_UART (UARTCh2)
-#endif
+#else
+#define CFG_BUS_UART (UARTCh2)	// To build without errors, Uart must be defined even
+#endif							// though it will not be used
 
 #ifdef RIGHT_SENSOR_SCOPE
 #define SCOPE_UART UARTCh2
