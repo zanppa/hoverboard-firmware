@@ -60,7 +60,7 @@
 // Reference source
 //#define REFERENCE_MODBUS			// Use modbus for references
 #define REFERENCE_ADC				// Use analog inputs for reference
-#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
+//#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
 
 
 // =============================
