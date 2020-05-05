@@ -128,10 +128,6 @@ void EXTI9_5_IRQHandler(void)
     return;
   }
 
-  // DEBUG: LED on
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
-
-
   // Read the speed timer
   new_count = TIM4->CNT;
   if(!new_count) new_count = 0x7FFF;
@@ -185,9 +181,6 @@ void EXTI15_10_IRQHandler(void)
   } else {
     return;
   }
-
-  // DEBUG: LED on
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   // Read the speed timer
   new_count = TIM5->CNT;
