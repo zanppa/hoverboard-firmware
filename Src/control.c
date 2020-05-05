@@ -548,7 +548,9 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
   // Apply limiter
-  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
+  //ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
+  ref_amplitude = ABS(ref_amplitude);
+  ref_amplitude = (ref_amplitude <= cfg.vars.max_pwm_l) ? ref_amplitude : cfg.vars.max_pwm_l;
 
   // Apply references
   __disable_irq();
@@ -660,7 +662,9 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
   // Apply limiter
-  ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
+  //ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
+  ref_amplitude = ABS(ref_amplitude);
+  ref_amplitude = (ref_amplitude <= cfg.vars.max_pwm_r) ? ref_amplitude : cfg.vars.max_pwm_r;
 
   // Apply references
   __disable_irq();
