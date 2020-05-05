@@ -51,6 +51,7 @@ Src/imeas.c \
 Src/adc.c \
 Src/powersw.c \
 Src/uartscope.c \
+Src/hall.c \
 
 # ASM sources
 ASM_SOURCES =  \

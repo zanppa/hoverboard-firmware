@@ -41,6 +41,21 @@ void MX_GPIO_Init(void) {
   // Other pins are driven by external pull-up/down or push-pull
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
 
+  GPIO_InitStruct.Pin = BUTTON_PIN;
+  HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
+
+  // TODO: Left and right OC pins might be swapped in the schematic/pcb!
+  // To be checked
+  GPIO_InitStruct.Pin = LEFT_OC_PIN;
+  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = RIGHT_OC_PIN;
+  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
+
+
+  // HALL sensor pins with external interrupts
+  GPIO_InitStruct.Mode  = GPIO_MODE_IT_RISING_FALLING;
+
   GPIO_InitStruct.Pin = LEFT_HALL_U_PIN;
   HAL_GPIO_Init(LEFT_HALL_PORT, &GPIO_InitStruct);
 
@@ -59,16 +74,6 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pin = RIGHT_HALL_W_PIN;
   HAL_GPIO_Init(RIGHT_HALL_PORT, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = BUTTON_PIN;
-  HAL_GPIO_Init(BUTTON_PORT, &GPIO_InitStruct);
-
-  // TODO: Left and right OC pins might be swapped in the schematic/pcb!
-  // To be checked
-  GPIO_InitStruct.Pin = LEFT_OC_PIN;
-  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = RIGHT_OC_PIN;
-  HAL_GPIO_Init(RIGHT_OC_PORT, &GPIO_InitStruct);
 
 
   // Output push-pull pins
@@ -176,6 +181,7 @@ void control_timer_init(void)
   htim_control.Init.RepetitionCounter = 0;
   htim_control.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
+  // TODO: Should this be base_init instead of PWM...?
   HAL_TIM_PWM_Init(&htim_control);
 
   // Control task should run at a quite low priority compared

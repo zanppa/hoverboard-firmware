@@ -18,6 +18,7 @@
 #include "uartscope.h"
 #include "math.h"
 #include "imeas.h"
+#include "hall.h"
 
 #include <stm32f1xx_hal_gpio.h>
 
@@ -28,8 +29,9 @@ extern volatile adc_buf_t analog_meas;
 #define LED_PERIOD (300)  //ms
 
 // TODO: Move to setup.c and calculate there
-const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (CONTROL_FREQ/1000.0);		// timer ticks/sector change at rated speed
-const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
+//const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (CONTROL_FREQ/1000.0);		// timer ticks/sector change at rated speed
+const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (HALL_TIMER_FREQ / 1000.0);		// timer ticks/sector change at rated speed
+//const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
 #define SPEED_SCALE 50		// Debug: Scale from reference to speed
@@ -98,41 +100,9 @@ volatile uint16_t led_pattern = 0xFF00;		// Default blinking pattern
 
 // Non-volatile variables that are ONLY used in the control timer interrupt
 static uint16_t control_tick = 0;
-static uint16_t speed_tick[2] = {0};
 
 static uint8_t buzzer_tone_tick = 0;
 static uint8_t pattern_tick = 0;
-
-// Array to convert HALL sensor readings (order CBA, MSB first) to sector number
-// Note that index 0 and 7 are "guards" and should never happen when sensors work properly
-//static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
-#if defined(HALL_GBYGBY)
-static const uint8_t hall_to_sector[8] = { 0, 2, 0, 1, 4, 3, 5, 0 };
-#elif defined(HALL_GBYBGY)
-static const uint8_t hall_to_sector[8] = { 0, 2, 4, 3, 0, 1, 5, 0 };
-#endif
-
-// HALL mapping (original sector order)
-// When board wire colors and motor wire colors match
-// 			Phases			HALLs
-//	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
-//	0		1	0	0		0	1	0		010	2
-//	1		1	1	0		0	1	1		011	3
-//	2		0	1	0		0	0	1		001	1
-//	3		0	1	1		1	0	1		101	5
-//	4		0	0	1		1	0	0		100	4
-//	5		1	0	1		1	1	0		110	6
-
-// When board side has green and blue wires switched
-// 			Phases			HALLs
-//	Sector	U/G	V/B	W/Y		G/2	B/1	Y/0		Bin	Dec
-//	0		1	0	0		1	0	0		100	4
-//	1		1	1	0		1	0	1		101	5
-//	2		0	1	0		0	0	1		001	1
-//	3		0	1	1		0	1	1		011	3
-//	4		0	0	1		0	1	0		010	2
-//	5		1	0	1		1	1	0		110	6
-
 
 
 // Fault (generate break) to selected motors
@@ -206,22 +176,6 @@ void enable_motors(uint8_t sides) {
 }
 
 
-// Read left hall sensors and return corresponding sector
-uint8_t read_left_hall(void) {
-  uint8_t sector;
-  sector =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  sector = hall_to_sector[sector];
-  return sector;
-}
-
-// Read right hall sensors and return corresponding sector
-uint8_t read_right_hall(void) {
-  uint8_t sector;
-  sector =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  sector = hall_to_sector[sector];
-  return sector;
-}
-
 // Initialize the control state, i.e. set starting positions
 // for motors, set control variables, do precalculations and so one
 void initialize_control_state(void) {
@@ -256,14 +210,14 @@ static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter
 // is definitely too slow / called too seldom
 void TIM3_IRQHandler(void)
 {
-  uint8_t sector_l, sector_r;
-  uint8_t prev_sector_l, prev_sector_r;
+  //uint8_t sector_l, sector_r;
+  //uint8_t prev_sector_l, prev_sector_r;
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
   int16_t ia_r, ib_r, ic_r;
-  uint16_t angle_l, angle_r;
   int16_t ref_l, ref_r;
+  uint16_t angle_l, angle_r;
   int16_t speed_error;
   int16_t torque_ref;
   uint8_t ctrl_mode;
@@ -284,103 +238,12 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
-  // Read HALL sensors
-  // Determine rotor position (sector) based on HALL sensors
-  sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  sector_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  sector_l = hall_to_sector[sector_l];
-  sector_r = hall_to_sector[sector_r];
-
-  prev_sector_l = motor_state[STATE_LEFT].act.sector;
-  prev_sector_r = motor_state[STATE_RIGHT].act.sector;
-
-  // Left motor speed
-  if(sector_l != prev_sector_l) {
-    // Sector has changed
-    speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-    uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
-
-    if(sector_l != ((prev_sector_l + 1) % 6)) {
-      speed_l = -speed_l;
-      angle += ANGLE_60DEG;
-    }
-
-    __disable_irq();
-
-    // Calculate min and max angles in this sector
-    // To prevent the modulator angle estimation from exceeding the sector
-    motor_state[STATE_LEFT].ctrl.angle_min = angle;
-    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
-
-#ifdef FOC_HALL_UPDATE
-    motor_state[STATE_LEFT].act.angle = angle;
-    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
-#endif
-
-    __enable_irq();
-
-    motor_state[STATE_LEFT].act.period = speed_tick[0];
-    speed_tick[0] = 0;
-  } else {
-    // Still inside the current sector
-    speed_l = motor_state[STATE_LEFT].act.speed;
-
-    if(speed_tick[0] > motor_state[STATE_LEFT].act.period) {
-      // We should have passed the sector change, going slower than expected
-      // so update speed
-      speed_l = ((speed_l < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-    }
-
-    if(speed_tick[0] < 1000) speed_tick[0]++;	// If no sector change in 1 s assume stall
-    else {
-      speed_l = 0;	// Easy way but response time is long
-      motor_state[STATE_LEFT].act.period = 0xFFFF;
-    }
-  }
-
-
-  // Right motor speed
-  if(sector_r != prev_sector_r) {
-    // Sector has changed
-    speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
-    uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
-
-    if(sector_r != ((prev_sector_r + 1) % 6)) {
-      speed_r = -speed_r;
-      angle += ANGLE_60DEG;
-    }
-
-    __disable_irq();
-
-    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
-    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
-
-
-#ifdef FOC_HALL_UPDATE
-    motor_state[STATE_RIGHT].act.angle = angle;
-    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
-#endif
-
-    __enable_irq();
-
-    motor_state[STATE_RIGHT].act.period = speed_tick[1];
-    speed_tick[1] = 0;
-  } else {
-    // Still inside the current sector
-    speed_r = motor_state[STATE_RIGHT].act.speed;
-
-    if(speed_tick[1] > motor_state[STATE_RIGHT].act.period) {
-      // We should have passed the sector change, going slower than expected
-      // so update speed
-      speed_r = ((speed_r < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
-    }
-
-    if(speed_tick[1] < 1000) speed_tick[1]++; // if no sector change in 1 s assume stall
-    else {
-      speed_r = 0;	// Easy way but response time is long
-      motor_state[STATE_RIGHT].act.period = 0xFFFF;
-    }
-  }
+  // Calculate actual speed in per unit. Period contains rotation sign.
+  //speed_l = (int32_t)(FIXED_ONE * motor_nominal_counts) / motor_state[STATE_LEFT].act.period;
+  //speed_r = (int32_t)(FIXED_ONE * motor_nominal_counts) / motor_state[STATE_RIGHT].act.period;
+  // fx_div also multiplies by FIXED_ONE so in effect turns non-fixed point to fixed point
+  speed_l = fx_div(motor_nominal_counts, motor_state[STATE_LEFT].act.period);
+  speed_r = fx_div(motor_nominal_counts, motor_state[STATE_RIGHT].act.period);
 
   // Current measurement and overcurrent trips
   // Left motor phase currents and position
@@ -733,8 +596,6 @@ void TIM3_IRQHandler(void)
 
 
   // Update motor state variables
-  motor_state[STATE_LEFT].act.sector = sector_l;
-  motor_state[STATE_RIGHT].act.sector = sector_r;
   motor_state[STATE_LEFT].act.speed = speed_l;
   motor_state[STATE_RIGHT].act.speed = speed_r;
   motor_state[STATE_LEFT].act.current[0] = i_meas.i_lA;
@@ -745,8 +606,8 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_RIGHT].act.current[2] = i_meas.i_rC;
 
   // Update config array
-  cfg.vars.pos_l = sector_l;
-  cfg.vars.pos_r = sector_r;
+  cfg.vars.pos_l = motor_state[STATE_LEFT].act.sector;
+  cfg.vars.pos_r = motor_state[STATE_RIGHT].act.sector;
   cfg.vars.speed_l = speed_l;
   cfg.vars.speed_r = speed_r;
   cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;

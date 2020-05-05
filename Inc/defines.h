@@ -129,7 +129,7 @@ typedef struct {
   // Actual values
   struct {
     int16_t speed;		// Actual rotation speed in p.u.
-    int16_t period;		// Period of hall-sensor sector changes in control ticks
+    int16_t period;		// Period of hall-sensor sector changes in hall timer ticks
     uint8_t sector;		// Rotor sector from HALL sensors
     uint16_t angle;		// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
     int16_t current[3];	// Current of phases A, B, C (p.u.)
@@ -137,7 +137,7 @@ typedef struct {
 
   // Reference(s)
   struct {
-    int16_t value;	// Typically speed reference
+    int16_t value;	// Speed or torque reference, p.u.
     uint8_t control_mode;
   } ref;
 
@@ -147,7 +147,7 @@ typedef struct {
     uint16_t angle;		// Angle (or angle advance)
     uint16_t angle_min;
     uint16_t angle_max;
-    int8_t speed;		// Speed in angle increments per modulator call for FOC
+    int8_t speed;		// Speed in angle increments per modulator call for FOC or SVM
     uint8_t enable;
   } ctrl;
 } motor_state_t;

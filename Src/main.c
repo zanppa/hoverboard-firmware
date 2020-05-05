@@ -31,6 +31,7 @@
 #include "math.h"
 #include "imeas.h"
 #include "powersw.h"
+#include "hall.h"
 
 void SystemClock_Config(void);
 
@@ -104,8 +105,11 @@ int main(void) {
 
 #ifdef POWER_BUTTON_NORMAL
   // Check the power-up sequence
-  powersw_on_sequence();
+//  powersw_on_sequence();
 #endif
+
+  // Enable hall sensor interrupts
+  hall_setup();
 
   // Enable both motor drivers
   enable_motors(0x01 | 0x02);
@@ -150,7 +154,7 @@ int main(void) {
 
 #if 0
     // Check if user requested power off
-    powersw_off_sequence();
+//    powersw_off_sequence();
 #endif
 
     // Check if power button was pressed long for fault reset
