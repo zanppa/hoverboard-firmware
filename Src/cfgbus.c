@@ -156,6 +156,11 @@ void CfgInit()
   cfg.vars.pos_l = 0;
   cfg.vars.pos_r = 0;
   cfg.vars.vbat = 0;
+
+  cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
+  cfg.vars.ki_iq = 328; 	// 0.08 * FIXED_ONE;
+  cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
+  cfg.vars.ki_id = 41; 		// 0.01 * FIXED_ONE;
 }
 
 
