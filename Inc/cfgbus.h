@@ -57,7 +57,11 @@
 	_ENTRY( l_angle_adv        , uint16_t   , _U16     , false     , "L angle adv"          ) \
 	_ENTRY( r_angle_adv        , uint16_t   , _U16     , false     , "R angle adv"          ) \
 	_ENTRY( t_req_r        , int16_t   , _I16     , false     , "R torq req"          ) \
-	_ENTRY( t_req_l        , int16_t   , _I16     , false     , "L torq req"          )
+	_ENTRY( t_req_l        , int16_t   , _I16     , false     , "L torq req"          ) \
+	_ENTRY( kp_iq        , uint16_t   , _U16     , true     , "P term IQ"          ) \
+	_ENTRY( ki_iq        , uint16_t   , _U16     , true     , "I term IQ"          ) \
+	_ENTRY( kp_id        , uint16_t   , _U16     , true     , "P term ID"          ) \
+	_ENTRY( ki_id        , uint16_t   , _U16     , true     , "I term ID"          )
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
