@@ -237,6 +237,7 @@ void TIM4_IRQHandler(void)
 #ifdef FOC_HALL_UPDATE
   // Set motor speed to zero
   motor_state[STATE_LEFT].ctrl.speed = 0;
+  motor_state[STATE_LEFT].act.speed = 0;
 #endif
 }
 
@@ -249,5 +250,6 @@ void TIM5_IRQHandler(void)
 #ifdef FOC_HALL_UPDATE
   // Set motor speed to zero
   motor_state[STATE_RIGHT].ctrl.speed = 0;
+  motor_state[STATE_RIGHT].act.speed = 0;
 #endif
 }
