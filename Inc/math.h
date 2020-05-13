@@ -40,6 +40,9 @@ int16_t fx_mul(int16_t a, int16_t b);
 uint16_t fx_divu(uint16_t a, uint16_t b);
 int16_t fx_div(int16_t a, int16_t b);
 
+uint16_t fx_lerpu(uint16_t a, uint16_t b, uint16_t t);
+int16_t fx_lerp(int16_t a, int16_t b, int16_t t);
+
 int16_t array_sin(uint16_t angle);
 
 void clarke(int16_t a, int16_t b, int16_t *alpha, int16_t *beta);
