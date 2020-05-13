@@ -92,6 +92,11 @@ void hall_setup(void)
   timer_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_OnePulse_Init(&timer_left, TIM_OPMODE_SINGLE);
 
+  // Enable update interrupt
+  TIM4->DIER |= TIM_DIER_UIE;
+  TIM4->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Enable update events
+
+
   __HAL_RCC_TIM5_CLK_ENABLE();
   timer_right.Instance = TIM5;
   timer_right.Init.Prescaler         = 64000000 / 2 / HALL_TIMER_FREQ;
@@ -103,6 +108,9 @@ void hall_setup(void)
   HAL_TIM_OnePulse_Init(&timer_right, TIM_OPMODE_SINGLE);
   //HAL_TIM_OnePulse_Start(&timer_right);
 
+  // Enable update interrupt
+  TIM5->DIER |= TIM_DIER_UIE;
+  TIM5->CR1 &= ~(TIM_CR1_URS | TIM_CR1_UDIS); // Enable update events
 
   // Lower priority than modulator or current measurement
   // TODO: Make these #defines?
@@ -217,4 +225,29 @@ void EXTI15_10_IRQHandler(void)
   motor_state[STATE_RIGHT].ctrl.speed = speed;
 #endif
   __enable_irq();
+}
+
+
+// Left motor timer update (overflow) interrupt
+void TIM4_IRQHandler(void)
+{
+  TIM4->SR = 0;
+  // TODO: Do we need to clear CEN or is it done automatically even with interrupt in one-pulse mode?
+
+#ifdef FOC_HALL_UPDATE
+  // Set motor speed to zero
+  motor_state[STATE_LEFT].ctrl.speed = 0;
+#endif
+}
+
+// Right motor timer update (overflow) interrupt
+void TIM5_IRQHandler(void)
+{
+  TIM5->SR = 0;
+  // TODO: Do we need to clear CEN or is it done automatically even with interrupt in one-pulse mode?
+
+#ifdef FOC_HALL_UPDATE
+  // Set motor speed to zero
+  motor_state[STATE_RIGHT].ctrl.speed = 0;
+#endif
 }
