@@ -48,7 +48,7 @@ int16_t fx_div(int16_t a, int16_t b) {
 }
 
 // Linear interpolation of unsigned fixed points
-// from a to b whne t goes from 0 to 1 [0...FIXED_ONE]
+// from a to b when t goes from 0 to 1 [0...FIXED_ONE]
 uint16_t fx_lerpu(uint16_t a, uint16_t b, uint16_t t)
 {
   t = CLAMP(t, 0, FIXED_ONE);	// Sanity check
@@ -56,7 +56,7 @@ uint16_t fx_lerpu(uint16_t a, uint16_t b, uint16_t t)
 }
 
 // Linear interpolation of signed fixed points
-// from a to b whne t goes from 0 to 1 [0...FIXED_ONE]
+// from a to b when t goes from 0 to 1 [0...FIXED_ONE]
 int16_t fx_lerp(int16_t a, int16_t b, int16_t t)
 {
   t = CLAMP(t, 0, FIXED_ONE);	// Sanity check
