@@ -242,8 +242,17 @@ void TIM3_IRQHandler(void)
   //speed_l = (int32_t)(FIXED_ONE * motor_nominal_counts) / motor_state[STATE_LEFT].act.period;
   //speed_r = (int32_t)(FIXED_ONE * motor_nominal_counts) / motor_state[STATE_RIGHT].act.period;
   // fx_div also multiplies by FIXED_ONE so in effect turns non-fixed point to fixed point
-  speed_l = fx_div(motor_nominal_counts, motor_state[STATE_LEFT].act.period);
-  speed_r = fx_div(motor_nominal_counts, motor_state[STATE_RIGHT].act.period);
+  speed_l = motor_state[STATE_LEFT].act.period;
+  if(speed_l == HALL_TIMER_MAX)
+    speed_l = 0;
+  else
+    speed_l = fx_div(motor_nominal_counts, speed_l);
+
+  speed_r = motor_state[STATE_RIGHT].act.period;
+  if(speed_r == HALL_TIMER_MAX)
+    speed_r = 0;
+  else
+    speed_r = fx_div(motor_nominal_counts, speed_r);
 
   // Current measurement and overcurrent trips
   // Left motor phase currents and position
