@@ -2,6 +2,7 @@
 
 #define HALL_TIMER_FREQ 64000   // Hz, should be multiple of (PWM frequency * 2)
 
+#define HALL_TIMER_MAX 0x7FFF	// Maximum timer count
 
 void hall_setup(void);
 uint8_t read_left_hall(void);

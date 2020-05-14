@@ -86,7 +86,7 @@ void hall_setup(void)
   timer_left.Instance = TIM4;
   timer_left.Init.Prescaler         = 64000000 / 2 / HALL_TIMER_FREQ;
   timer_left.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  timer_left.Init.Period            = 0x7FFF;
+  timer_left.Init.Period            = HALL_TIMER_MAX;
   timer_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   timer_left.Init.RepetitionCounter = 0;
   timer_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -101,7 +101,7 @@ void hall_setup(void)
   timer_right.Instance = TIM5;
   timer_right.Init.Prescaler         = 64000000 / 2 / HALL_TIMER_FREQ;
   timer_right.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  timer_right.Init.Period            = 0x7FFF;
+  timer_right.Init.Period            = HALL_TIMER_MAX;
   timer_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   timer_right.Init.RepetitionCounter = 0;
   timer_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -238,6 +238,7 @@ void TIM4_IRQHandler(void)
   // Set motor speed to zero
   motor_state[STATE_LEFT].ctrl.speed = 0;
   motor_state[STATE_LEFT].act.speed = 0;
+  motor_state[STATE_LEFT].act.period = HALL_TIMER_MAX;
 #endif
 }
 
@@ -251,5 +252,6 @@ void TIM5_IRQHandler(void)
   // Set motor speed to zero
   motor_state[STATE_RIGHT].ctrl.speed = 0;
   motor_state[STATE_RIGHT].act.speed = 0;
+  motor_state[STATE_RIGHT].act.period = HALL_TIMER_MAX;
 #endif
 }
