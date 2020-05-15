@@ -22,6 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "config.h"
 #include "bldc.h"
 
+static const uint16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
+static const uint16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
+
+
 // RDSon measurement trigger
 extern ADC_HandleTypeDef adc_rdson;
 
@@ -44,7 +48,9 @@ static const uint8_t bldc_mod_pattern[6][3] = {
 void TIM8_UP_IRQHandler() {
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   uint8_t sector;
-  int16_t ampl;
+  int16_t ampl_pos, ampl_neg;
+  int16_t ampl_zero = 0;
+  uint16_t weak;
 #endif
 
   // Clear the update interrupt flag
@@ -52,22 +58,71 @@ void TIM8_UP_IRQHandler() {
 
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;
-  ampl = motor_state[STATE_LEFT].ctrl.amplitude;
-  ampl = CLAMP(ampl, BLDC_SHORT_PULSE - (PWM_PERIOD/2), (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
+  ampl_pos = motor_state[STATE_LEFT].ctrl.amplitude;
+  ampl_neg = ampl_pos;
 
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl;
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl;
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
+#ifdef BLDC_FIELD_WEAKENING
+  // Field weakening
+  weak = motor_state[STATE_LEFT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
+  // TODO: Clamp weak between 0 and FIXED_ONE?
+  if(weak != 0) {
+    if((sector & 1) && ampl_pos > 0) {
+      // Odd sectors in positive direction or
+      // even sectors in negative direction,
+      // "negative" vector amplitude does not change
+      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
+      ampl_zero = fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to full between 0.5 ... 1
+    } else {
+      // Other way around, "positive" vector does not change
+      ampl_neg = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
+      ampl_zero = -fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to negative full between 0.5 ... 1
+    }
+  }
+#endif
+
+  // Make sure minimum pulse limitations still apply
+  ampl_pos = CLAMP(ampl_pos, bldc_min_pulse, bldc_max_pulse);
+  ampl_neg = CLAMP(ampl_neg, bldc_min_pulse, bldc_max_pulse);
+  ampl_zero = CLAMP(ampl_zero, bldc_min_pulse, bldc_max_pulse);
+
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl_pos;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl_neg;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
 #endif
 
 #ifdef RIGHT_MOTOR_BLDC
   sector = motor_state[STATE_RIGHT].act.sector;
-  ampl = motor_state[STATE_RIGHT].ctrl.amplitude;
-  ampl = CLAMP(ampl, BLDC_SHORT_PULSE - (PWM_PERIOD/2), (PWM_PERIOD/2) - BLDC_SHORT_PULSE);
+  ampl_pos = motor_state[STATE_RIGHT].ctrl.amplitude;
+  ampl_neg = ampl_pos;
+  ampl_zero = 0;
 
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl;
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl;
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2;
+#ifdef BLDC_FIELD_WEAKENING
+  // Field weakening
+  weak = motor_state[STATE_RIGHT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
+  // TODO: Clamp weak between 0 and FIXED_ONE?
+  if(weak != 0) {
+    if((sector & 1) && ampl_pos > 0) {
+      // Odd sectors in positive direction or
+      // even sectors in negative direction,
+      // "negative" vector amplitude does not change
+      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
+      ampl_zero = fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to full between 0.5 ... 1
+    } else {
+      // Other way around, "positive" vector does not change
+      ampl_neg = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
+      ampl_zero = -fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to negative full between 0.5 ... 1
+    }
+  }
+#endif
+
+  // Make sure minimum pulse limitations still apply
+  ampl_pos = CLAMP(ampl_pos, bldc_min_pulse, bldc_max_pulse);
+  ampl_neg = CLAMP(ampl_neg, bldc_min_pulse, bldc_max_pulse);
+  ampl_zero = CLAMP(ampl_zero, bldc_min_pulse, bldc_max_pulse);
+
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl_pos;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl_neg;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
 #endif
 }
 

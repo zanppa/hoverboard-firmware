@@ -63,6 +63,22 @@ int16_t fx_lerp(int16_t a, int16_t b, int16_t t)
   return fx_mul(a, FIXED_ONE - t) + fx_mul(b, t);
 }
 
+// Linear interpolation
+// from a to 0 when t goes from 0 to 1 [0...FIXED_ONE]
+int16_t fx_lerp0(int16_t a, int16_t t)
+{
+  t = CLAMP(t, 0, FIXED_ONE);	// Sanity check
+  return fx_mul(a, FIXED_ONE - t);
+}
+
+// Linear interpolation
+// from 0 to a when t goes from 0 to 1 [0...FIXED_ONE]
+int16_t fx_lerp1(int16_t a, int16_t t)
+{
+  t = CLAMP(t, 0, FIXED_ONE);	// Sanity check
+  return fx_mul(a, t);
+}
+
 
 // Trigonometric functions
 

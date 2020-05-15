@@ -42,6 +42,8 @@ int16_t fx_div(int16_t a, int16_t b);
 
 uint16_t fx_lerpu(uint16_t a, uint16_t b, uint16_t t);
 int16_t fx_lerp(int16_t a, int16_t b, int16_t t);
+int16_t fx_lerp0(int16_t a, int16_t t);
+int16_t fx_lerp1(int16_t a, int16_t t);
 
 int16_t array_sin(uint16_t angle);
 

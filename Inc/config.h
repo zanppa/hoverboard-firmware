@@ -50,7 +50,11 @@
 #define I_MEAS_RDSON
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
+// TODO: This needs to be enabled in FOC mode automatically
 #define FOC_HALL_UPDATE
+
+// Use field weakening region in BLDC mode
+#define BLDC_FIELD_WEAKENING
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate

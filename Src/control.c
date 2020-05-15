@@ -243,10 +243,8 @@ void initialize_control_state(void) {
 }
 
 
-// Controller internal variables, e.g. limited and ramped references
-static int16_t ref_l_limit = 0;
+// Controller internal variables, i.e. ramped references
 static int16_t ref_l_ramp = 0;
-static int16_t ref_r_limit = 0;
 static int16_t ref_r_ramp = 0;
 
 static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
@@ -577,15 +575,34 @@ void TIM3_IRQHandler(void)
 #elif defined(LEFT_MOTOR_BLDC)
   // Torque (voltage) control of left motor in BLDC mode
 
-  // Scale ramped reference according to PWM period and DC voltage
-  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
+  // Scale ramped reference according to DC voltage
   torque_ref = fx_mul(torque_ref, voltage_scale);
 
   // Limit pwm value
-  ref_l_limit = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+  torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+
+#if defined(BLDC_FIELD_WEAKENING)
+  // Apply field weakening if necessary
+  uint16_t tref_abs = ABS(torque_ref);
+  if(tref_abs > FIXED_ONE) {
+    // "Excess" torque reference
+    tref_abs = tref_abs - FIXED_ONE;
+
+    // Excess is directly applied as the field weakening ref
+    // TODO: Apply inside disable_irq
+    motor_state[STATE_LEFT].ctrl.angle = tref_abs;
+
+    // Limit the torque reference to one (full
+    torque_ref = LIMIT(torque_ref, FIXED_ONE);
+  }
+#endif
+
+  // Scale to PWM units
+  // TODO: Move to bldc.c
+  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
 
   __disable_irq();
-  motor_state[STATE_LEFT].ctrl.amplitude = ref_l_limit;
+  motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
   __enable_irq();
 #endif // LEFT_MOTOR_BLDC
 
@@ -692,16 +709,35 @@ void TIM3_IRQHandler(void)
 #elif defined(RIGHT_MOTOR_BLDC)
   // Torque (voltage) control of left motor in BLDC mode
 
-  // Scale ramped reference according to PWM period and DC voltage
-  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
+  // Scale ramped reference according to DC voltage
   torque_ref = fx_mul(torque_ref, voltage_scale);
 
   // Limit pwm reference to maximum limits
-  ref_r_limit = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+  torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+
+#if defined(BLDC_FIELD_WEAKENING)
+  // Apply field weakening if necessary
+  uint16_t tref_abs = ABS(torque_ref);
+  if(tref_abs > FIXED_ONE) {
+    // "Excess" torque reference
+    tref_abs = tref_abs - FIXED_ONE;
+
+    // Excess is directly applied as the field weakening ref
+    // TODO: Apply inside disable_irq
+    motor_state[STATE_RIGHT].ctrl.angle = tref_abs;
+
+    // Limit the torque reference to one (full
+    torque_ref = LIMIT(torque_ref, FIXED_ONE);
+  }
+#endif
+
+  // Scale to PWM units
+  // TODO: Move to bldc.c
+  torque_ref = fx_mul(torque_ref, PWM_PERIOD);
 
   // Apply the reference
   __disable_irq();
-  motor_state[STATE_RIGHT].ctrl.amplitude = ref_r_limit;
+  motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
   __enable_irq();
 #endif // RIGHT_MOTOR_BLDC
 
