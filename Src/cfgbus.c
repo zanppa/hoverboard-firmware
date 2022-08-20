@@ -148,7 +148,7 @@ void CfgInit()
 
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
-  cfg.vars.buzzer = 0;
+  cfg.vars.buzzer = 1;
   cfg.vars.speed_l = 0;
   cfg.vars.speed_r = 0;
   cfg.vars.pwm_l = 0;

@@ -43,7 +43,7 @@ extern volatile i_meas_t i_meas;
 extern volatile uint16_t rdson_offset[4];
 
 extern volatile uint8_t generic_adc_conv_done;
-
+extern volatile uint8_t status_bits;
 
 int main(void) {
   //uint16_t button_time = 0;
@@ -107,6 +107,9 @@ int main(void) {
   powersw_on_sequence();
 #endif
 
+  // Wait until we're ready to start
+  while(!(status_bits && STATUS_READY));
+
   // Enable both motor drivers
   enable_motors(0x01 | 0x02);
 
@@ -133,6 +136,9 @@ int main(void) {
   UARTRxEnable(CFG_BUS_UART, 1);
 #endif
 
+  // TODO: Debug
+  //disable_motors(0x01 | 0x02);
+
 
   while(1)
   {
@@ -154,7 +160,7 @@ int main(void) {
 #endif
 
     // Check if power button was pressed long for fault reset
-    if(powersw_fault_reset()) clear_fault(0x01 | 0x02);		// Reset all faults
+    //if(powersw_fault_reset()) clear_fault(0x01 | 0x02);		// Reset all faults
 
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
@@ -169,7 +175,7 @@ int main(void) {
     // And all variables most likely will change so copy them locally first
 
     float v_battery = analog_meas.v_battery;
-    v_battery = (v_battery - ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
+    v_battery = (v_battery + ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
     //cfg.vars.v_battery = v_battery;
 
     float act_speed = motor_state[STATE_LEFT].act.speed;

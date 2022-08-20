@@ -15,8 +15,8 @@
 // #define RIGHT_SENSOR_SCOPE		// Enable uart scope on right sensor (UART2)
 
 // Configure power button operation
-#define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
-//#define POWER_BUTTON_ESTOP		// Emergency stop opeartion: Must be pressed for power on, release for shutdown
+//#define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
+#define POWER_BUTTON_ESTOP		// Emergency stop opeartion: Must be pressed for power on, release for shutdown
 
 
 // =============================
@@ -41,9 +41,9 @@
 //#define LEFT_MOTOR_FOC			/ Use field oriented control for left motor (requires SVM also)
 
 // Right motor
-//#define RIGHT_MOTOR_BLDC		// BLDC for right motor
-#define RIGHT_MOTOR_SVM			// SVM for right motor
-#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
+#define RIGHT_MOTOR_BLDC		// BLDC for right motor
+//#define RIGHT_MOTOR_SVM			// SVM for right motor
+//#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
 // Current measurement using Rds,on
@@ -54,7 +54,7 @@
 #define FOC_HALL_UPDATE
 
 // Use field weakening region in BLDC mode
-#define BLDC_FIELD_WEAKENING
+//#define BLDC_FIELD_WEAKENING
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
@@ -62,9 +62,10 @@
 
 // =============================
 // Reference source
-//#define REFERENCE_MODBUS			// Use modbus for references
-#define REFERENCE_ADC				// Use analog inputs for reference
+#define REFERENCE_MODBUS			// Use modbus for references
+//#define REFERENCE_ADC				// Use analog inputs for reference
 //#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
+//#define REFERENCE_ADC_SINGLE		// Use only single channel ADC ref for both sides
 
 
 // =============================
@@ -98,8 +99,8 @@
 
 // ADC calibration values
 // ADC reading to volts
-#define ADC_BATTERY_VOLTS   0.02444	// Approximately: (3.3 V / 4096) * (15k+15k+1k) / 1k, but calibrated by hand
-#define ADC_BATTERY_OFFSET	87		// ADC offset when reading zero volts, in ADC units
+#define ADC_BATTERY_VOLTS   0.024	// Approximately: (3.3 V / 4096) * (15k+15k+1k) / 1k, but calibrated by hand
+#define ADC_BATTERY_OFFSET	102		// ADC offset when reading zero volts, in ADC units
 
 // How many times to sample ADC to get offsets
 #define ADC_OFFSET_SAMPLES		1024

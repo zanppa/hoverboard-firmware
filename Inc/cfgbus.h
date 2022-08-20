@@ -46,22 +46,26 @@
 	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
 	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      ) \
 	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"         ) \
-	_ENTRY( rdsonla        , int16_t   , _I16     , false     , "Rdson,lA"          ) \
-	_ENTRY( rdsonlb        , int16_t   , _I16     , false     , "Rdson,lB"          ) \
-	_ENTRY( rdsonrb        , int16_t   , _I16     , false     , "Rdson,rB"          ) \
-	_ENTRY( rdsonrc        , int16_t   , _I16     , false     , "Rdson,rC"          ) \
-	_ENTRY( lboff        , uint16_t   , _U16     , false     , "offset"          ) \
-	_ENTRY( r_id        , int16_t   , _I16     , false     , "R D cur"          ) \
-	_ENTRY( r_iq        , int16_t   , _I16     , false     , "R Q cur"          ) \
-	_ENTRY( r_angle        , uint16_t   , _U16     , false     , "R angle"          ) \
-	_ENTRY( l_angle_adv        , uint16_t   , _U16     , false     , "L angle adv"          ) \
-	_ENTRY( r_angle_adv        , uint16_t   , _U16     , false     , "R angle adv"          ) \
-	_ENTRY( t_req_r        , int16_t   , _I16     , false     , "R torq req"          ) \
-	_ENTRY( t_req_l        , int16_t   , _I16     , false     , "L torq req"          ) \
-	_ENTRY( kp_iq        , uint16_t   , _U16     , true     , "P term IQ"          ) \
-	_ENTRY( ki_iq        , uint16_t   , _U16     , true     , "I term IQ"          ) \
-	_ENTRY( kp_id        , uint16_t   , _U16     , true     , "P term ID"          ) \
-	_ENTRY( ki_id        , uint16_t   , _U16     , true     , "I term ID"          )
+	_ENTRY( rdsonla        , int16_t    , _I16     , false     , "Rdson,lA"          ) \
+	_ENTRY( rdsonlb        , int16_t    , _I16     , false     , "Rdson,lB"          ) \
+	_ENTRY( rdsonrb        , int16_t    , _I16     , false     , "Rdson,rB"          ) \
+	_ENTRY( rdsonrc        , int16_t    , _I16     , false     , "Rdson,rC"          ) \
+	_ENTRY( lboff          , uint16_t   , _U16     , false     , "offset"            ) \
+	_ENTRY( r_id           , int16_t    , _I16     , false     , "R D cur"           ) \
+	_ENTRY( r_iq           , int16_t    , _I16     , false     , "R Q cur"           ) \
+	_ENTRY( r_angle        , uint16_t   , _U16     , false     , "R angle"           ) \
+	_ENTRY( l_angle_adv    , uint16_t   , _U16     , false     , "L angle adv"       ) \
+	_ENTRY( r_angle_adv    , uint16_t   , _U16     , false     , "R angle adv"       ) \
+	_ENTRY( t_req_r        , int16_t    , _I16     , false     , "R torq req"        ) \
+	_ENTRY( t_req_l        , int16_t    , _I16     , false     , "L torq req"        ) \
+	_ENTRY( kp_iq          , uint16_t   , _U16     , true      , "P term IQ"         ) \
+	_ENTRY( ki_iq          , uint16_t   , _U16     , true      , "I term IQ"         ) \
+	_ENTRY( kp_id          , uint16_t   , _U16     , true      , "P term ID"         ) \
+	_ENTRY( ki_id          , uint16_t   , _U16     , true      , "I term ID"         ) \
+	_ENTRY( buzzer_tone    , uint16_t   , _U16     , true      , "Tone"              ) \
+	_ENTRY( buzzer_pattern , uint16_t   , _U16     , true      , "Pattern"           )
+
+
 
 //-------------------------------------------------------------------------------------------------------------
 // DO NOT EDIT BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
