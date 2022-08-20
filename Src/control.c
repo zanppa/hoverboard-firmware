@@ -259,7 +259,8 @@ static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter
 void TIM3_IRQHandler(void)
 {
   uint8_t sector_l, sector_r;
-  uint8_t prev_sector_l, prev_sector_r;
+  uint8_t prev_sector_l = 0, prev_sector_r = 0;
+  uint8_t prev_prev_sector_l = 0, prev_prev_sector_r = 0;	// Needed to survive oscillation around one sector edge
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
@@ -302,30 +303,43 @@ void TIM3_IRQHandler(void)
   // Left motor speed
   if(sector_l != prev_sector_l) {
     // Sector has changed
-    speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-    uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
-    if(sector_l != ((prev_sector_l + 1) % 6)) {
-      speed_l = -speed_l;
-      angle += ANGLE_60DEG;
-    }
+    if(sector_l == prev_prev_sector_l) {
+      // Oscillating over a sector edge --> assume stall
 
-    __disable_irq();
+      speed_l = 0;
+      motor_state[STATE_LEFT].act.period = 0xFFFF;
+    } else {
+      // Going one direction correctly
 
-    // Calculate min and max angles in this sector
-    // To prevent the modulator angle estimation from exceeding the sector
-    motor_state[STATE_LEFT].ctrl.angle_min = angle;
-    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
+      speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
+      uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
+
+      if(sector_l != ((prev_sector_l + 1) % 6)) {
+        speed_l = -speed_l;
+        angle += ANGLE_60DEG;
+      }
+
+      __disable_irq();
+
+      // Calculate min and max angles in this sector
+      // To prevent the modulator angle estimation from exceeding the sector
+      motor_state[STATE_LEFT].ctrl.angle_min = angle;
+      motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
 
 #if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
-    motor_state[STATE_LEFT].act.angle = angle;
-    motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
+      motor_state[STATE_LEFT].act.angle = angle;
+      motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
 #endif
 
-    __enable_irq();
+      __enable_irq();
 
-    motor_state[STATE_LEFT].act.period = speed_tick[0];
+      motor_state[STATE_LEFT].act.period = speed_tick[0];
+    }
+
     speed_tick[0] = 0;
+    prev_prev_sector_l = prev_sector_l;
+
   } else {
     // Still inside the current sector
     speed_l = motor_state[STATE_LEFT].act.speed;
@@ -347,29 +361,40 @@ void TIM3_IRQHandler(void)
   // Right motor speed
   if(sector_r != prev_sector_r) {
     // Sector has changed
-    speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
-    uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
-    if(sector_r != ((prev_sector_r + 1) % 6)) {
-      speed_r = -speed_r;
-      angle += ANGLE_60DEG;
-    }
+    if(sector_r == prev_prev_sector_r) {
+      // Oscillating over a sector edge --> assume stall
 
-    __disable_irq();
+      speed_r = 0;
+      motor_state[STATE_RIGHT].act.period = 0xFFFF;
 
-    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
-    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
+    } else {
+      speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
+      uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
 
+      if(sector_r != ((prev_sector_r + 1) % 6)) {
+        speed_r = -speed_r;
+        angle += ANGLE_60DEG;
+      }
+
+      __disable_irq();
+
+      motor_state[STATE_RIGHT].ctrl.angle_min = angle;
+      motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
 
 #if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
-    motor_state[STATE_RIGHT].act.angle = angle;
-    motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
+      motor_state[STATE_RIGHT].act.angle = angle;
+      motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
 #endif
 
-    __enable_irq();
+      __enable_irq();
 
-    motor_state[STATE_RIGHT].act.period = speed_tick[1];
+      motor_state[STATE_RIGHT].act.period = speed_tick[1];
+    }
+
     speed_tick[1] = 0;
+    prev_prev_sector_r = prev_sector_r;
+
   } else {
     // Still inside the current sector
     speed_r = motor_state[STATE_RIGHT].act.speed;
