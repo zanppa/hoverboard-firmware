@@ -22,8 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "config.h"
 #include "bldc.h"
 
-static const uint16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
-static const uint16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
+static const int16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
+static const int16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
 
 
 // RDSon measurement trigger
@@ -44,13 +44,15 @@ static const uint8_t bldc_mod_pattern[6][3] = {
 #endif
 
 // Timer 8 handler updates the BLDC PWM references
-// This timer runs at twise the switching frequency
+// This timer runs at twice the switching frequency
 void TIM8_UP_IRQHandler() {
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   uint8_t sector;
   int16_t ampl_pos, ampl_neg;
   int16_t ampl_zero = 0;
+#if defined(BLDC_FIELD_WEAKENING)
   uint16_t weak;
+#endif
 #endif
 
   // Clear the update interrupt flag
@@ -58,10 +60,10 @@ void TIM8_UP_IRQHandler() {
 
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;
-  ampl_pos = motor_state[STATE_LEFT].ctrl.amplitude;
+  ampl_pos = fx_mul(motor_state[STATE_LEFT].ctrl.amplitude, PWM_PERIOD);
   ampl_neg = ampl_pos;
 
-#ifdef BLDC_FIELD_WEAKENING
+#if defined(BLDC_FIELD_WEAKENING)
   // Field weakening
   weak = motor_state[STATE_LEFT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
   // TODO: Clamp weak between 0 and FIXED_ONE?
@@ -78,7 +80,7 @@ void TIM8_UP_IRQHandler() {
       ampl_zero = -fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to negative full between 0.5 ... 1
     }
   }
-#endif
+#endif // BLDC_FIELD_WEAKENING
 
   // Make sure minimum pulse limitations still apply
   ampl_pos = CLAMP(ampl_pos, bldc_min_pulse, bldc_max_pulse);
@@ -90,13 +92,14 @@ void TIM8_UP_IRQHandler() {
   *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
 #endif
 
+
 #ifdef RIGHT_MOTOR_BLDC
   sector = motor_state[STATE_RIGHT].act.sector;
-  ampl_pos = motor_state[STATE_RIGHT].ctrl.amplitude;
+  ampl_pos = fx_mul(motor_state[STATE_RIGHT].ctrl.amplitude, PWM_PERIOD);
   ampl_neg = ampl_pos;
   ampl_zero = 0;
 
-#ifdef BLDC_FIELD_WEAKENING
+#if defined(BLDC_FIELD_WEAKENING)
   // Field weakening
   weak = motor_state[STATE_RIGHT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
   // TODO: Clamp weak between 0 and FIXED_ONE?
