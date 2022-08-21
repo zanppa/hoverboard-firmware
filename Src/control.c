@@ -788,7 +788,7 @@ void TIM3_IRQHandler(void)
   // Torque (voltage) control of left motor in BLDC mode
 
   // Scale ramped reference according to DC voltage
-  //torque_ref = fx_mul(torque_ref, voltage_scale);
+  torque_ref = fx_mul(torque_ref, voltage_scale);
 
   // Limit pwm reference to maximum limits
   torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
