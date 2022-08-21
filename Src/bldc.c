@@ -22,6 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "config.h"
 #include "bldc.h"
 
+#ifdef HALL_MODULATOR_UPDATE
+#include "control.h"
+#endif
+
 static const int16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
 static const int16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
 
@@ -57,6 +61,11 @@ void TIM8_UP_IRQHandler() {
 
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
+
+#ifdef HALL_MODULATOR_UPDATE
+  motor_state[STATE_LEFT].act.sector = read_left_hall();;
+  motor_state[STATE_RIGHT].act.sector = read_right_hall();;
+#endif
 
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;

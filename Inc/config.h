@@ -46,6 +46,10 @@
 //#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
+// Update hall sensors in (BLDC) modulator interrupt instead of control loop
+// This could provide better performance at high motor speeds
+#define HALL_MODULATOR_UPDATE
+
 // Current measurement using Rds,on
 #define I_MEAS_RDSON
 

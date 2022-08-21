@@ -290,15 +290,19 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
+#if !defined(HALL_MODULATOR_UPDATE)
   // Read HALL sensors
   // Determine rotor position (sector) based on HALL sensors
-  sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  sector_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  sector_l = hall_to_sector[sector_l];
-  sector_r = hall_to_sector[sector_r];
-
-  prev_sector_l = motor_state[STATE_LEFT].act.sector;
-  prev_sector_r = motor_state[STATE_RIGHT].act.sector;
+  //sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
+  //sector_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
+  //sector_l = hall_to_sector[sector_l];
+  //sector_r = hall_to_sector[sector_r];
+  sector_l = read_left_hall();
+  sector_r = read_right_hall();
+#else
+  sector_l = motor_state[STATE_LEFT].act.sector;
+  sector_r = motor_state[STATE_RIGHT].act.sector;
+#endif
 
   // Left motor speed
   if(sector_l != prev_sector_l) {
@@ -339,6 +343,7 @@ void TIM3_IRQHandler(void)
 
     speed_tick[0] = 0;
     prev_prev_sector_l = prev_sector_l;
+    prev_sector_l = motor_state[STATE_LEFT].act.sector;
 
   } else {
     // Still inside the current sector
@@ -394,6 +399,7 @@ void TIM3_IRQHandler(void)
 
     speed_tick[1] = 0;
     prev_prev_sector_r = prev_sector_r;
+    prev_sector_r = motor_state[STATE_RIGHT].act.sector;
 
   } else {
     // Still inside the current sector
@@ -563,9 +569,9 @@ void TIM3_IRQHandler(void)
     //speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_l += speed_error / speed_int_divisor;
     speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
-    //torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
-    //torque_ref = fx_mul(torque_ref, kp_speed);
-    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
+    torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
+    torque_ref = fx_mul(torque_ref, kp_speed);
+    //torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_LEFT].ref.value;
   } else {
@@ -692,9 +698,9 @@ void TIM3_IRQHandler(void)
     //speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_r += speed_error / speed_int_divisor;
     speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
-    //torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
-    //torque_ref = fx_mul(torque_ref, kp_speed);
-    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
+    torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
+    torque_ref = fx_mul(torque_ref, kp_speed);
+    //torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
   } else {
