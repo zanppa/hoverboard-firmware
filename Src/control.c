@@ -254,8 +254,6 @@ static int16_t ref_r_ramp = 0;
 static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
 
 //called 64000000/64000 = 1000 times per second
-// TODO: At 20 km/h HALL sector changes every 1 ms so this
-// is definitely too slow / called too seldom
 void TIM3_IRQHandler(void)
 {
   uint8_t sector_l, sector_r;
@@ -290,19 +288,9 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
-#if !defined(HALL_MODULATOR_UPDATE)
-  // Read HALL sensors
-  // Determine rotor position (sector) based on HALL sensors
-  //sector_l =  (LEFT_HALL_PORT->IDR >> LEFT_HALL_LSB_PIN) & 0b111;
-  //sector_r =  (RIGHT_HALL_PORT->IDR >> RIGHT_HALL_LSB_PIN) & 0b111;
-  //sector_l = hall_to_sector[sector_l];
-  //sector_r = hall_to_sector[sector_r];
-  sector_l = read_left_hall();
-  sector_r = read_right_hall();
-#else
+  // Update sector information (motor position) from modulator
   sector_l = motor_state[STATE_LEFT].act.sector;
   sector_r = motor_state[STATE_RIGHT].act.sector;
-#endif
 
   // Left motor speed
   if(sector_l != prev_sector_l) {
@@ -317,7 +305,7 @@ void TIM3_IRQHandler(void)
       // Going one direction correctly
 
       speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-      uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
+      uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// New angle at the edge of a sector TODO: Move to bldc.c
 
       if(sector_l != ((prev_sector_l + 1) % 6)) {
         speed_l = -speed_l;
@@ -326,6 +314,7 @@ void TIM3_IRQHandler(void)
 
       __disable_irq();
 
+      // TODO: Move to bldc.c with the HALL update
       // Calculate min and max angles in this sector
       // To prevent the modulator angle estimation from exceeding the sector
       motor_state[STATE_LEFT].ctrl.angle_min = angle;
