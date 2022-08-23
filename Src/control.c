@@ -233,7 +233,7 @@ void initialize_control_state(void) {
   __disable_irq();
   motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume we're in the middle of a sector
   motor_state[STATE_LEFT].ctrl.amplitude = 0;
-  motor_state[STATE_LEFT].ctrl.angle = 0;
+  motor_state[STATE_LEFT].ctrl.angle = sector * ANGLE_60DEG;;
   __enable_irq();
 
   sector = read_right_hall();
@@ -241,7 +241,7 @@ void initialize_control_state(void) {
   __disable_irq();
   motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume middle of a sector
   motor_state[STATE_RIGHT].ctrl.amplitude = 0;
-  motor_state[STATE_RIGHT].ctrl.angle = 0;
+  motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
   __enable_irq();
 
 }
