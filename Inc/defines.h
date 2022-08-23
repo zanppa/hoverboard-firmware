@@ -129,7 +129,7 @@ typedef struct {
   // Actual values
   struct {
     int16_t speed;		// Actual rotation speed in p.u.
-    int16_t period;		// Period of hall-sensor sector changes in control ticks
+    int16_t period;		// Period of hall-sensor sector changes in PWM ticks
     uint8_t sector;		// Rotor sector from HALL sensors
     uint16_t angle;		// Accurate rotor position if available (e.g. FOC estimate) (p.u.)
     int16_t current[3];	// Current of phases A, B, C (p.u.)
@@ -159,3 +159,7 @@ typedef struct {
 #define CONTROL_SPEED 		0
 #define CONTROL_TORQUE 		1
 #define CONTROL_ANGLE 		2
+
+// Stalled speed period limit
+#define PERIOD_STOP			0x7F00
+#define PERIOD_MAX			0x7E00
