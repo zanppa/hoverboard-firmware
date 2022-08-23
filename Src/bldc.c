@@ -23,11 +23,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "bldc.h"
 #include "control.h"
 
+
 static const int16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
 static const int16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
 
-static uint16_t left_period_tick = 0;
-static uint16_t right_period_tick = 0;
+static int16_t left_period_tick = 0;
+static int16_t right_period_tick = 0;
 
 static uint8_t left_expected_sector = 0;
 static uint8_t right_expected_sector = 0;
@@ -53,8 +54,9 @@ static const uint8_t bldc_mod_pattern[6][3] = {
 // Timer 8 handler updates the BLDC PWM references
 // This timer runs at twice the switching frequency
 void TIM8_UP_IRQHandler() {
-#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   uint8_t sector, prev_sector;
+  uint16_t angle;
+#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t ampl_pos, ampl_neg;
   int16_t ampl_zero = 0;
 #if defined(BLDC_FIELD_WEAKENING)
@@ -65,36 +67,74 @@ void TIM8_UP_IRQHandler() {
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
 
+  // DEBUG: LED on
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+
   // Motor position and speed detection, first left motor
   sector = read_left_hall();
   prev_sector = motor_state[STATE_LEFT].act.sector;
   motor_state[STATE_LEFT].act.sector = sector;
 
   if(sector != prev_sector) {  // Sector changed, calculate new speed
+    // Update rotor position
+    angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
+
+    // Calculate min and max angles in this sector
+    // To prevent the modulator angle estimation from exceeding the sector
+    motor_state[STATE_LEFT].ctrl.angle_min = angle;
+    motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
+
     // Stall detection, if did not go to expected sector then rotation direction abruptly changed --> assume stall
-    if(sector != left_expected_sector) {
+    if(sector != left_expected_sector)
       left_period_tick = PERIOD_STOP; // Set speed to zero to prevent rapid oscillation in speed
-    }
+
+
+    // Update the actual rotor position and SVM speed
+#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+    motor_state[STATE_LEFT].act.angle = angle;
+#endif
 
     // Calculate what sector should be if going in positive direction
     if(prev_sector == 5) prev_sector = 0;
     else prev_sector++;
 
-    if(sector != prev_sector) left_period_tick = -left_period_tick; // Not the expected sector --> going to negative direction
+    if(sector != prev_sector) {
+      left_period_tick = -left_period_tick; // Not the expected sector --> going to negative direction
+      angle += ANGLE_60DEG;		// Other end of the sector for rotor angle
+    }
 
     // Update expected sector according to rotation direction
     if(left_period_tick < 0) {
-      if(left_expected_sector == 0) left_expected_sector = 5;
-      else left_expected_sector--;
+      if(sector == 0) left_expected_sector = 5;
+      else left_expected_sector = sector - 1;
     } else {
-      left_expected_sector++;
-      if(left_expected_sector > 5) left_expected_sector = 0;
+      if(sector == 5) left_expected_sector = 0;
+      else left_expected_sector = sector + 1;
     }
+
 
     motor_state[STATE_LEFT].act.period = left_period_tick;
     left_period_tick = 0;
-  } else if(left_period_tick < PERIOD_MAX) left_period_tick++;
 
+#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+    if(left_period_tick == PERIOD_STOP || left_period_tick == -PERIOD_STOP)
+      motor_state[STATE_LEFT].ctrl.speed = 0; // Rotation speed to zero
+    else
+      motor_state[STATE_LEFT].ctrl.speed = ANGLE_60DEG / left_period_tick; // Rotation speed / modulator interrupt
+#endif
+
+
+  } else {
+    if(left_period_tick < PERIOD_STOP) {
+      left_period_tick++;
+    } else {
+      // Assume stall if rotating too slowly
+      motor_state[STATE_LEFT].act.period = PERIOD_STOP;
+#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+      motor_state[STATE_LEFT].ctrl.speed = 0;
+#endif
+    }
+  }
 
 
   // Then right motor position and speed
@@ -103,30 +143,62 @@ void TIM8_UP_IRQHandler() {
   motor_state[STATE_RIGHT].act.sector = sector;
 
   if(sector != prev_sector) {  // Sector changed, calculate new speed
+    // Update rotor position
+    angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
+
+    // Calculate min and max angles in this sector
+    // To prevent the modulator angle estimation from exceeding the sector
+    motor_state[STATE_RIGHT].ctrl.angle_min = angle;
+    motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
+
     // Stall detection, if did not go to expected sector then rotation direction abruptly changed --> assume stall
-    if(sector != right_expected_sector) {
+    if(sector != right_expected_sector)
       right_period_tick = PERIOD_STOP; // Set speed to zero to prevent rapid oscillation in speed
-    }
 
     // Calculate expected sector if going in positive direction
     if(prev_sector == 5) prev_sector = 0;
     else prev_sector++;
 
-    if(sector != prev_sector) right_period_tick = -right_period_tick; // Not the expected sector --> going to negative direction
+    if(sector != prev_sector) {
+      right_period_tick = -right_period_tick; // Not the expected sector --> going to negative direction
+      angle += ANGLE_60DEG;		// Other end of the sector for rotor angle
+    }
 
     // Update expected sector according to rotation direction
     if(right_period_tick < 0) {
-      if(right_expected_sector == 0) right_expected_sector = 5;
-      else right_expected_sector--;
+      if(sector == 0) right_expected_sector = 5;
+      else right_expected_sector = sector - 1;
     } else {
-      right_expected_sector++;
-      if(right_expected_sector > 5) right_expected_sector = 0;
+      if(sector == 5) right_expected_sector = 0;
+      else right_expected_sector = sector + 1;
     }
 
+    // Update the actual rotor position
+#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
+    motor_state[STATE_RIGHT].act.angle = angle;
+#endif
 
     motor_state[STATE_RIGHT].act.period = right_period_tick;
     right_period_tick = 0;
-  } else if(right_period_tick < PERIOD_MAX) right_period_tick++;
+
+#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
+    if(right_period_tick == PERIOD_STOP || right_period_tick == -PERIOD_STOP)
+      motor_state[STATE_RIGHT].ctrl.speed = 0; // Rotation speed to zero
+    else
+      motor_state[STATE_RIGHT].ctrl.speed = ANGLE_60DEG / right_period_tick; // Rotation speed / modulator interrupt
+#endif
+
+  } else {
+    if(right_period_tick < PERIOD_STOP) {
+      right_period_tick++;
+    } else {
+      // Assume stall if rotating too slowly
+      motor_state[STATE_RIGHT].act.period = PERIOD_STOP;
+#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
+      motor_state[STATE_RIGHT].ctrl.speed = 0;
+#endif
+    }
+  }
 
 
   // Left motor modulation, if enabled
@@ -200,5 +272,9 @@ void TIM8_UP_IRQHandler() {
   *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl_neg;
   *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
 #endif
+
+  // DEBUG: LED off
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+
 }
 

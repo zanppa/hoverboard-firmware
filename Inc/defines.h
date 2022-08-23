@@ -162,4 +162,3 @@ typedef struct {
 
 // Stalled speed period limit
 #define PERIOD_STOP			0x7F00
-#define PERIOD_MAX			0x7E00

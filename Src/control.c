@@ -28,8 +28,8 @@ extern volatile adc_buf_t analog_meas;
 #define LED_PERIOD (300)  //ms
 
 // TODO: Move to setup.c and calculate there
-const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (CONTROL_FREQ/1000.0);		// timer ticks/sector change at rated speed
-const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
+const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (PWM_FREQ/1000.0);		// PWM ticks/sector change at rated speed (per unit)
+//const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
 #define SPEED_SCALE 50		// Debug: Scale from reference to speed
@@ -65,11 +65,11 @@ const uint8_t int_divisor = 10;
 
 // ---------
 // Speed control parameters
-static uint16_t kp_speed = 1.2 * FIXED_ONE;
-static uint16_t ki_speed = 0.1 * FIXED_ONE;
+static uint16_t kp_speed = 0.6 * FIXED_ONE;
+static uint16_t ki_speed = 0.12 * FIXED_ONE;
 static int16_t speed_error_int_l = 0;
 static int16_t speed_error_int_r = 0;
-static const uint16_t speed_int_max = 20000;	// TODO: What is a sane value?
+static const uint16_t speed_int_max = 15000;	// TODO: What is a sane value?
 static const uint16_t speed_int_divisor = 30;
 
 uint16_t battery_volt_pu = 0;
@@ -98,7 +98,7 @@ volatile uint16_t led_pattern = 0xFF00;		// Default blinking pattern
 
 // Non-volatile variables that are ONLY used in the control timer interrupt
 static uint16_t control_tick = 0;
-static uint16_t speed_tick[2] = {0};
+static int16_t speed_tick[2] = {0};
 
 static uint8_t buzzer_tone_tick = 0;
 static uint8_t pattern_tick = 0;
@@ -257,8 +257,6 @@ static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter
 void TIM3_IRQHandler(void)
 {
   uint8_t sector_l, sector_r;
-  uint8_t prev_sector_l = 0, prev_sector_r = 0;
-  uint8_t prev_prev_sector_l = 0, prev_prev_sector_r = 0;	// Needed to survive oscillation around one sector edge
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
@@ -292,120 +290,21 @@ void TIM3_IRQHandler(void)
   sector_l = motor_state[STATE_LEFT].act.sector;
   sector_r = motor_state[STATE_RIGHT].act.sector;
 
-  // Left motor speed
-  if(sector_l != prev_sector_l) {
-    // Sector has changed
+  // Update motor speed from latest period information
+  // Left motor
+  speed_tick[0] = motor_state[STATE_LEFT].act.period;
+  if(speed_tick[0] != PERIOD_STOP && speed_tick[0] != -PERIOD_STOP)
+    speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
+  else
+    speed_l = 0;
 
-    if(sector_l == prev_prev_sector_l) {
-      // Oscillating over a sector edge --> assume stall
+  // Right motor
+  speed_tick[1] = motor_state[STATE_RIGHT].act.period;
+  if(speed_tick[1] != PERIOD_STOP && speed_tick[1] != -PERIOD_STOP)
+    speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
+  else
+    speed_r = 0;
 
-      speed_l = 0;
-      motor_state[STATE_LEFT].act.period = 0xFFFF;
-    } else {
-      // Going one direction correctly
-
-      speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-      uint16_t angle = sector_l * ANGLE_60DEG - ANGLE_30DEG;	// New angle at the edge of a sector TODO: Move to bldc.c
-
-      if(sector_l != ((prev_sector_l + 1) % 6)) {
-        speed_l = -speed_l;
-        angle += ANGLE_60DEG;
-      }
-
-      __disable_irq();
-
-      // TODO: Move to bldc.c with the HALL update
-      // Calculate min and max angles in this sector
-      // To prevent the modulator angle estimation from exceeding the sector
-      motor_state[STATE_LEFT].ctrl.angle_min = angle;
-      motor_state[STATE_LEFT].ctrl.angle_max = angle + ANGLE_60DEG;
-
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
-      motor_state[STATE_LEFT].act.angle = angle;
-      motor_state[STATE_LEFT].ctrl.speed = sector_counts_to_svm / speed_tick[0];
-#endif
-
-      __enable_irq();
-
-      motor_state[STATE_LEFT].act.period = speed_tick[0];
-    }
-
-    speed_tick[0] = 0;
-    prev_prev_sector_l = prev_sector_l;
-    prev_sector_l = motor_state[STATE_LEFT].act.sector;
-
-  } else {
-    // Still inside the current sector
-    speed_l = motor_state[STATE_LEFT].act.speed;
-
-    if(speed_tick[0] > motor_state[STATE_LEFT].act.period) {
-      // We should have passed the sector change, going slower than expected
-      // so update speed
-      speed_l = ((speed_l < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
-    }
-
-    if(speed_tick[0] < 1000) speed_tick[0]++;	// If no sector change in 1 s assume stall
-    else {
-      speed_l = 0;	// Easy way but response time is long
-      motor_state[STATE_LEFT].act.period = 0xFFFF;
-    }
-  }
-
-
-  // Right motor speed
-  if(sector_r != prev_sector_r) {
-    // Sector has changed
-
-    if(sector_r == prev_prev_sector_r) {
-      // Oscillating over a sector edge --> assume stall
-
-      speed_r = 0;
-      motor_state[STATE_RIGHT].act.period = 0xFFFF;
-
-    } else {
-      speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
-      uint16_t angle = sector_r * ANGLE_60DEG - ANGLE_30DEG;	// Edge of a sector
-
-      if(sector_r != ((prev_sector_r + 1) % 6)) {
-        speed_r = -speed_r;
-        angle += ANGLE_60DEG;
-      }
-
-      __disable_irq();
-
-      motor_state[STATE_RIGHT].ctrl.angle_min = angle;
-      motor_state[STATE_RIGHT].ctrl.angle_max = angle + ANGLE_60DEG;
-
-#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
-      motor_state[STATE_RIGHT].act.angle = angle;
-      motor_state[STATE_RIGHT].ctrl.speed = sector_counts_to_svm / speed_tick[1];
-#endif
-
-      __enable_irq();
-
-      motor_state[STATE_RIGHT].act.period = speed_tick[1];
-    }
-
-    speed_tick[1] = 0;
-    prev_prev_sector_r = prev_sector_r;
-    prev_sector_r = motor_state[STATE_RIGHT].act.sector;
-
-  } else {
-    // Still inside the current sector
-    speed_r = motor_state[STATE_RIGHT].act.speed;
-
-    if(speed_tick[1] > motor_state[STATE_RIGHT].act.period) {
-      // We should have passed the sector change, going slower than expected
-      // so update speed
-      speed_r = ((speed_r < 0) ? -1 : 1) * (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
-    }
-
-    if(speed_tick[1] < 1000) speed_tick[1]++; // if no sector change in 1 s assume stall
-    else {
-      speed_r = 0;	// Easy way but response time is long
-      motor_state[STATE_RIGHT].act.period = 0xFFFF;
-    }
-  }
 
   // Current measurement and overcurrent trips
   // Left motor phase currents and position
@@ -558,9 +457,9 @@ void TIM3_IRQHandler(void)
     //speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_l += speed_error / speed_int_divisor;
     speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
-    torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
-    torque_ref = fx_mul(torque_ref, kp_speed);
-    //torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
+    //torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
+    //torque_ref = fx_mul(torque_ref, kp_speed);
+    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_LEFT].ref.value;
   } else {
@@ -687,9 +586,9 @@ void TIM3_IRQHandler(void)
     //speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_r += speed_error / speed_int_divisor;
     speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
-    torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
-    torque_ref = fx_mul(torque_ref, kp_speed);
-    //torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
+    //torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
+    //torque_ref = fx_mul(torque_ref, kp_speed);
+    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
   } else {
@@ -847,11 +746,6 @@ void TIM3_IRQHandler(void)
     pattern_tick = (pattern_tick + 1) & 0xF;
 
 
-  // Update motor state variables
-  motor_state[STATE_LEFT].act.sector = sector_l;
-  motor_state[STATE_RIGHT].act.sector = sector_r;
-  motor_state[STATE_LEFT].act.speed = speed_l;
-  motor_state[STATE_RIGHT].act.speed = speed_r;
   motor_state[STATE_LEFT].act.current[0] = i_meas.i_lA;
   motor_state[STATE_LEFT].act.current[1] = i_meas.i_lB;
   motor_state[STATE_LEFT].act.current[2] = -i_meas.i_lA - i_meas.i_lB;
@@ -872,6 +766,8 @@ void TIM3_IRQHandler(void)
   cfg.vars.pos_r = sector_r;
   cfg.vars.speed_l = speed_l;
   cfg.vars.speed_r = speed_r;
+  //cfg.vars.speed_l = speed_tick[0];
+  //cfg.vars.speed_r = speed_tick[1];
   cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;
 
 
