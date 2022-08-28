@@ -21,7 +21,7 @@
 
 // =============================
 // Motor parameters
-#define MOTOR_VOLTS				15.0	// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
+#define MOTOR_VOLTS				18.0 //15.0	// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
 #define MOTOR_SPEED				600.0	// Nominal speed rpm
 #define MOTOR_POLEPAIRS			15.0	// Polepairs, mechanical speed to electrical speed (15 electrical rounds/1 mechanical round)
 #define MOTOR_CUR				5.0		// TODO: [A] at rated load / phase (RMS)
@@ -36,8 +36,8 @@
 
 // Left motor
 // What control method to use for which motor
-#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
-//#define LEFT_MOTOR_SVM			// Use SVM for left motor
+//#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+#define LEFT_MOTOR_SVM			// Use SVM for left motor
 //#define LEFT_MOTOR_FOC			/ Use field oriented control for left motor (requires SVM also)
 
 // Right motor
@@ -161,7 +161,7 @@
 #define MOTOR_VOLTS_PER_HZ		(MOTOR_VOLTS * 60.0 / (MOTOR_SPEED * MOTOR_POLEPAIRS))
 
 // IR compensation (for SVM, U/F modulation). Sets the minimum voltage applied at low speeds, fixed point per unit
-#define IR_MINIMUM_VOLTAGE		200		// Approximately 5 %
+#define IR_MINIMUM_VOLTAGE		400		// Approximately 5 % TODO: Increased from 200 to about 500 --> terrible... down to 100
 
 #define PWM_PERIOD       (64000000 / 2 / PWM_FREQ)
 

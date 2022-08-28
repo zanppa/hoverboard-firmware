@@ -32,7 +32,6 @@ const uint16_t motor_nominal_counts = MOTOR_NOMINAL_PERIOD * (PWM_FREQ/1000.0);	
 //const uint16_t sector_counts_to_svm = ANGLE_60DEG / (2*PWM_FREQ/CONTROL_FREQ);	// Control cycle runs at 1000 Hz while modulator twice in PWM_FREQ
 const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEED);
 
-#define SPEED_SCALE 50		// Debug: Scale from reference to speed
 
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
@@ -294,14 +293,14 @@ void TIM3_IRQHandler(void)
   // Left motor
   speed_tick[0] = motor_state[STATE_LEFT].act.period;
   if(speed_tick[0] != PERIOD_STOP && speed_tick[0] != -PERIOD_STOP)
-    speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
+    speed_l = fx_div(motor_nominal_counts, speed_tick[0]);
   else
     speed_l = 0;
 
   // Right motor
   speed_tick[1] = motor_state[STATE_RIGHT].act.period;
   if(speed_tick[1] != PERIOD_STOP && speed_tick[1] != -PERIOD_STOP)
-    speed_r = (FIXED_ONE * motor_nominal_counts) / speed_tick[1];
+    speed_r = fx_div(motor_nominal_counts, speed_tick[1]);
   else
     speed_r = 0;
 
@@ -518,15 +517,20 @@ void TIM3_IRQHandler(void)
 #elif defined(LEFT_MOTOR_SVM)
   // TODO: U/f control for SVM without FOC?
   if(ctrl_mode == CONTROL_SPEED) {
+    torque_ref = fx_mul(ABS(motor_state[STATE_LEFT].ref.value), voltage_scale);
     __disable_irq();
-    motor_state[STATE_LEFT].ctrl.amplitude = MAX(ABS(motor_state[STATE_LEFT].ref.value), IR_MINIMUM_VOLTAGE);
-    motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value / SPEED_SCALE;
+    motor_state[STATE_LEFT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
+    //motor_state[STATE_LEFT].ctrl.amplitude = 500;
+    //motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value / SPEED_SCALE;
+    // TODO: Clean this up...
+    motor_state[STATE_LEFT].ctrl.speed = (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+    // Ref: speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
     __enable_irq();
   } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.speed = 0;
-    //motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value; // TODO_DEBUG
-    motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 2;
+    motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;
+    motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
     __enable_irq();
   }
 
@@ -667,8 +671,8 @@ void TIM3_IRQHandler(void)
   } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = 0;
-    motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value; // TODO: DEBUG
-    motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 2;
+    motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;
+    motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
     __enable_irq();
   }
 
