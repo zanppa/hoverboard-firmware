@@ -39,7 +39,6 @@ const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain 
 // -----------
 // Torque control (FOC D and Q axis currents) parameters
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
-const uint16_t idq_filt_gain = FIXED_ONE / 300;	// Low pass filter id and iq
 
 // P and I terms for d and q axis current regulators for FOC
 // TODO: Ifdefs
@@ -48,6 +47,15 @@ uint16_t ki_id = 0.01 * FIXED_ONE; //2000; //1200;
 
 uint16_t kp_iq = 0.6 * FIXED_ONE;
 uint16_t ki_iq = 0.08 * FIXED_ONE; //1200;
+
+#if defined(RIGHT_MOTOR_FOC)
+int16_t id_old_r = 0;
+int16_t iq_old_r = 0;
+#endif
+#if defined(LEFT_MOTOR_FOC)
+int16_t id_old_l = 0;
+int16_t iq_old_l = 0;
+#endif
 
 // Id and Iq error integrals
 #ifdef LEFT_MOTOR_FOC
@@ -478,9 +486,19 @@ void TIM3_IRQHandler(void)
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
+  // Filter id and iq
+  id = FILTER(id, id_old_l, cfg.vars.i_filter);
+  iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
+  id_old_l = id;
+  iq_old_l = iq;
+
   id_error = id;	// TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
   iq_error = torque_ref - iq;
+
+  // Debug: Store id and iq to config bus
+  cfg.vars.r_id = id;
+  cfg.vars.r_iq = iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
@@ -510,17 +528,18 @@ void TIM3_IRQHandler(void)
   // Apply references
   __disable_irq();
   motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);	// Should start with 90 degree phase shift
+  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Should start with 90 degree phase shift
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-#elif defined(LEFT_MOTOR_SVM)
+  torque_ref = ref_amplitude; // TODO:DEBUG
+
+#elif defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
   // TODO: U/f control for SVM without FOC?
   if(ctrl_mode == CONTROL_SPEED) {
     torque_ref = fx_mul(ABS(motor_state[STATE_LEFT].ref.value), voltage_scale);
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
-    //motor_state[STATE_LEFT].ctrl.amplitude = 500;
     //motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value / SPEED_SCALE;
     // TODO: Clean this up...
     motor_state[STATE_LEFT].ctrl.speed = (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
@@ -613,8 +632,12 @@ void TIM3_IRQHandler(void)
   clarke(ia, ib, &ialpha, &ibeta);
   park(ialpha, ibeta, angle, &id, &iq);
 
-  id = FILTER(id, cfg.vars.r_id, idq_filt_gain);
-  iq = FILTER(iq, cfg.vars.r_iq, idq_filt_gain);
+  // Filter id and iq
+  id = FILTER(id, id_old_r, cfg.vars.i_filter);
+  iq = FILTER(iq, iq_old_r, cfg.vars.i_filter);
+  id_old_r = id;
+  iq_old_r = iq;
+
 
   // Debug: Store id and iq to config bus
   cfg.vars.r_id = id;
@@ -656,17 +679,22 @@ void TIM3_IRQHandler(void)
   // Apply references
   __disable_irq();
   motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_90DEG);
+  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
+
+  torque_ref = ref_amplitude; // TODO: Debug
 
 #elif defined(RIGHT_MOTOR_SVM) // RIGHT_MOTOR_FOC
   // TODO: U/f control for SVM without FOC?
 
   if(ctrl_mode == CONTROL_SPEED) {
     __disable_irq();
-    motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
-    motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value / SPEED_SCALE;
+    motor_state[STATE_RIGHT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
+    //motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
+    //motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value / SPEED_SCALE;
+    // TODO: Clean this
+    motor_state[STATE_RIGHT].ctrl.speed = (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
     __enable_irq();
   } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
@@ -770,8 +798,6 @@ void TIM3_IRQHandler(void)
   cfg.vars.pos_r = sector_r;
   cfg.vars.speed_l = speed_l;
   cfg.vars.speed_r = speed_r;
-  //cfg.vars.speed_l = speed_tick[0];
-  //cfg.vars.speed_r = speed_tick[1];
   cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;
 
 

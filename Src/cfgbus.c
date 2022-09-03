@@ -161,6 +161,8 @@ void CfgInit()
   cfg.vars.ki_iq = 328; 	// 0.08 * FIXED_ONE;
   cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_id = 41; 		// 0.01 * FIXED_ONE;
+
+  cfg.vars.i_filter = 300;	// 0.0x * FIXED_ONE;
 }
 
 

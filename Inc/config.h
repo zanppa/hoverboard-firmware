@@ -38,7 +38,7 @@
 // What control method to use for which motor
 //#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
 #define LEFT_MOTOR_SVM			// Use SVM for left motor
-//#define LEFT_MOTOR_FOC			/ Use field oriented control for left motor (requires SVM also)
+#define LEFT_MOTOR_FOC			// Use field oriented control for left motor (requires SVM also)
 
 // Right motor
 #define RIGHT_MOTOR_BLDC		// BLDC for right motor
@@ -210,22 +210,21 @@
 #warning config.h: Adc differential reference selected without ADC reference
 #endif
 
+#if defined(LEFT_MOTOR_FOC)
+#define LEFT_MOTOR_SVM
+#define FOC_HALL_UPDATE
+#endif
+
+#if defined(RIGHT_MOTOR_FOC)
+#define RIGHT_MOTOR_SVM
+#define FOC_HALL_UPDATE
+#endif
+
+
 #if defined(LEFT_MOTOR_FOC) && !defined(LEFT_MOTOR_SVM)
 #error config.h: Left motor FOC control requires SVM
 #endif
 
-/*
-#if defined(LEFT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
-#error config.h: Left motor FOC control requires SVM_HALL_UPDATE
-#endif
-*/
-
 #if defined(RIGHT_MOTOR_FOC) && !defined(RIGHT_MOTOR_SVM)
 #error config.h: Right motor FOC requires SVM
 #endif
-
-/*
-#if defined(RIGHT_MOTOR_FOC) && !defined(SVM_HALL_UPDATE)
-#error config.h: Right motor FOC requires SVM_HALL_UPDATE
-#endif
-*/

@@ -63,7 +63,8 @@
 	_ENTRY( kp_id          , uint16_t   , _U16     , true      , "P term ID"         ) \
 	_ENTRY( ki_id          , uint16_t   , _U16     , true      , "I term ID"         ) \
 	_ENTRY( buzzer_tone    , uint16_t   , _U16     , true      , "Tone"              ) \
-	_ENTRY( buzzer_pattern , uint16_t   , _U16     , true      , "Pattern"           )
+	_ENTRY( buzzer_pattern , uint16_t   , _U16     , true      , "Pattern"           ) \
+	_ENTRY( i_filter       , uint16_t   , _U16     , true      , "Current filter"    )
 
 
 

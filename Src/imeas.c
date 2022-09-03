@@ -41,7 +41,7 @@ static volatile uint8_t rdson_adc_conv_done = 0;
 // current = volts * RDSON
 // current_pu = current / motor_nominal_current
 // Without division by 4096 we directly get fixed point value
-const uint16_t rdson_to_i = 3.3 / RDSON / MOTOR_CUR;
+const uint16_t rdson_to_i = 1; //3.3 / RDSON / MOTOR_CUR; // TODO:DEBUG
 
 // ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
 void ADC1_init(void) {
