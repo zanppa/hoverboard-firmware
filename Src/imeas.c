@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define RDSON_MEAS_COUNT	4
 
 ADC_HandleTypeDef adc_rdson;
+ADC_HandleTypeDef hadc2;
 
 // Rds,on measurement order:
 // Left A, Left B, Right B, Right C phases
@@ -159,4 +160,59 @@ void DMA1_Channel1_IRQHandler(void) {
   i_meas.i_rC = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
 
   rdson_adc_conv_done = 1;	// This is used for calibration
+}
+
+
+/* ADC2 init function */
+// This is used for shunt current measurement
+void MX_ADC2_Init(void) {
+  ADC_ChannelConfTypeDef sConfig;
+
+  __HAL_RCC_ADC2_CLK_ENABLE();
+
+  hadc2.Instance                   = ADC2;
+  hadc2.Init.ScanConvMode          = ADC_SCAN_ENABLE;
+  hadc2.Init.NbrOfConversion       = 4;
+  hadc2.Init.ContinuousConvMode    = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = ENABLE;
+  hadc2.Init.NbrOfDiscConversion   = 4; // Single conversion / trigger
+  hadc2.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T2_CC2;
+  hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  HAL_ADC_Init(&hadc2);
+
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+
+  sConfig.Channel = ADC_CHANNEL_11; // Left current
+  sConfig.Rank    = 1;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_11; // Left current
+  sConfig.Rank    = 2;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+
+  sConfig.Channel = ADC_CHANNEL_10; // Right current
+  sConfig.Rank    = 3;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_10; // Right current
+  sConfig.Rank    = 4;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+  __HAL_ADC_ENABLE(&hadc2);
+}
+
+
+//void ADC1_2_IRQHandler()
+//{
+//  
+//}
+
+void TIM2_IRQHandler()
+{
+  TIM2->SR = 0;
+
+  // Debug: LED off
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 }

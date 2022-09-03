@@ -187,6 +187,7 @@ void control_timer_init(void)
 }
 
 
+
 /*
  * Initialize timers for left and right side motors
  */
@@ -208,7 +209,7 @@ void MX_TIM_Init(void) {
   // down to 1 and creates underflow event. Then it restarts.
   // pre-scaler = 0 and divier = 1 i.e.
   // the timer runs at crystal(?) frequency
-  htim_right.Instance               = RIGHT_TIM;	// TIM8
+  htim_right.Instance               = RIGHT_TIM;	// TIM1
   htim_right.Init.Prescaler         = 0;
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_right.Init.Period            = PWM_PERIOD;
@@ -242,7 +243,9 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_right, &sBreakDeadTimeConfig);
 
-  htim_left.Instance               = LEFT_TIM;
+
+  // Left motor timer
+  htim_left.Instance               = LEFT_TIM; // TIM8
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_left.Init.Period            = PWM_PERIOD;
@@ -256,7 +259,7 @@ void MX_TIM_Init(void) {
   sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_ENABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_left, &sMasterConfig);
 
-  sTimConfig.InputTrigger = TIM_TS_ITR0;
+  sTimConfig.InputTrigger = TIM_TS_ITR0;	// TIM1_TRGO
   sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
   HAL_TIM_SlaveConfigSynchronization(&htim_left, &sTimConfig);
 
@@ -324,4 +327,37 @@ void MX_TIM_Init(void) {
   htim_left.Instance->RCR = 1;
 
   __HAL_TIM_ENABLE(&htim_right);
+}
+
+
+// Initialize timer for triggering shunt current measurement
+void ishunt_timer_init(void)
+{
+  TIM_HandleTypeDef htim_ishunt;
+  TIM_SlaveConfigTypeDef sTimConfig;
+
+  __HAL_RCC_TIM2_CLK_ENABLE();
+
+  htim_ishunt.Instance               = TIM2;
+  htim_ishunt.Init.Prescaler         = 0;
+  htim_ishunt.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  htim_ishunt.Init.Period            = PWM_PERIOD;
+  htim_ishunt.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  htim_ishunt.Init.RepetitionCounter = 0;
+  htim_ishunt.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+  HAL_TIM_PWM_Init(&htim_ishunt);
+
+  sTimConfig.InputTrigger = TIM_TS_ITR1;	// TIM8 triggers
+  sTimConfig.SlaveMode    = TIM_SLAVEMODE_RESET;
+  HAL_TIM_SlaveConfigSynchronization(&htim_ishunt, &sTimConfig);
+
+  TIM2->DIER |= TIM_DIER_CC2IE;	// Enable capture-compare 2 interrupt (launches ADC2)
+
+  // Low priority but higher than control task
+  HAL_NVIC_SetPriority(TIM2_IRQn, 8, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+
+  HAL_TIM_PWM_Start_IT(&htim_ishunt, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim_ishunt, TIM_CHANNEL_2);
 }

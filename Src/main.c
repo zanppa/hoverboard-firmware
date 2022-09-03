@@ -99,6 +99,9 @@ int main(void) {
   // Initialize control timer
   control_timer_init();
 
+  // Current shunt measuring timer init
+  ishunt_timer_init();
+
   // Initialize PWM timers
   MX_TIM_Init();
 

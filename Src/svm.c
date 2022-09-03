@@ -129,7 +129,7 @@ void TIM1_UP_IRQHandler() {
   TIM1->SR = 0; //&= ~TIM_SR_UIF;
 
   // DEBUG: LED on
-  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
 // Trigger RDSon measurement here
 #if defined(I_MEAS_RDSON)
@@ -178,6 +178,9 @@ void TIM1_UP_IRQHandler() {
   else // Even sectors uses "left" vector first
     *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
   *((uint16_t *)(LEFT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+
+  // TODO: Debug for timer 2
+  TIM2->CCR2 = t0 + t2;
 #endif
 
 
