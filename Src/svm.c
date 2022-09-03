@@ -141,8 +141,7 @@ void TIM1_UP_IRQHandler() {
 #endif
 
 #ifdef LEFT_MOTOR_SVM
-  // Interpolate the rotor position
-  angle = motor_state[STATE_LEFT].act.angle + motor_state[STATE_LEFT].ctrl.speed;
+  angle = motor_state[STATE_LEFT].act.angle;
 
 #ifdef LEFT_MOTOR_FOC
   angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
@@ -158,8 +157,6 @@ void TIM1_UP_IRQHandler() {
       else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
   }
 #endif
-
-  motor_state[STATE_LEFT].act.angle = angle;
 
 
   // Get the vector times from the modulator
@@ -186,8 +183,7 @@ void TIM1_UP_IRQHandler() {
 
 
 #ifdef RIGHT_MOTOR_SVM
-  // Interpolate the rotor position
-  angle = motor_state[STATE_RIGHT].act.angle + motor_state[STATE_RIGHT].ctrl.speed;
+  angle = motor_state[STATE_RIGHT].act.angle;
 
 #ifdef RIGHT_MOTOR_FOC
   angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
@@ -203,8 +199,6 @@ void TIM1_UP_IRQHandler() {
       else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
   }
 #endif
-
-  motor_state[STATE_RIGHT].act.angle = angle;
 
   // Get the vector times from the modulator
 #ifdef RIGHT_MOTOR_FOC

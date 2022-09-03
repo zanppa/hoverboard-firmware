@@ -68,12 +68,13 @@ void TIM8_UP_IRQHandler() {
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
 
   // DEBUG: LED on
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
   // Motor position and speed detection, first left motor
   sector = read_left_hall();
   prev_sector = motor_state[STATE_LEFT].act.sector;
   motor_state[STATE_LEFT].act.sector = sector;
+  angle = motor_state[STATE_LEFT].act.angle;
 
   if(sector != prev_sector) {  // Sector changed, calculate new speed
     // Update rotor position
@@ -90,11 +91,6 @@ void TIM8_UP_IRQHandler() {
     if(sector != left_expected_sector)
       left_period_tick = PERIOD_STOP; // Set speed to zero to prevent rapid oscillation in speed
 
-
-    // Update the actual rotor position and SVM speed
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
-    motor_state[STATE_LEFT].act.angle = angle;
-#endif
 
     // Calculate what sector should be if going in positive direction
     if(prev_sector == 5) prev_sector = 0;
@@ -138,11 +134,18 @@ void TIM8_UP_IRQHandler() {
     }
   }
 
+#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+    // Update the actual rotor position and SVM speed
+    motor_state[STATE_LEFT].act.angle = angle + motor_state[STATE_LEFT].ctrl.speed;
+#endif
+
 
   // Then right motor position and speed
   sector = read_right_hall();
   prev_sector = motor_state[STATE_RIGHT].act.sector;
   motor_state[STATE_RIGHT].act.sector = sector;
+  angle = motor_state[STATE_RIGHT].act.angle;
+
 
   if(sector != prev_sector) {  // Sector changed, calculate new speed
     // Update rotor position
@@ -177,11 +180,6 @@ void TIM8_UP_IRQHandler() {
       else right_expected_sector = sector + 1;
     }
 
-    // Update the actual rotor position
-#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
-    motor_state[STATE_RIGHT].act.angle = angle;
-#endif
-
     motor_state[STATE_RIGHT].act.period = right_period_tick;
     right_period_tick = 0;
 
@@ -203,6 +201,12 @@ void TIM8_UP_IRQHandler() {
 #endif
     }
   }
+
+#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+    // Update the actual rotor position and SVM speed
+    motor_state[STATE_RIGHT].act.angle = angle + motor_state[STATE_RIGHT].ctrl.speed;
+#endif
+
 
 
   // Left motor modulation, if enabled
