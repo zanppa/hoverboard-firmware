@@ -359,5 +359,5 @@ void ishunt_timer_init(void)
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
   HAL_TIM_PWM_Start_IT(&htim_ishunt, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim_ishunt, TIM_CHANNEL_2);
+  //HAL_TIMEx_PWMN_Start(&htim_ishunt, TIM_CHANNEL_2);
 }
