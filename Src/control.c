@@ -497,8 +497,8 @@ void TIM3_IRQHandler(void)
   iq_error = torque_ref - iq;
 
   // Debug: Store id and iq to config bus
-  cfg.vars.r_id = id;
-  cfg.vars.r_iq = iq;
+  //cfg.vars.r_id = id;
+  //cfg.vars.r_iq = iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
@@ -685,10 +685,12 @@ void TIM3_IRQHandler(void)
 
   torque_ref = ref_amplitude; // TODO: Debug
 
-#elif defined(RIGHT_MOTOR_SVM) // RIGHT_MOTOR_FOC
+
+#elif defined(RIGHT_MOTOR_SVM)  && !defined(RIGHT_MOTOR_FOC)
   // TODO: U/f control for SVM without FOC?
 
   if(ctrl_mode == CONTROL_SPEED) {
+    torque_ref = fx_mul(ABS(motor_state[STATE_RIGHT].ref.value), voltage_scale);
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
     //motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
