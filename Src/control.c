@@ -36,6 +36,17 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
+
+#if defined(LEFT_CURRENT_TFORM)
+int16_t id_old_l = 0;
+int16_t iq_old_l = 0;
+#endif
+#if defined(RIGHT_CURRENT_TFORM)
+int16_t id_old_r = 0;
+int16_t iq_old_r = 0;
+#endif
+
+
 // -----------
 // Torque control (FOC D and Q axis currents) parameters
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
@@ -48,21 +59,12 @@ uint16_t ki_id = 0.01 * FIXED_ONE; //2000; //1200;
 uint16_t kp_iq = 0.6 * FIXED_ONE;
 uint16_t ki_iq = 0.08 * FIXED_ONE; //1200;
 
-#if defined(RIGHT_MOTOR_FOC)
-int16_t id_old_r = 0;
-int16_t iq_old_r = 0;
-#endif
+// Id and Iq error integrals for FOC
 #if defined(LEFT_MOTOR_FOC)
-int16_t id_old_l = 0;
-int16_t iq_old_l = 0;
-#endif
-
-// Id and Iq error integrals
-#ifdef LEFT_MOTOR_FOC
 static int16_t id_error_int_l = 0;
 static int16_t iq_error_int_l = 0;
 #endif // LEFT_MOTOR_FOC
-#ifdef RIGHT_MOTOR_FOC
+#if defined(RIGHT_MOTOR_FOC)
 static int16_t id_error_int_r = 0;
 static int16_t iq_error_int_r = 0;
 #endif // RIGHT_MOTOR_FOC
@@ -268,12 +270,8 @@ void TIM3_IRQHandler(void)
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
   int16_t ia_r, ib_r, ic_r;
-#if defined(LEFT_MOTOR_FOC)
   uint16_t angle_l;
-#endif
-#if defined(RIGHT_MOTOR_FOC)
   uint16_t angle_r;
-#endif
   int16_t ref_l, ref_r;
   int16_t ref_ramp_diff;
   int16_t speed_error;
@@ -281,14 +279,19 @@ void TIM3_IRQHandler(void)
   uint8_t ctrl_mode;
   uint16_t v_bat;
 
-#if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
-  int16_t ia, ib;
-  uint16_t angle;
+#if defined(LEFT_CURRENT_TFORM) || defined(RIGHT_CURRENT_TFORM)
   int16_t ialpha, ibeta;
   int16_t id, iq;
+#endif
+
+#if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
   int16_t id_error, iq_error;
   int16_t angle_advance, ref_amplitude;
   int8_t ref_sign;
+#endif
+
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
+  int16_t speed_ctrl;
 #endif
 
   CTRL_TIM->SR = 0;
@@ -318,16 +321,12 @@ void TIM3_IRQHandler(void)
   __disable_irq();
   ia_l = i_meas.i_lA;
   ib_l = i_meas.i_lB;
-#if defined(LEFT_MOTOR_FOC)
   angle_l = motor_state[STATE_LEFT].act.angle;
-#endif
 
   // Right motor phase currents and position
   ib_r = i_meas.i_rB;
   ic_r = i_meas.i_rC;
-#if defined(RIGHT_MOTOR_FOC)
   angle_r = motor_state[STATE_RIGHT].act.angle;
-#endif
   __enable_irq();
 
   ia_r = -ib_r - ic_r;
@@ -475,22 +474,20 @@ void TIM3_IRQHandler(void)
 
   //torque_ref = motor_state[STATE_LEFT].ref.value;
 
-
-#if defined(LEFT_MOTOR_FOC)
-  // Get the interpolated position and measured currents from exactly same time instants
-  ia = ia_l;
-  ib = ib_l;
-  angle = angle_l;
-
+#if defined(LEFT_CURRENT_TFORM)
   // Transform to rotor coordinate frame
-  clarke(ia, ib, &ialpha, &ibeta);
-  park(ialpha, ibeta, angle, &id, &iq);
+  clarke(ia_l, ib_l, &ialpha, &ibeta);
+  park(ialpha, ibeta, angle_l, &id, &iq);
 
   // Filter id and iq
   id = FILTER(id, id_old_l, cfg.vars.i_filter);
   iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
   id_old_l = id;
   iq_old_l = iq;
+#endif
+
+
+#if defined(LEFT_MOTOR_FOC)
 
   id_error = id;	// TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
@@ -515,7 +512,7 @@ void TIM3_IRQHandler(void)
   ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
 
-  ref_sign = SIGN(ref_amplitude);
+  ref_sign = ISIGN(ref_amplitude);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -535,15 +532,17 @@ void TIM3_IRQHandler(void)
   torque_ref = ref_amplitude; // TODO:DEBUG
 
 #elif defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
-  // TODO: U/f control for SVM without FOC?
-  if(ctrl_mode == CONTROL_SPEED) {
-    torque_ref = fx_mul(ABS(motor_state[STATE_LEFT].ref.value), voltage_scale);
+  if(ctrl_mode == CONTROL_UF) {
+    // Simple U/F control where voltage and rotation speed are set manually
+    torque_ref =  fx_mul(motor_state[STATE_LEFT].ref.value, voltage_scale);
+    speed_ctrl = ISIGN(torque_ref);
+    torque_ref = ABS(torque_ref);
+
+    speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+
     __disable_irq();
-    motor_state[STATE_LEFT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
-    //motor_state[STATE_LEFT].ctrl.speed = motor_state[STATE_LEFT].ref.value / SPEED_SCALE;
-    // TODO: Clean this up...
-    motor_state[STATE_LEFT].ctrl.speed = (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
-    // Ref: speed_l = (FIXED_ONE * motor_nominal_counts) / speed_tick[0];
+    motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+    motor_state[STATE_LEFT].ctrl.speed = speed_ctrl;
     __enable_irq();
   } else if(ctrl_mode == CONTROL_ANGLE) {
     __disable_irq();
@@ -622,23 +621,19 @@ void TIM3_IRQHandler(void)
   //cfg.vars.t_req_r = torque_ref;
 
 
-#if defined(RIGHT_MOTOR_FOC)
-  // Get the interpolated position and measured currents from exactly same time instants
-  ia = ia_r;		// For simplicity, we use ia and ib in the calculation
-  ib = ib_r;
-  angle = angle_r;	// Estimated rotor position
-
+#if defined(RIGHT_CURRENT_TFORM)
   // Transform to rotor coordinate frame
-  clarke(ia, ib, &ialpha, &ibeta);
-  park(ialpha, ibeta, angle, &id, &iq);
+  clarke(ia_r, ib_r, &ialpha, &ibeta);
+  park(ialpha, ibeta, angle_r, &id, &iq);
 
   // Filter id and iq
   id = FILTER(id, id_old_r, cfg.vars.i_filter);
   iq = FILTER(iq, iq_old_r, cfg.vars.i_filter);
   id_old_r = id;
   iq_old_r = iq;
+#endif
 
-
+#if defined(RIGHT_MOTOR_FOC)
   // Debug: Store id and iq to config bus
   cfg.vars.r_id = id;
   cfg.vars.r_iq = iq;
@@ -666,7 +661,7 @@ void TIM3_IRQHandler(void)
   ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
   ref_amplitude = fx_mul(ref_amplitude, kp_iq);
 
-  ref_sign = SIGN(ref_amplitude);
+  ref_sign = ISIGN(ref_amplitude);
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -687,23 +682,27 @@ void TIM3_IRQHandler(void)
 
 
 #elif defined(RIGHT_MOTOR_SVM)  && !defined(RIGHT_MOTOR_FOC)
-  // TODO: U/f control for SVM without FOC?
+  if(ctrl_mode == CONTROL_UF) {
+    // Simple U/F control where voltage and rotation speed are set manually
+    torque_ref =  fx_mul(motor_state[STATE_RIGHT].ref.value, voltage_scale);
+    speed_ctrl = ISIGN(torque_ref);
+    torque_ref = ABS(torque_ref);
 
-  if(ctrl_mode == CONTROL_SPEED) {
-    torque_ref = fx_mul(ABS(motor_state[STATE_RIGHT].ref.value), voltage_scale);
+    speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+
     __disable_irq();
-    motor_state[STATE_RIGHT].ctrl.amplitude = MAX(torque_ref, IR_MINIMUM_VOLTAGE);
-    //motor_state[STATE_RIGHT].ctrl.amplitude = MAX(ABS(motor_state[STATE_RIGHT].ref.value), IR_MINIMUM_VOLTAGE);
-    //motor_state[STATE_RIGHT].ctrl.speed = motor_state[STATE_RIGHT].ref.value / SPEED_SCALE;
-    // TODO: Clean this
-    motor_state[STATE_RIGHT].ctrl.speed = (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+    motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+    motor_state[STATE_RIGHT].ctrl.speed = speed_ctrl;
     __enable_irq();
   } else if(ctrl_mode == CONTROL_ANGLE) {
+    // Direct angle control for debugging purposes
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.speed = 0;
     motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;
     motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
     __enable_irq();
+  } else {
+    // Normal torque and speed control modes
   }
 
 #elif defined(RIGHT_MOTOR_BLDC)
