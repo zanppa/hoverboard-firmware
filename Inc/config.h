@@ -78,6 +78,10 @@
 
 #define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
+#define OVERSPEED_TRIP		(0.5*FIXED_ONE)		// Compared to rated rotation speed
+#define OVERSPEED_LIMIT		(0.4*FIXED_ONE)		// Start limiting torque above this, also speed control max
+#define OVERSPEED_LIM_GAIN	20					// Gain of how much torque is removed above the overspeed limit
+
 
 // =============================
 // Other parameters
@@ -109,7 +113,9 @@
 // The measurement has a gain of about 0.06 until battery voltage is 21 V, then the gain drops
 // gradually to about 0.04.
 // Power button threshold of about 18 V (required for supply to operate properly) is about 1340 in ADC units
-#define ADC_POWERSW_THRESHOLD	1340
+//#define ADC_POWERSW_THRESHOLD	1340
+// Should be higher than undervoltage limit. Scale is roughly V_meas * 0.056 / 3.3 V * 4095 ~= V_meas * 70
+#define ADC_POWERSW_THRESHOLD	((UNDERVOLTAGE_WARN) * 70)
 
 // Power switch time that it is allowed to be in off-state before next press (in control timer units)
 #define POWERSW_OFF_TIMER		1000

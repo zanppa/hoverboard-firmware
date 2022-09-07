@@ -16,14 +16,16 @@
 #define FAULT_OVERVOLTAGE		0x04	// Battery overvoltage
 #define FAULT_UNDERVOLTAGE		0x08	// Battery undervoltage
 #define FAULT_OVERTEMP			0x10	// Over temperature measured
+#define FAULT_OVERSPEED			0x20	// Over speed trip
 
 // Status bits
 #define STATUS_READY			0x01	// Booted up and intialized everything
 #define STATUS_RUN				0x02	// One or both motors are running
 #define STATUS_CURRENT_LIMIT	0x04	// One or both motors run at current limit
 #define STATUS_FIELD_WEAK		0x08	// One or both motors run at field weakening
-#define STATUS_OVERVOLTAGE_WARN	0x10
-#define STATUS_UNDERVOLTAGE_WARN	0x20
+#define STATUS_OVERVOLTAGE_WARN	0x10	// DC voltage is above the overvoltage warning level
+#define STATUS_UNDERVOLTAGE_WARN	0x20 // DC voltage is below the undervoltage warning level
+#define STATUS_OVERSPEED_LIMIT	0x40	// Speed is above the overspeed limit, torque reduced
 
 
 void led_update(void);

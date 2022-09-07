@@ -313,6 +313,17 @@ void TIM3_IRQHandler(void)
     speed_r = 0;
 
 
+  // Check overspeed trip
+  if(speed_l > OVERSPEED_TRIP || speed_l < -OVERSPEED_TRIP ||
+     speed_r > OVERSPEED_TRIP || speed_r < -OVERSPEED_TRIP) {
+    do_fault(0x01 | 0x02);	// Trip both motors
+    fault_bits |= FAULT_OVERSPEED;
+
+    buzzer_pattern = 0xA8A8;
+    buzzer_tone = 0xAA88;
+  }
+
+
   // Current measurement and overcurrent trips
   // Left motor phase currents and position
   __disable_irq();
@@ -339,7 +350,7 @@ void TIM3_IRQHandler(void)
   if(ia_l > OVERCURRENT_TRIP || -ia_l < -OVERCURRENT_TRIP ||
      ib_l > OVERCURRENT_TRIP || -ib_l < -OVERCURRENT_TRIP ||
      ic_l > OVERCURRENT_TRIP || -ic_l < -OVERCURRENT_TRIP) {
-    do_fault(0x01);	// Trip left motor
+    do_fault(0x01 | 0x02);	// Trip both motors
     fault_bits |= FAULT_OVERCURRENT;
     // TODO: Buzzer + led
   }
@@ -347,7 +358,7 @@ void TIM3_IRQHandler(void)
   if(ia_r > OVERCURRENT_TRIP || -ia_r < -OVERCURRENT_TRIP ||
      ib_r > OVERCURRENT_TRIP || -ib_r < -OVERCURRENT_TRIP ||
      ic_r > OVERCURRENT_TRIP || -ic_r < -OVERCURRENT_TRIP) {
-    do_fault(0x02);	// Trip right motor
+    do_fault(0x01 | 0x02);	// Trip both motors
     fault_bits |= FAULT_OVERCURRENT;
     // TODO: Buzzer + led
   }
@@ -384,7 +395,7 @@ void TIM3_IRQHandler(void)
     buzzer_pattern = 0xAAAA;
 
   } else if(battery_volt_pu < uv_trip_pu && (status_bits & STATUS_READY)) {
-    do_fault(0x01 | 0x02);
+    do_fault(0x01 | 0x02); // Trip both motors
     fault_bits |= FAULT_UNDERVOLTAGE;
 
     buzzer_tone = 0xF0F0;
@@ -400,8 +411,11 @@ void TIM3_IRQHandler(void)
   } else { // Remove alarm bits
     status_bits &= ~(STATUS_OVERVOLTAGE_WARN | STATUS_UNDERVOLTAGE_WARN);
 
-    buzzer_tone = 0;
-    buzzer_pattern = 0;
+    // Clear buzzer only if no faults are active
+    if(!fault_bits) {
+      buzzer_tone = 0;
+      buzzer_pattern = 0;
+    }
 
     // Check that filtered DC link voltage is high enough and indicate ready state
     if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
