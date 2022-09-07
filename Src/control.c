@@ -270,8 +270,6 @@ void TIM3_IRQHandler(void)
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
   int16_t ia_r, ib_r, ic_r;
-  uint16_t angle_l;
-  uint16_t angle_r;
   int16_t ref_l, ref_r;
   int16_t ref_ramp_diff;
   int16_t speed_error;
@@ -279,7 +277,13 @@ void TIM3_IRQHandler(void)
   uint8_t ctrl_mode;
   uint16_t v_bat;
 
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
+  int8_t ref_sign;
+#endif
+
 #if defined(LEFT_CURRENT_TFORM) || defined(RIGHT_CURRENT_TFORM)
+  uint16_t angle_l;
+  uint16_t angle_r;
   int16_t ialpha, ibeta;
   int16_t id, iq;
 #endif
@@ -287,7 +291,6 @@ void TIM3_IRQHandler(void)
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
   int16_t id_error, iq_error;
   int16_t angle_advance, ref_amplitude;
-  int8_t ref_sign;
 #endif
 
 #if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
@@ -321,12 +324,16 @@ void TIM3_IRQHandler(void)
   __disable_irq();
   ia_l = i_meas.i_lA;
   ib_l = i_meas.i_lB;
+#if defined(LEFT_CURRENT_TFORM)
   angle_l = motor_state[STATE_LEFT].act.angle;
+#endif
 
   // Right motor phase currents and position
   ib_r = i_meas.i_rB;
   ic_r = i_meas.i_rC;
+#if defined(RIGHT_CURRENT_TFORM)
   angle_r = motor_state[STATE_RIGHT].act.angle;
+#endif
   __enable_irq();
 
   ia_r = -ib_r - ic_r;
@@ -550,6 +557,20 @@ void TIM3_IRQHandler(void)
     motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;
     motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
     __enable_irq();
+  } else {
+    // Torque or speed control mode with SVM
+    // Scale ramped reference according to DC voltage
+    torque_ref = fx_mul(torque_ref, voltage_scale);
+    // Limit pwm value
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+    ref_sign = ISIGN(torque_ref);
+    torque_ref = ABS(torque_ref);
+
+    // Apply the reference
+    __disable_irq();
+    motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+    motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_90DEG;
+    __enable_irq();
   }
 
 
@@ -702,7 +723,19 @@ void TIM3_IRQHandler(void)
     motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
     __enable_irq();
   } else {
-    // Normal torque and speed control modes
+    // Torque or speed control mode with SVM
+    // Scale ramped reference according to DC voltage
+    torque_ref = fx_mul(torque_ref, voltage_scale);
+    // Limit pwm value
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+    ref_sign = ISIGN(torque_ref);
+    torque_ref = ABS(torque_ref);
+
+    // Apply the reference
+    __disable_irq();
+    motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+    motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_90DEG;
+    __enable_irq();
   }
 
 #elif defined(RIGHT_MOTOR_BLDC)

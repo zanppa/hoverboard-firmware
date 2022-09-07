@@ -123,6 +123,7 @@ void TIM1_UP_IRQHandler() {
   uint16_t angle;
   uint8_t sector;
   uint16_t angle_min, angle_max;
+  uint8_t mode;
 #endif
 
   // Clear the update interrupt flag
@@ -140,34 +141,35 @@ void TIM1_UP_IRQHandler() {
   }
 #endif
 
-#ifdef LEFT_MOTOR_SVM
-  angle = motor_state[STATE_LEFT].act.angle;
+#if defined(LEFT_MOTOR_SVM)
+  mode = motor_state[STATE_LEFT].ref.control_mode;
 
-#if defined(LEFT_MOTOR_FOC) && defined(FOC_HALL_UPDATE)
-  angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
-  angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
-
-  // Check that the new angle is inside the sector limits
-  if(angle_min < angle_max) {
-    // Normal situation
-    angle = CLAMP(angle, angle_min, angle_max);
-  } else {
-    // Sector 0, angle 0 is inside the sector
-      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
-      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
-  }
-#endif
-
-
-  // Get the vector times from the modulator
-#ifdef LEFT_MOTOR_FOC
-  // Phase advance according to ctrl angle
-  angle += motor_state[STATE_LEFT].ctrl.angle;
-#else
-  // In SVM angle mode, the control angle is directly the modulation angle
-  if(motor_state[STATE_LEFT].ref.control_mode == CONTROL_ANGLE)
+  if(mode == CONTROL_ANGLE) {
+    // In SVM angle mode, the control angle is directly the modulation angle
     angle = motor_state[STATE_LEFT].ctrl.angle;
-#endif
+  } else {
+    angle = motor_state[STATE_LEFT].act.angle;
+
+    if(mode != CONTROL_UF) {
+      // In FOC and normal SVM modes the actual angle is clamped (position feedback)
+      angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
+      angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
+
+      // Check that the new angle is inside the sector limits
+      if(angle_min < angle_max) {
+        // Normal situation
+        angle = CLAMP(angle, angle_min, angle_max);
+      } else {
+        // Sector 0, angle 0 is inside the sector
+        if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+        else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+      }
+    }
+
+    // Phase advance according to ctrl angle
+    angle += motor_state[STATE_LEFT].ctrl.angle;
+  }
+
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_LEFT].ctrl.amplitude, angle, &t0, &t1, &t2);
 
@@ -182,33 +184,36 @@ void TIM1_UP_IRQHandler() {
 
 
 
-#ifdef RIGHT_MOTOR_SVM
-  angle = motor_state[STATE_RIGHT].act.angle;
+#if defined(RIGHT_MOTOR_SVM)
+  mode = motor_state[STATE_LEFT].ref.control_mode;
 
-#if defined(RIGHT_MOTOR_FOC) && defined(FOC_HALL_UPDATE)
-  angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
-  angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
-
-  // Check that the new angle is inside the sector limits
-  if(angle_min < angle_max) {
-    // Normal situation
-    angle = CLAMP(angle, angle_min, angle_max);
+  if(mode == CONTROL_ANGLE) {
+    // In SVM angle mode, the control angle is directly the modulation angle
+    angle = motor_state[STATE_RIGHT].ctrl.angle;
   } else {
-    // Sector 0, angle 0 is inside the sector
-      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
-      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+    angle = motor_state[STATE_RIGHT].act.angle;
+
+    if(mode != CONTROL_UF) {
+      // In FOC and normal SVM modes the actual angle is clamped (position feedback)
+      angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
+      angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
+
+      // Check that the new angle is inside the sector limits
+      if(angle_min < angle_max) {
+        // Normal situation
+        angle = CLAMP(angle, angle_min, angle_max);
+      } else {
+        // Sector 0, angle 0 is inside the sector
+        if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+        else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+      }
+    }
+
+    // Phase advance according to ctrl angle
+    angle += motor_state[STATE_RIGHT].ctrl.angle;
   }
-#endif
 
   // Get the vector times from the modulator
-#ifdef RIGHT_MOTOR_FOC
-  // Phase advance according to ctrl angle
-  angle += motor_state[STATE_RIGHT].ctrl.angle;
-#else
-  // In SVM angle mode, the control angle is directly the modulation angle
-  if(motor_state[STATE_RIGHT].ref.control_mode == CONTROL_ANGLE)
-    angle = motor_state[STATE_RIGHT].ctrl.angle;
-#endif
   sector = angle_to_svm_sector(angle);
   calculate_modulator(motor_state[STATE_RIGHT].ctrl.amplitude, angle, &t0, &t1, &t2);
 

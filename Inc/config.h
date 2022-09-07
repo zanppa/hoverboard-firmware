@@ -54,9 +54,6 @@
 #define LEFT_CURRENT_TFORM
 #define RIGHT_CURRENT_TFORM
 
-// Update SVM reference position from HALL sensors or not, this is required by FOC
-// TODO: This needs to be enabled in FOC mode automatically
-//#define FOC_HALL_UPDATE
 
 // Use field weakening region in BLDC mode
 //#define BLDC_FIELD_WEAKENING
@@ -217,13 +214,11 @@
 
 #if defined(LEFT_MOTOR_FOC)
 #define LEFT_MOTOR_SVM
-#define FOC_HALL_UPDATE
 #define LEFT_CURRENT_TFORM
 #endif
 
 #if defined(RIGHT_MOTOR_FOC)
 #define RIGHT_MOTOR_SVM
-#define FOC_HALL_UPDATE
 #define RIGHT_CURRENT_TFORM
 #endif
 
