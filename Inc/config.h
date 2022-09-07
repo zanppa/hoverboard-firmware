@@ -36,13 +36,13 @@
 
 // Left motor
 // What control method to use for which motor
-//#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
-#define LEFT_MOTOR_SVM			// Use SVM for left motor
-#define LEFT_MOTOR_FOC			// Use field oriented control for left motor (requires SVM also)
+#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+//#define LEFT_MOTOR_SVM			// Use SVM for left motor
+//#define LEFT_MOTOR_FOC			// Use field oriented control for left motor (requires SVM also)
 
 // Right motor
-#define RIGHT_MOTOR_BLDC		// BLDC for right motor
-//#define RIGHT_MOTOR_SVM			// SVM for right motor
+//#define RIGHT_MOTOR_BLDC		// BLDC for right motor
+#define RIGHT_MOTOR_SVM			// SVM for right motor
 //#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
@@ -51,7 +51,7 @@
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
 // TODO: This needs to be enabled in FOC mode automatically
-#define FOC_HALL_UPDATE
+//#define FOC_HALL_UPDATE
 
 // Use field weakening region in BLDC mode
 //#define BLDC_FIELD_WEAKENING

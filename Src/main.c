@@ -69,8 +69,8 @@ int main(void) {
   SystemClock_Config();
 
   // Initialize control modes
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
-  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_SPEED;
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // BLDC
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_SPEED; // SVM
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
