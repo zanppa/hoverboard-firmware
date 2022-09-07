@@ -487,6 +487,18 @@ void TIM3_IRQHandler(void)
     torque_ref = 0;
   }
 
+  // Torque reference limitation above overspeed
+  // Note! This only limits torque if torque is in the same direction as speed
+  // During braking, limitation is not active but will brake until overspeed trip
+  if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
+    speed_error = ABS(speed_l) - OVERSPEED_LIMIT;
+    speed_error *= OVERSPEED_LIM_GAIN;
+    speed_error = CLAMP(speed_error, 0, torque_ref);
+
+    if(speed_l > 0 && torque_ref > 0) torque_ref -= speed_error;
+    else if(speed_l < 0 && torque_ref < 0) torque_ref += speed_error;
+  }
+
   //torque_ref = motor_state[STATE_LEFT].ref.value;
 
 
@@ -630,6 +642,19 @@ void TIM3_IRQHandler(void)
     torque_ref = motor_state[STATE_RIGHT].ref.value;
   } else {
     torque_ref = 0;
+  }
+
+
+  // Torque reference limitation above overspeed
+  // Note! This only limits torque if torque is in the same direction as speed
+  // During braking, limitation is not active but will brake until overspeed trip
+  if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
+    speed_error = ABS(speed_r) - OVERSPEED_LIMIT;
+    speed_error *= OVERSPEED_LIM_GAIN;
+    speed_error = CLAMP(speed_error, 0, torque_ref);
+
+    if(speed_r > 0 && torque_ref > 0) torque_ref -= speed_error;
+    else if(speed_r < 0 && torque_ref < 0) torque_ref += speed_error;
   }
 
   //torque_ref = motor_state[STATE_RIGHT].ref.value;
