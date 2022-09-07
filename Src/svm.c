@@ -143,7 +143,7 @@ void TIM1_UP_IRQHandler() {
 #ifdef LEFT_MOTOR_SVM
   angle = motor_state[STATE_LEFT].act.angle;
 
-#ifdef LEFT_MOTOR_FOC
+#if defined(LEFT_MOTOR_FOC) && defined(FOC_HALL_UPDATE)
   angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
   angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
 
@@ -185,7 +185,7 @@ void TIM1_UP_IRQHandler() {
 #ifdef RIGHT_MOTOR_SVM
   angle = motor_state[STATE_RIGHT].act.angle;
 
-#ifdef RIGHT_MOTOR_FOC
+#if defined(RIGHT_MOTOR_FOC) && defined(FOC_HALL_UPDATE)
   angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
   angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
 

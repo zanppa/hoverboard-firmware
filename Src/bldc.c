@@ -134,7 +134,10 @@ void TIM8_UP_IRQHandler() {
     }
   }
 
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+#if defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
+    // Update the actual rotor position and SVM speed
+    motor_state[STATE_LEFT].act.angle += motor_state[STATE_LEFT].ctrl.speed;
+#elif defined(LEFT_MOTOR_FOC)
     // Update the actual rotor position and SVM speed
     motor_state[STATE_LEFT].act.angle = angle + motor_state[STATE_LEFT].ctrl.speed;
 #endif
@@ -202,7 +205,10 @@ void TIM8_UP_IRQHandler() {
     }
   }
 
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+#if defined(RIGHT_MOTOR_SVM) && !defined(RIGHT_MOTOR_FOC)
+    // Update the actual rotor position and SVM speed
+    motor_state[STATE_RIGHT].act.angle += motor_state[STATE_RIGHT].ctrl.speed;
+#elif defined(RIGHT_MOTOR_FOC)
     // Update the actual rotor position and SVM speed
     motor_state[STATE_RIGHT].act.angle = angle + motor_state[STATE_RIGHT].ctrl.speed;
 #endif
