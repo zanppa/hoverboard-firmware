@@ -80,7 +80,7 @@ void TIM8_UP_IRQHandler() {
     // Update rotor position
     angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
 
-#if defined(LEFT_MOTOR_FOC)
+#if defined(LEFT_MOTOR_FOC) || defined(LEFT_MOTOR_SVM)
     // Calculate min and max angles in this sector
     // To prevent the modulator angle estimation from exceeding the sector
     motor_state[STATE_LEFT].ctrl.angle_min = angle;
@@ -154,7 +154,7 @@ void TIM8_UP_IRQHandler() {
     // Update rotor position
     angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
 
-#if defined(RIGHT_MOTOR_FOC)
+#if defined(RIGHT_MOTOR_FOC) || defined(RIGHT_MOTOR_SVM)
     // Calculate min and max angles in this sector
     // To prevent the modulator angle estimation from exceeding the sector
     motor_state[STATE_RIGHT].ctrl.angle_min = angle;
