@@ -346,21 +346,25 @@ void TIM3_IRQHandler(void)
 
 #if 0
   // Check if currents exceed overcurrent limits
-  // and trip one (TODO: or both?) motors
-  if(ia_l > OVERCURRENT_TRIP || -ia_l < -OVERCURRENT_TRIP ||
-     ib_l > OVERCURRENT_TRIP || -ib_l < -OVERCURRENT_TRIP ||
-     ic_l > OVERCURRENT_TRIP || -ic_l < -OVERCURRENT_TRIP) {
+  // and trip one both motors
+  if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
+     ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
+     ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
     do_fault(0x01 | 0x02);	// Trip both motors
     fault_bits |= FAULT_OVERCURRENT;
-    // TODO: Buzzer + led
+
+    buzzer_tone = 0x92A4;
+    buzzer_pattern = 0xC30C;
   }
 
-  if(ia_r > OVERCURRENT_TRIP || -ia_r < -OVERCURRENT_TRIP ||
-     ib_r > OVERCURRENT_TRIP || -ib_r < -OVERCURRENT_TRIP ||
-     ic_r > OVERCURRENT_TRIP || -ic_r < -OVERCURRENT_TRIP) {
+  if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
+     ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
+     ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
     do_fault(0x01 | 0x02);	// Trip both motors
     fault_bits |= FAULT_OVERCURRENT;
-    // TODO: Buzzer + led
+
+    buzzer_tone = 0x92A4;
+    buzzer_pattern = 0xC30C;
   }
 #endif
 
