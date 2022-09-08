@@ -44,6 +44,7 @@ extern volatile uint16_t rdson_offset[4];
 
 extern volatile uint8_t generic_adc_conv_done;
 extern volatile uint8_t status_bits;
+extern volatile uint8_t fault_bits;
 
 int main(void) {
   //uint16_t button_time = 0;
@@ -176,22 +177,39 @@ int main(void) {
 
     float v_battery = analog_meas.v_battery;
     v_battery = (v_battery + ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
-    //cfg.vars.v_battery = v_battery;
+    cfg.vars.v_battery = v_battery;
 
     float act_speed = motor_state[STATE_LEFT].act.speed;
     act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
-    //cfg.vars.speed_l = act_speed;
+    cfg.vars.speed_l = act_speed;
 
     act_speed = motor_state[STATE_RIGHT].act.speed;
     act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
-    //cfg.vars.speed_r = act_speed;
+    cfg.vars.speed_r = act_speed;
 
-    // Copy rdson measurement values to configbus
+
+    // Update rotor positions (sector)
+    cfg.vars.pos_l = motor_state[STATE_LEFT].act.sector;
+    cfg.vars.pos_r = motor_state[STATE_RIGHT].act.sector;
+
+
+    // Store analog measurement values to config bus
+    cfg.vars.temperature = analog_meas.temperature;
+    cfg.vars.aref1 = analog_meas.analog_ref_1;
+    cfg.vars.aref2 = analog_meas.analog_ref_2;
+    cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
+    cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
+    cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
+    cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
+    cfg.vars.fault_code = fault_bits;
+    cfg.vars.status_code = status_bits;
+
+
+    // Copy raw rdson measurement values to configbus
     cfg.vars.rdsonla = i_meas.i_lA;
     cfg.vars.rdsonlb = i_meas.i_lB;
     cfg.vars.rdsonrb = i_meas.i_rB;
     cfg.vars.rdsonrc = i_meas.i_rC;
-    cfg.vars.lboff = rdson_offset[0];
   }
 }
 

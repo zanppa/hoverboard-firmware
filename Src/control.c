@@ -263,7 +263,6 @@ static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter
 //called 64000000/64000 = 1000 times per second
 void TIM3_IRQHandler(void)
 {
-  uint8_t sector_l, sector_r;
   int16_t speed_l, speed_r;
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
@@ -292,10 +291,6 @@ void TIM3_IRQHandler(void)
 #endif
 
   CTRL_TIM->SR = 0;
-
-  // Update sector information (motor position) from modulator
-  sector_l = motor_state[STATE_LEFT].act.sector;
-  sector_r = motor_state[STATE_RIGHT].act.sector;
 
   // Update motor speed from latest period information
   // Left motor
@@ -433,8 +428,6 @@ void TIM3_IRQHandler(void)
 #if defined(REFERENCE_MODBUS)
   ref_l = cfg.vars.setpoint_l;
   ref_r = cfg.vars.setpoint_r;
-  //  ref_l = cfg.vars.spdref_l;
-  // ref_r = cfg.vars.spdref_r;
 #elif defined(REFERENCE_ADC)
 #if defined(REFERENCE_ADC_DIFF)
   // This is simple and results in -8192 ... 8191 range
@@ -531,10 +524,6 @@ void TIM3_IRQHandler(void)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
   iq_error = torque_ref - iq;
 
-  // Debug: Store id and iq to config bus
-  //cfg.vars.r_id = id;
-  //cfg.vars.r_iq = iq;
-
   // Run the PI controllers
   // First for D axis current which sets the angle advance
   //id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
@@ -556,7 +545,6 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
   // Apply limiter
-  //ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_l);
   ref_amplitude = ABS(ref_amplitude);
   ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_l);
 
@@ -567,7 +555,7 @@ void TIM3_IRQHandler(void)
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-  torque_ref = ref_amplitude; // TODO:DEBUG
+  torque_ref = ref_amplitude; // For debugging purposes only
 
 #elif defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
   // TODO: U/f control for SVM without FOC?
@@ -672,9 +660,6 @@ void TIM3_IRQHandler(void)
   } else status_bits &= ~STATUS_OVERSPEED_WARN_R;
 
 
-  //torque_ref = motor_state[STATE_RIGHT].ref.value;
-  //cfg.vars.t_req_r = torque_ref;
-
 
 #if defined(RIGHT_MOTOR_FOC)
   // Get the interpolated position and measured currents from exactly same time instants
@@ -692,10 +677,6 @@ void TIM3_IRQHandler(void)
   id_old_r = id;
   iq_old_r = iq;
 
-
-  // Debug: Store id and iq to config bus
-  cfg.vars.r_id = id;
-  cfg.vars.r_iq = iq;
 
   id_error = id;    // TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_r - iq;
@@ -726,7 +707,6 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
   // Apply limiter
-  //ref_amplitude = CLAMP(ref_amplitude, 0, cfg.vars.max_pwm_r);
   ref_amplitude = ABS(ref_amplitude);
   ref_amplitude = MIN(ref_amplitude,cfg.vars.max_pwm_r);
 
@@ -794,8 +774,8 @@ void TIM3_IRQHandler(void)
 
 #endif // RIGHT_MOTOR_BLDC
 
-
   cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
+
 
 
   // Update buzzer
@@ -805,7 +785,7 @@ void TIM3_IRQHandler(void)
   }
   else
   {
-    // TODO: Debug
+    // Modbus can be used to override buzzer to test notes & patterns
     if(cfg.vars.buzzer_tone != 0 && cfg.vars.buzzer_pattern != 0) {
       buzzer_pattern = cfg.vars.buzzer_pattern;
       buzzer_tone = cfg.vars.buzzer_tone;
@@ -841,6 +821,7 @@ void TIM3_IRQHandler(void)
   motor_state[STATE_RIGHT].act.current[1] = i_meas.i_rB;
   motor_state[STATE_RIGHT].act.current[2] = i_meas.i_rC;
 
+
   // Update controller tuning parameters
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
   kp_iq = cfg.vars.kp_iq;
@@ -849,27 +830,6 @@ void TIM3_IRQHandler(void)
   ki_id = cfg.vars.ki_id;
 #endif
 
-  // Update config array
-  cfg.vars.pos_l = sector_l;
-  cfg.vars.pos_r = sector_r;
-  cfg.vars.speed_l = speed_l;
-  cfg.vars.speed_r = speed_r;
-  cfg.vars.r_angle = motor_state[STATE_RIGHT].act.angle;
-
-
-  // Copy ADC values to cfg array
-  // TODO: Move to main?
-  cfg.vars.vbat = analog_meas.v_battery;
-  cfg.vars.vsw = analog_meas.v_switch;
-  cfg.vars.temperature = analog_meas.temperature;
-  cfg.vars.aref1 = analog_meas.analog_ref_1;
-  cfg.vars.aref2 = analog_meas.analog_ref_2;
-  cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
-  cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
-  cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
-  cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
-  cfg.vars.ref_scale = voltage_scale;
-  cfg.vars.fault_code = fault_bits;
 
 #if defined(LEFT_SENSOR_SCOPE) || defined(RIGHT_SENSOR_SCOPE)
   // Scope, send every other tick (start bits & 2 stop bits included)

@@ -142,10 +142,6 @@ void CfgInit()
   if(cfg.vars.max_pwm_l == 0)
       cfg.vars.max_pwm_l = 200;
 
-  // Debug: non-zero default speed refs
-  cfg.vars.spdref_l = 0;
-  cfg.vars.spdref_r = 0;
-
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
   cfg.vars.buzzer = 1;
@@ -155,7 +151,7 @@ void CfgInit()
   cfg.vars.pwm_r = 0;
   cfg.vars.pos_l = 0;
   cfg.vars.pos_r = 0;
-  cfg.vars.vbat = 0;
+  cfg.vars.v_battery = 0;
 
   cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_iq = 328; 	// 0.08 * FIXED_ONE;
