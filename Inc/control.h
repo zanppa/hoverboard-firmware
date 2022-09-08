@@ -25,7 +25,8 @@
 #define STATUS_FIELD_WEAK		0x08	// One or both motors run at field weakening
 #define STATUS_OVERVOLTAGE_WARN	0x10	// DC voltage is above the overvoltage warning level
 #define STATUS_UNDERVOLTAGE_WARN	0x20 // DC voltage is below the undervoltage warning level
-#define STATUS_OVERSPEED_LIMIT	0x40	// Speed is above the overspeed limit, torque reduced
+#define STATUS_OVERSPEED_WARN_L	0x40	// Left motor overspeed warning, torque may be limited
+#define STATUS_OVERSPEED_WARN_R	0x80	// Left motor overspeed warning, torque may be limited
 
 
 void led_update(void);

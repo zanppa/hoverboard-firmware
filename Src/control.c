@@ -493,11 +493,16 @@ void TIM3_IRQHandler(void)
   if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
     speed_error = ABS(speed_l) - OVERSPEED_LIMIT;
     speed_error *= OVERSPEED_LIM_GAIN;
+    speed_error /= 5; // TODO: Debug
     speed_error = CLAMP(speed_error, 0, torque_ref);
 
     if(speed_l > 0 && torque_ref > 0) torque_ref -= speed_error;
     else if(speed_l < 0 && torque_ref < 0) torque_ref += speed_error;
-  }
+
+    status_bits |= STATUS_OVERSPEED_WARN_L;
+    buzzer_pattern = 0x9120;
+    buzzer_tone = 0xAA88;
+  } else status_bits &= ~STATUS_OVERSPEED_WARN_L;
 
   //torque_ref = motor_state[STATE_LEFT].ref.value;
 
@@ -651,11 +656,17 @@ void TIM3_IRQHandler(void)
   if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
     speed_error = ABS(speed_r) - OVERSPEED_LIMIT;
     speed_error *= OVERSPEED_LIM_GAIN;
+    speed_error /= 5; // TODO: Debug
     speed_error = CLAMP(speed_error, 0, torque_ref);
 
     if(speed_r > 0 && torque_ref > 0) torque_ref -= speed_error;
     else if(speed_r < 0 && torque_ref < 0) torque_ref += speed_error;
-  }
+
+    status_bits |= STATUS_OVERSPEED_WARN_R;
+    buzzer_pattern = 0x9120;
+    buzzer_tone = 0xAA88;
+  } else status_bits &= ~STATUS_OVERSPEED_WARN_R;
+
 
   //torque_ref = motor_state[STATE_RIGHT].ref.value;
   //cfg.vars.t_req_r = torque_ref;
@@ -854,6 +865,7 @@ void TIM3_IRQHandler(void)
   cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
   cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
   cfg.vars.ref_scale = voltage_scale;
+  cfg.vars.fault_code = fault_bits;
 
 #if defined(LEFT_SENSOR_SCOPE) || defined(RIGHT_SENSOR_SCOPE)
   // Scope, send every other tick (start bits & 2 stop bits included)
