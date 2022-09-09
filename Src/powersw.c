@@ -63,14 +63,13 @@ void power_tune(uint8_t tune)
 
 // Disable motors, release power latch and wait forever
 void power_off(void) {
-
   disable_motors(0x01 | 0x02);
 
   // Release the power latch
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 0);
 
-  // TODO: Beep or timeout or something, if the
-  // power button is pressed, will not power
+  // Play a turn-off tune (if buzzer is enabled), if the
+  // power button is kept pressed, board will not power
   // down but just hang there doing nothing
   power_tune(0);
 
@@ -80,8 +79,10 @@ void power_off(void) {
 
 // Check that the power button is pressed in correct sequence for power on,
 // power off if not
+// This function is blocking
 void powersw_on_sequence(void) {
   uint16_t sw_timer;
+  uint8_t ok = 0;
 
   // Power button must be pressed twice and held for power on
   // Wait until power button reaches threshold, if not then when button
@@ -90,29 +91,28 @@ void powersw_on_sequence(void) {
   // Wait until power button is released
   while(analog_meas.v_switch > ADC_POWERSW_THRESHOLD);
 
-  // Release timer
-  sw_timer = POWERSW_OFF_TIMER;
-  while(sw_timer) {
-    if(analog_meas.v_switch > ADC_POWERSW_THRESHOLD)
-      break;
 
-    while(!generic_adc_conv_done);
-    generic_adc_conv_done = 0;	// Can be reset here because this function blocks
-    sw_timer--;
+  // Release timer
+  sw_timer = control_tick;
+  while((uint16_t)(control_tick - sw_timer) < POWERSW_OFF_TIMER) {
+    if(analog_meas.v_switch > ADC_POWERSW_THRESHOLD) {
+      ok = 1; // Button pressed before timeout
+      break;
+    }
   }
-  if(!sw_timer)     // Button was not re-pressed soon enough
+  if(!ok)     // Button was not re-pressed soon enough
     power_off();
 
   // Button has to be pressed long enough the second time
-  sw_timer = POWERSW_ON_TIMER;
-  while(sw_timer) {
-    if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD)
+  sw_timer = control_tick;
+  while((uint16_t)(control_tick - sw_timer) < POWERSW_ON_TIMER) {
+    if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
+      // Button released too early
+      ok = 0;
       break;
-    while(!generic_adc_conv_done);
-    generic_adc_conv_done = 0;	// Can be reset here because this function blocks
-    sw_timer--;
+    }
   }
-  if(sw_timer)  // Released too early
+  if(!ok)  // Released too early
     power_off();
 
   // Sequence was done correctly, can power up
