@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "control.h"
 #include "math.h"
 
+#define TONE_LENGTH 200
+
 // Power switch voltage is an analog measurement
 extern volatile adc_buf_t analog_meas;
 extern volatile uint8_t generic_adc_conv_done;
@@ -47,15 +49,15 @@ void power_tune(uint8_t tune)
 
   sound_timer = control_tick;
   set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF);
-  while(control_tick - sound_timer < 200); // Wait half a second
+  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 
   sound_timer = control_tick;
   set_buzzer(0x8888, 0xFFFF);
-  while(control_tick - sound_timer < 200); // Wait half a second
+  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 
   sound_timer = control_tick;
   set_buzzer(tune ? 0x8080 : 0xAAAA, 0xFFFF);
-  while(control_tick - sound_timer < 200); // Wait half a second
+  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 }
 
 
@@ -198,14 +200,10 @@ static uint16_t powersw_reset_timer = 0;
 
 uint8_t powersw_fault_reset(void) {
   if(generic_adc_conv_done && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
-    // Power button pressed
-    if(!powersw_reset_timer) {
-      powersw_reset_timer = POWERSW_FAULT_RESET;
-    } else {
-      powersw_reset_timer--;
-      if(!powersw_reset_timer)  // Timer ran out while button was pressed
-        return 1;
-    }
+    if((uint16_t)(control_tick - powersw_reset_timer) > POWERSW_FAULT_RESET)
+      return 1; // Power button pressed long enough for reset
+  } else {
+    powersw_reset_timer = control_tick;
   }
   return 0;
 }
