@@ -104,7 +104,7 @@ volatile uint16_t buzzer_pattern = 0xFF00;	// Beep pattern, 1 bit is 64 ms (8b o
 volatile uint16_t led_pattern = 0xFF00;		// Default blinking pattern
 
 // Non-volatile variables that are ONLY used in the control timer interrupt
-static uint16_t control_tick = 0;
+uint16_t control_tick = 0;
 static int16_t speed_tick[2] = {0};
 
 static uint8_t buzzer_tone_tick = 0;
@@ -251,6 +251,13 @@ void initialize_control_state(void) {
   motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
   __enable_irq();
 
+}
+
+// Helper to set buzzer from outside functions
+void set_buzzer(uint16_t tone, uint16_t pattern)
+{
+  buzzer_tone = tone;
+  buzzer_pattern = pattern;
 }
 
 

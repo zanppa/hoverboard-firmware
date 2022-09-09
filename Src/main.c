@@ -111,6 +111,9 @@ int main(void) {
   // Wait until we're ready to start
   while(!(status_bits && STATUS_READY));
 
+  // Play a turn-on tune when we're ready to start
+  power_tune(1);
+
   // Enable both motor drivers
   enable_motors(0x01 | 0x02);
 
@@ -136,9 +139,6 @@ int main(void) {
 #if defined(LEFT_SENSOR_MODBUS) || defined(RIGHT_SENSOR_MODBUS)
   UARTRxEnable(CFG_BUS_UART, 1);
 #endif
-
-  // TODO: Debug
-  //disable_motors(0x01 | 0x02);
 
 
   while(1)

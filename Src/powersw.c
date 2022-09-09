@@ -25,6 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern volatile adc_buf_t analog_meas;
 extern volatile uint8_t generic_adc_conv_done;
 
+// Control tick is used to make power on/off sounds
+extern uint16_t control_tick;
+
 
 #if defined(POWER_BUTTON_ESTOP)
 static uint8_t powersw_samples = 0;
@@ -35,8 +38,30 @@ extern volatile motor_state_t motor_state[2];
 #endif
 
 
+// Make a sequence of tones to be played during power on and off
+// A three tone high to low melody during power off and low to high during power on
+// tune = 0 --> power off tune, 1 (or nonzero) --> power on tune
+void power_tune(uint8_t tune)
+{
+  uint16_t sound_timer;
+
+  sound_timer = control_tick;
+  set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF);
+  while(control_tick - sound_timer < 200); // Wait half a second
+
+  sound_timer = control_tick;
+  set_buzzer(0x8888, 0xFFFF);
+  while(control_tick - sound_timer < 200); // Wait half a second
+
+  sound_timer = control_tick;
+  set_buzzer(tune ? 0x8080 : 0xAAAA, 0xFFFF);
+  while(control_tick - sound_timer < 200); // Wait half a second
+}
+
+
 // Disable motors, release power latch and wait forever
 void power_off(void) {
+
   disable_motors(0x01 | 0x02);
 
   // Release the power latch
@@ -45,6 +70,7 @@ void power_off(void) {
   // TODO: Beep or timeout or something, if the
   // power button is pressed, will not power
   // down but just hang there doing nothing
+  power_tune(0);
 
   while(1);
 }
@@ -72,7 +98,7 @@ void powersw_on_sequence(void) {
     generic_adc_conv_done = 0;	// Can be reset here because this function blocks
     sw_timer--;
   }
-  if(!sw_timer)     // Button was not re-pressed sono enough
+  if(!sw_timer)     // Button was not re-pressed soon enough
     power_off();
 
   // Button has to be pressed long enough the second time

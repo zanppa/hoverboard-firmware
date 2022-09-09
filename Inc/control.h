@@ -45,5 +45,6 @@ void initialize_control_state(void);
 uint8_t read_left_hall(void);
 uint8_t read_right_hall(void);
 
+void set_buzzer(uint16_t tone, uint16_t pattern);
 
 #endif /* INC_CONTROL_H_ */
