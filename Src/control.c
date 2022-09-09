@@ -251,6 +251,18 @@ void initialize_control_state(void) {
   motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
   __enable_irq();
 
+
+  // Reset integrators
+  speed_error_int_l = 0;
+  speed_error_int_r = 0;
+#ifdef LEFT_MOTOR_FOC
+  id_error_int_l = 0;
+  iq_error_int_l = 0;
+#endif // LEFT_MOTOR_FOC
+#ifdef RIGHT_MOTOR_FOC
+  id_error_int_r = 0;
+  iq_error_int_r = 0;
+#endif // RIGHT_MOTOR_FOC
 }
 
 // Helper to set buzzer from outside functions

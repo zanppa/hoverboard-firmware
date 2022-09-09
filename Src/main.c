@@ -160,8 +160,14 @@ int main(void) {
     powersw_off_sequence();
 #endif
 
+#if 0 // TODO: Disabled for now
     // Check if power button was pressed long for fault reset
-    //if(powersw_fault_reset()) clear_fault(0x01 | 0x02);		// Reset all faults
+    if(powersw_fault_reset()) {
+      initialize_control_state();
+      clear_fault(0x01 | 0x02);		// Reset all faults
+      enable_motors(0x01 | 0x02);
+    }
+#endif
 
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
