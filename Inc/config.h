@@ -24,7 +24,7 @@
 #define MOTOR_VOLTS				18.0 //15.0	// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
 #define MOTOR_SPEED				600.0	// Nominal speed rpm
 #define MOTOR_POLEPAIRS			15.0	// Polepairs, mechanical speed to electrical speed (15 electrical rounds/1 mechanical round)
-#define MOTOR_CUR				5.0		// TODO: [A] at rated load / phase (RMS)
+#define MOTOR_CUR				10.0	// [A] at rated load, phase (RMS)
 #define MOTOR_CIRCUMFERENCE		0.534	// meters, motor outside circumference
 
 #define MOTOR_MIN_VOLTS			0.5		// Volts to apply at zero and low speed, to get the motor started (IR compensation)
@@ -50,7 +50,6 @@
 #define I_MEAS_RDSON
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
-// TODO: This needs to be enabled in FOC mode automatically
 //#define FOC_HALL_UPDATE
 
 // Use field weakening region in BLDC mode
@@ -79,8 +78,8 @@
 #define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
 #define OVERSPEED_TRIP		(0.5*FIXED_ONE)		// Compared to rated rotation speed
-#define OVERSPEED_LIMIT		(0.4*FIXED_ONE)		// Start limiting torque above this, also speed control max
-#define OVERSPEED_LIM_GAIN	20					// Gain of how much torque is removed above the overspeed limit
+#define OVERSPEED_LIMIT		(0.3*FIXED_ONE)		// Start limiting torque above this, also speed control max
+#define OVERSPEED_LIM_GAIN	0					// Gain of how much torque is removed above the overspeed limit // TODO: Disabled due to instability
 
 
 // =============================
@@ -134,7 +133,8 @@
 // Mosfet Rds,on, e.g. equivalent resistance in on-state
 // This is the equivalent value taking into account the voltage measurement
 // gain of about 2.5 ... 3 => if Rdson is about 0.0056 ohm, the value is 0.0056 * 3 = 0.017
-#define RDSON		0.017
+// Increased a bit because seems to be more accurate that way
+#define RDSON		0.019
 
 
 // =============================
