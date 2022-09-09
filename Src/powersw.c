@@ -31,11 +31,9 @@ extern volatile uint8_t generic_adc_conv_done;
 extern uint16_t control_tick;
 
 
-#if defined(POWER_BUTTON_ESTOP)
-static uint8_t powersw_samples = 0;
-#elif defined(POWER_BUTTON_NORMAL)
-static uint8_t powersw_state = 0;
 static uint16_t powersw_timer = 0;
+#if defined(POWER_BUTTON_NORMAL)
+static uint8_t powersw_state = 0;
 extern volatile motor_state_t motor_state[2];
 #endif
 
@@ -123,54 +121,56 @@ void powersw_on_sequence(void) {
 // sequence for powering of the system
 void powersw_off_sequence(void) {
   // Check power button presses
-  if(generic_adc_conv_done) {
 
 #if defined(POWER_BUTTON_NORMAL)
-    // Same routine as for power on, needs 2 pressed
-    // and the latter is held for long time, and
-    // speed must be below threshold
-    if(powersw_state == 0 && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
-      // Initial button press
-      powersw_state = 1;
-      powersw_timer = POWERSW_OFF_TIMER;
+  // Same routine as for power on, needs 2 pressed
+  // and the latter is held for long time, and
+  // speed must be below threshold
+  if(powersw_state == 0 && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
+    // Initial button press
+    powersw_state = 1;
+    powersw_timer = control_tick; //POWERSW_OFF_TIMER;
 
-    } else if(powersw_state == 1 && powersw_timer && analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
+  } else if(powersw_state == 1) {
+     if((uint16_t)(control_tick - powersw_timer) > POWERSW_OFF_TIMER) {
+       // Reset sequence, button was kept pressed too long
+       powersw_state = 0;
+     } else if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
       // Button must be released shortly
       powersw_state = 2;
-      powersw_timer = POWERSW_OFF_TIMER;
+      powersw_timer = control_tick; //POWERSW_OFF_TIMER;
+    }
 
-    } else if(powersw_state == 2 && powersw_timer && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
+  } else if(powersw_state == 2) {
+    if((uint16_t)(control_tick - powersw_timer) > POWERSW_OFF_TIMER) {
+       // Reset sequence, button was not pressed quickly enough
+       powersw_state = 0;
+    } else if(analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
       // Button was re-pressed shortly again
       powersw_state = 3;
-      powersw_timer = POWERSW_ON_TIMER;
+      powersw_timer = control_tick; //POWERSW_ON_TIMER;
+    }
 
-    } else if(powersw_state == 3 && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
-      if(!powersw_timer) {
-        // Power off if speed is below limit
-        if(ABS(motor_state[STATE_LEFT].act.speed) < POWEROFF_SPEED_LIMIT && ABS(motor_state[STATE_RIGHT].act.speed) < POWEROFF_SPEED_LIMIT) {
-          power_off();
-        } else {
-          // TODO: Beep?
-          powersw_state = 0;
-          powersw_timer = 0;
-        }
+  } else if(powersw_state == 3) {
+    if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
+       // Reset sequence, button was released too early
+       powersw_state = 0;
+    } else if((uint16_t)(control_tick - powersw_timer) > POWERSW_ON_TIMER) {
+      // Button was kept pressed long enough
+      // Power off if speed is below limit
+      if(ABS(motor_state[STATE_LEFT].act.speed) < POWEROFF_SPEED_LIMIT && ABS(motor_state[STATE_RIGHT].act.speed) < POWEROFF_SPEED_LIMIT) {
+        power_off();
+      } else {
+        // Speed was too high, cannot turn off while running!
+        // TODO: Beep or some other indication of error?
+        powersw_state = 0;
       }
-
-    } else {
-      // Sequence failed, return to normal
-      powersw_state = 0;
-      powersw_timer = 0;
     }
 
-    // If timer has run out, return to normal
-    // Note that the final button press where the timer must
-    // run out was aleady handled above
-    if(!powersw_timer) {
-      powersw_state = 0;
-    } else {
-      powersw_timer--;
-    }
-
+  } else {
+    // Sequence failed, return to normal
+    powersw_state = 0;
+  }
 
 #elif defined(POWER_BUTTON_ESTOP)
     // In e-stop mode, when the button is released
@@ -179,19 +179,15 @@ void powersw_off_sequence(void) {
 
     if(analog_meas.v_switch < ADC_POWERSW_THRESHOLD) {
       // Power button released
-      powersw_samples++;
+      if((uint16_t)(control_tick - powersw_timer) > POWERSW_ESTOP_SAMPLES) {
+        // Emergency shutdown (or normal in some cases)
+        disable_motors(0x01 | 0x02);
+        power_off();
+      }
     } else {
-      powersw_samples = 0;
-    }
-
-    if(powersw_samples > POWERSW_ESTOP_SAMPLES) {
-      // Emergency shutdown (or normal in some cases)
-      disable_motors(0x01 | 0x02);
-      power_off();
+      powersw_timer = control_tick;
     }
 #endif
-  }
-
 }
 
 
