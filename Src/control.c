@@ -481,7 +481,7 @@ void TIM3_IRQHandler(void)
   ref_r = (ref_r - 4096) * 2;
 #elif defined(REFERENCE_ADC_SINGLE)
   ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
-  ref_r = ref_l
+  ref_r = ref_l;
 #else // REFERENCE_ADC_SINGLE
   // ADC output is 0...4095, scale it to -4096 ... 4095
   // TODO: Add some configuration (offset, gain, deadband) to these?
@@ -708,7 +708,7 @@ void TIM3_IRQHandler(void)
   }
 
   // Limit torque reference
-  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_l, cfg.vars.max_tref_l);
+  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_r, cfg.vars.max_tref_r);
 
 
   // Torque reference limitation above overspeed
