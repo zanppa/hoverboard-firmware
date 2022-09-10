@@ -97,8 +97,9 @@ volatile motor_state_t motor_state[2] = {0};
 extern volatile i_meas_t i_meas;
 
 // Buzzer tone control
-volatile uint16_t buzzer_tone = 0x0; // No tone. This defines the tone(s) to play. 1 bit is 1 ms.
-volatile uint16_t buzzer_pattern = 0xFF00;	// Beep pattern, 1 bit is 64 ms (8b on 8b off is about 1 Hz beep)
+uint16_t buzzer_tone = 0x0; // No tone. This defines the tone(s) to play. 1 bit is 1 ms.
+uint16_t buzzer_pattern = 0xFF00;	// Beep pattern, 1 bit is 64 ms (8b on 8b off is about 1 Hz beep)
+uint8_t buzzer_custom = 0;
 
 // LED blinking pattern control
 volatile uint16_t led_pattern = 0xFF00;		// Default blinking pattern
@@ -266,10 +267,11 @@ void initialize_control_state(void) {
 }
 
 // Helper to set buzzer from outside functions
-void set_buzzer(uint16_t tone, uint16_t pattern)
+void set_buzzer(uint16_t tone, uint16_t pattern, uint8_t enable)
 {
   buzzer_tone = tone;
   buzzer_pattern = pattern;
+  buzzer_custom = enable;
 }
 
 
@@ -452,12 +454,10 @@ void TIM3_IRQHandler(void)
     status_bits &= ~(STATUS_OVERVOLTAGE_WARN | STATUS_UNDERVOLTAGE_WARN);
 
     // Clear buzzer only if no faults are active
-#if 0 // TODO: Remove until I figure a better way to clear this...
-    if(!fault_bits) {
+    if(!fault_bits && !buzzer_custom) {
       buzzer_tone = 0;
       buzzer_pattern = 0;
     }
-#endif
 
     // Check that filtered DC link voltage is high enough and indicate ready state
     if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)

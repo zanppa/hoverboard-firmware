@@ -45,19 +45,19 @@ void power_tune(uint8_t tune)
 {
   uint16_t sound_timer;
 
-  set_buzzer(tune ? 0x8080 : 0xAAAA, 0xFFFF);
+  set_buzzer(tune ? 0x8080 : 0xAAAA, 0xFFFF, 1);
   sound_timer = control_tick;
   while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 
-  set_buzzer(0x8888, 0xFFFF);
+  set_buzzer(0x8888, 0xFFFF, 1);
   sound_timer = control_tick;
   while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 
-  set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF);
+  set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF, 1);
   sound_timer = control_tick;
   while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
 
-  set_buzzer(0, 0); // Off
+  set_buzzer(0, 0, 0); // Off
 }
 
 
