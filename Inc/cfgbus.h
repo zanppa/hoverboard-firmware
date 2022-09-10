@@ -47,8 +47,8 @@
 	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) /* 28 */ \
 	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) /* 29 */ \
 	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) /* 30 */ \
-	_ENTRY( t_req_r        , int16_t    , _I16     , false     , "R torque request"  ) /* 31 */ \
-	_ENTRY( t_req_l        , int16_t    , _I16     , false     , "L torque request"  ) /* 32 */ \
+	_ENTRY( t_req_l        , int16_t    , _I16     , false     , "R torque request"  ) /* 31 */ \
+	_ENTRY( t_req_r        , int16_t    , _I16     , false     , "L torque request"  ) /* 32 */ \
 	_ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) /* 33 */ \
 	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) /* 34 */ \
 	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) /* 35 */ \
