@@ -70,8 +70,10 @@ int main(void) {
   SystemClock_Config();
 
   // Initialize control modes
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // BLDC
-  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_SPEED; // SVM
+  //motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // BLDC
+  //motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // SVM
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;  // BLDC
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // BLDC
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
@@ -113,6 +115,17 @@ int main(void) {
   while(!(status_bits && STATUS_READY));
 
 
+  // Enable both motor drivers
+  enable_motors(0x01 | 0x02);
+
+#ifdef I_MEAS_RDSON
+  // Rds,on measurement must be calibrated when modulator is running
+  // without load (0 reference)
+  ADC1_calibrate();
+#endif
+
+
+
   // Initialize UARTs
 #if defined(LEFT_SENSOR_MODBUS) || defined(LEFT_SENSOR_SCOPE)
   UART_Init(0, 1);	// Use UART3 for modbus
@@ -131,16 +144,8 @@ int main(void) {
 
 
   // Play a turn-on tune when we're ready to start
+  // Play after config bus enable so buzzer enable status is known
   power_tune(1);
-
-  // Enable both motor drivers
-  enable_motors(0x01 | 0x02);
-
-#ifdef I_MEAS_RDSON
-  // Rds,on measurement must be calibrated when modulator is running
-  // without load (0 reference)
-  ADC1_calibrate();
-#endif
 
 
   while(1)
@@ -160,14 +165,12 @@ int main(void) {
     // Check if user requested power off
     powersw_off_sequence();
 
-#if 0 // TODO: Disabled for now
     // Check if power button was pressed long for fault reset
     if(powersw_fault_reset()) {
       initialize_control_state();
       clear_fault(0x01 | 0x02);		// Reset all faults
       enable_motors(0x01 | 0x02);
     }
-#endif
 
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
