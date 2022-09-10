@@ -296,6 +296,8 @@ void TIM3_IRQHandler(void)
   int16_t ref_ramp_diff;
   int16_t speed_error;
   int16_t torque_ref;
+  int16_t torque_lim_speed = INT16_MAX; // Limits motoring (speeding up) torque only, not braking
+  int16_t torque_lim_volt = INT16_MAX; // Positive --> motoring (speeding up) limit, negative --> generating (braking) limit
   uint8_t ctrl_mode;
   uint16_t v_bat;
 
@@ -407,7 +409,15 @@ void TIM3_IRQHandler(void)
 
   } else if(battery_volt_pu > ov_warn_pu) {
     status_bits |= STATUS_OVERVOLTAGE_WARN;
-    // TODO: LED Blink
+
+    // Torque limitation
+    // At low voltage this results in INT16_MIN (negative), then goes to zero when voltage is increased
+    // i.e. allow braking current (that charges battery) only when voltage is low enough
+    torque_lim_volt = CLAMP(battery_volt_pu - ov_warn_pu, (INT16_MIN + OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN,
+                            (INT16_MAX - OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN) * OVERVOLTAGE_LIM_GAIN;
+    torque_lim_volt = CLAMP(torque_lim_volt, INT16_MIN + OVERVOLTAGE_LIM_OFFSET, OVERVOLTAGE_LIM_OFFSET) - OVERVOLTAGE_LIM_OFFSET;
+
+    // TODO: LED Blink?
 
     buzzer_tone = 0xCCCC;
     buzzer_pattern = 0xAAAA;
@@ -421,6 +431,14 @@ void TIM3_IRQHandler(void)
 
   } else if(battery_volt_pu < uv_warn_pu) {
     status_bits |= STATUS_UNDERVOLTAGE_WARN;
+
+    // Torque limitation
+    // At high voltage this results in INT16_MAX (positive), then goes to zero when voltage is increased
+    // i.e. allows motoring (battery discharging) current only at high enough voltage
+    torque_lim_volt = CLAMP(ov_warn_pu - battery_volt_pu, (INT16_MIN + OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN,
+                            (INT16_MAX - OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN) * OVERVOLTAGE_LIM_GAIN;
+    torque_lim_volt = OVERVOLTAGE_LIM_OFFSET - CLAMP(torque_lim_volt, INT16_MIN + OVERVOLTAGE_LIM_OFFSET+1, OVERVOLTAGE_LIM_OFFSET);
+
     // TODO: LED blink
 
     buzzer_tone = 0xF0F0;
@@ -507,18 +525,35 @@ void TIM3_IRQHandler(void)
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
   if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
-    speed_error = ABS(speed_l) - OVERSPEED_LIMIT;
-    speed_error *= OVERSPEED_LIM_GAIN;
-    speed_error /= 5; // TODO: Debug
-    speed_error = CLAMP(speed_error, 0, torque_ref);
-
-    if(speed_l > 0 && torque_ref > 0) torque_ref -= speed_error;
-    else if(speed_l < 0 && torque_ref < 0) torque_ref += speed_error;
+#if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
+    torque_lim_speed = CLAMP(ABS(speed_l) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
+                       (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+    torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
+#endif
 
     status_bits |= STATUS_OVERSPEED_WARN_L;
     buzzer_pattern = 0x9120;
     buzzer_tone = 0xAA88;
   } else status_bits &= ~STATUS_OVERSPEED_WARN_L;
+
+
+  // Apply torque limitations
+  if(speed_l > 0 && torque_ref > 0) {
+    // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
+    torque_ref = MIN(torque_ref, torque_lim_speed);
+    torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
+  } else if(speed_l < 0 && torque_ref < 0) {
+    // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
+    torque_ref = MAX(torque_ref, -torque_lim_speed);
+    torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
+  } else {
+    // Braking --> overvoltage only (negative)
+    if(torque_ref > 0)
+      torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
+    else
+      torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
+  }
+
 
   //torque_ref = motor_state[STATE_LEFT].ref.value;
 
@@ -665,19 +700,34 @@ void TIM3_IRQHandler(void)
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
   if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
-    speed_error = ABS(speed_r) - OVERSPEED_LIMIT;
-    speed_error *= OVERSPEED_LIM_GAIN;
-    speed_error /= 5; // TODO: Debug
-    speed_error = CLAMP(speed_error, 0, torque_ref);
-
-    if(speed_r > 0 && torque_ref > 0) torque_ref -= speed_error;
-    else if(speed_r < 0 && torque_ref < 0) torque_ref += speed_error;
+#if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
+    torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
+                       (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+    torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
+#endif
 
     status_bits |= STATUS_OVERSPEED_WARN_R;
     buzzer_pattern = 0x9120;
     buzzer_tone = 0xAA88;
   } else status_bits &= ~STATUS_OVERSPEED_WARN_R;
 
+
+  // Apply torque limitations
+  if(speed_r > 0 && torque_ref > 0) {
+    // Positive motoring direction --> undervoltage & overspeed limitations
+    torque_ref = MIN(torque_ref, torque_lim_speed);
+    torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
+  } else if(speed_r < 0 && torque_ref < 0) {
+    // Negative motoring direction --> undervoltage & overspeed limitations
+    torque_ref = MAX(torque_ref, -torque_lim_speed);
+    torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
+  } else {
+    // Braking --> overvoltage only
+    if(torque_ref > 0)
+      torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
+    else
+      torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
+  }
 
 
 #if defined(RIGHT_MOTOR_FOC)

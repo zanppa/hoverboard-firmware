@@ -75,11 +75,21 @@
 #define UNDERVOLTAGE_WARN	22		// Undervoltage warning level in volts
 #define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
 
+#define OVERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
+#define OVERVOLTAGE_LIM_GAIN	5	// Gain of braking torque limitation in per-units when voltage > overvoltage warn
+
+#define UNDERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
+#define UNDERVOLTAGE_LIM_GAIN	5	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn
+
+
 #define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
 #define OVERSPEED_TRIP		(0.5*FIXED_ONE)		// Compared to rated rotation speed
+
 #define OVERSPEED_LIMIT		(0.3*FIXED_ONE)		// Start limiting torque above this, also speed control max
-#define OVERSPEED_LIM_GAIN	0					// Gain of how much torque is removed above the overspeed limit // TODO: Disabled due to instability
+#define OVERSPEED_LIM_GAIN	1					// Gain of how much torque is removed above the overspeed limit
+#define OVERSPEED_LIM_OFFSET	(FIXED_ONE)
+
 
 
 // =============================
