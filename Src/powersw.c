@@ -28,7 +28,7 @@ extern volatile adc_buf_t analog_meas;
 extern volatile uint8_t generic_adc_conv_done;
 
 // Control tick is used to make power on/off sounds
-extern uint16_t control_tick;
+extern volatile uint16_t control_tick;
 
 
 static uint16_t powersw_timer = 0;
@@ -45,17 +45,19 @@ void power_tune(uint8_t tune)
 {
   uint16_t sound_timer;
 
-  sound_timer = control_tick;
-  set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF);
-  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
-
-  sound_timer = control_tick;
-  set_buzzer(0x8888, 0xFFFF);
-  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
-
-  sound_timer = control_tick;
   set_buzzer(tune ? 0x8080 : 0xAAAA, 0xFFFF);
+  sound_timer = control_tick;
   while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
+
+  set_buzzer(0x8888, 0xFFFF);
+  sound_timer = control_tick;
+  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
+
+  set_buzzer(tune ? 0xAAAA : 0x8080, 0xFFFF);
+  sound_timer = control_tick;
+  while((uint16_t)(control_tick - sound_timer) < TONE_LENGTH);
+
+  set_buzzer(0, 0); // Off
 }
 
 
@@ -63,13 +65,13 @@ void power_tune(uint8_t tune)
 void power_off(void) {
   disable_motors(0x01 | 0x02);
 
-  // Release the power latch
-  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 0);
-
   // Play a turn-off tune (if buzzer is enabled), if the
   // power button is kept pressed, board will not power
   // down but just hang there doing nothing
   power_tune(0);
+
+  // Release the power latch
+  HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 0);
 
   while(1);
 }

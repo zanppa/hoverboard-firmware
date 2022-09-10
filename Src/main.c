@@ -103,25 +103,14 @@ int main(void) {
   // Initialize PWM timers
   MX_TIM_Init();
 
+
 #ifdef POWER_BUTTON_NORMAL
   // Check the power-up sequence
   powersw_on_sequence();
 #endif
 
-  // Wait until we're ready to start
+  // Wait until we're ready to start (continue forward)
   while(!(status_bits && STATUS_READY));
-
-  // Play a turn-on tune when we're ready to start
-  power_tune(1);
-
-  // Enable both motor drivers
-  enable_motors(0x01 | 0x02);
-
-#ifdef I_MEAS_RDSON
-  // Rds,on measurement must be calibrated when modulator is running
-  // without load (0 reference)
-  ADC1_calibrate();
-#endif
 
 
   // Initialize UARTs
@@ -141,6 +130,19 @@ int main(void) {
 #endif
 
 
+  // Play a turn-on tune when we're ready to start
+  power_tune(1);
+
+  // Enable both motor drivers
+  enable_motors(0x01 | 0x02);
+
+#ifdef I_MEAS_RDSON
+  // Rds,on measurement must be calibrated when modulator is running
+  // without load (0 reference)
+  ADC1_calibrate();
+#endif
+
+
   while(1)
   {
     //show user board is alive
@@ -155,10 +157,8 @@ int main(void) {
     mb_update();
 #endif
 
-#if 0
     // Check if user requested power off
     powersw_off_sequence();
-#endif
 
 #if 0 // TODO: Disabled for now
     // Check if power button was pressed long for fault reset
