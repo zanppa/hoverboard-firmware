@@ -18,55 +18,49 @@
 
 //USE _STRxx FOR STRING ENTRIES of size xx!!!
 //--------------------------------------------------------------------------------------------------
-//FORMAT  | var name       | entry type | cfg_type | writeable | name string         |
+//FORMAT  | var name       | entry type | cfg_type | writeable | name string         | Address
 //--------------------------------------------------------------------------------------------------
 #define CFG_ENTRIES(_ENTRY) \
-	_ENTRY( magic          , uint16_t   , _U16     , false     , "Magic Value"       ) \
-	_ENTRY( nr_entries     , uint16_t   , _U16     , false     , "Nr Entries"        ) \
-	_ENTRY( dev_name[12]   , char       , _STR12   , false     , "Device Name"       ) \
-	_ENTRY( err_code       , uint16_t   , _U16     , true      , "Error Code"        ) \
-	_ENTRY( err_cnt        , uint16_t   , _U16     , true      , "Error Count"       ) \
-	_ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) \
-	_ENTRY( setpoint_l     , int16_t    , _I16     , true      , "PWM Setpoint-L"    ) \
-	_ENTRY( setpoint_r     , int16_t    , _I16     , true      , "PWM Setpoint-R"    ) \
-	_ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) \
-	_ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) \
-	_ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer enable"     ) \
-	_ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) \
-	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) \
-/*	_ENTRY( spdref_l       , int16_t    , _I16     , true      , "Speed ref L"       )*/ \
-/*	_ENTRY( spdref_r       , int16_t    , _I16     , true      , "Speed ref R"       )*/ \
-	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) \
-	_ENTRY( pwm_r          , int16_t    , _I16     , false     , "PWM-Right"         ) \
-	_ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) \
-	_ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) \
-	_ENTRY( v_battery      , uint16_t   , _U16     , false     , "Battery Voltage"   ) \
-	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) \
-	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) \
-	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) \
-/*	_ENTRY( vsw            , uint16_t   , _U16     , false     , "Power switch"      )*/ \
-/*	_ENTRY( ref_scale      , uint16_t   , _U16     , false     , "Ref scale"         )*/ \
-	_ENTRY( rdsonla        , int16_t    , _I16     , false     , "Rdson,lA"          ) \
-	_ENTRY( rdsonlb        , int16_t    , _I16     , false     , "Rdson,lB"          ) \
-	_ENTRY( rdsonrb        , int16_t    , _I16     , false     , "Rdson,rB"          ) \
-	_ENTRY( rdsonrc        , int16_t    , _I16     , false     , "Rdson,rC"          ) \
-/*	_ENTRY( lboff          , uint16_t   , _U16     , false     , "offset"            )*/ \
-/*	_ENTRY( r_id           , int16_t    , _I16     , false     , "R D cur"           )*/ \
-/*	_ENTRY( r_iq           , int16_t    , _I16     , false     , "R Q cur"           )*/ \
-/*	_ENTRY( r_angle        , uint16_t   , _U16     , false     , "R angle"           )*/ \
-	_ENTRY( l_angle_adv    , uint16_t   , _U16     , false     , "L angle advance"   ) \
-	_ENTRY( r_angle_adv    , uint16_t   , _U16     , false     , "R angle advance"   ) \
-	_ENTRY( t_req_r        , int16_t    , _I16     , false     , "R torque request"  ) \
-	_ENTRY( t_req_l        , int16_t    , _I16     , false     , "L torque request"  ) \
-	_ENTRY( kp_iq          , uint16_t   , _U16     , true      , "P term IQ"         ) \
-	_ENTRY( ki_iq          , uint16_t   , _U16     , true      , "I term IQ"         ) \
-	_ENTRY( kp_id          , uint16_t   , _U16     , true      , "P term ID"         ) \
-	_ENTRY( ki_id          , uint16_t   , _U16     , true      , "I term ID"         ) \
-	_ENTRY( buzzer_tone    , uint16_t   , _U16     , true      , "Tone"              ) \
-	_ENTRY( buzzer_pattern , uint16_t   , _U16     , true      , "Pattern"           ) \
-	_ENTRY( i_filter       , uint16_t   , _U16     , true      , "Current filter"    ) \
-	_ENTRY( fault_code     , uint16_t   , _U16     , false     , "Fault code"        ) \
-	_ENTRY( status_code    , uint16_t   , _U16     , false     , "Status code"       )
+	_ENTRY( magic          , uint16_t   , _U16     , false     , "Magic Value"       ) /* 0  */ \
+	_ENTRY( nr_entries     , uint16_t   , _U16     , false     , "Nr Entries"        ) /* 1  */ \
+	_ENTRY( dev_name[12]   , char       , _STR12   , false     , "Device Name"       ) /* 2  */ \
+	_ENTRY( err_code       , uint16_t   , _U16     , true      , "Error Code"        ) /* 8  */ \
+	_ENTRY( err_cnt        , uint16_t   , _U16     , true      , "Error Count"       ) /* 9  */ \
+	_ENTRY( status_code    , uint16_t   , _U16     , false     , "Status code"       ) /* 10 */ \
+	_ENTRY( fault_code     , uint16_t   , _U16     , false     , "Fault code"        ) /* 11 */ \
+	_ENTRY( setpoint_l     , int16_t    , _I16     , true      , "PWM Setpoint-L"    ) /* 12 */ \
+	_ENTRY( setpoint_r     , int16_t    , _I16     , true      , "PWM Setpoint-R"    ) /* 13 */ \
+	_ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) /* 14 */ \
+	_ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) /* 15 */ \
+	_ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) /* 16 */ \
+	_ENTRY( max_ref_l      , uint16_t   , _U16     , true      , "Max reference L"   ) /* 17 */ \
+	_ENTRY( max_ref_r      , uint16_t   , _U16     , true      , "Max reference R"   ) /* 18 */ \
+	_ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer enable"     ) /* 19 */ \
+	_ENTRY( kp_iq          , uint16_t   , _U16     , true      , "P term IQ"         ) /* 20 */ \
+	_ENTRY( ki_iq          , uint16_t   , _U16     , true      , "I term IQ"         ) /* 21 */ \
+	_ENTRY( kp_id          , uint16_t   , _U16     , true      , "P term ID"         ) /* 22 */ \
+	_ENTRY( ki_id          , uint16_t   , _U16     , true      , "I term ID"         ) /* 23 */ \
+	_ENTRY( i_filter       , uint16_t   , _U16     , true      , "Current filter"    ) /* 24 */ \
+	_ENTRY( buzzer_tone    , uint16_t   , _U16     , true      , "Tone"              ) /* 25 */ \
+	_ENTRY( buzzer_pattern , uint16_t   , _U16     , true      , "Pattern"           ) /* 26 */ \
+	_ENTRY( v_battery      , uint16_t   , _U16     , false     , "Battery Voltage"   ) /* 27 */ \
+	_ENTRY( temperature    , uint16_t   , _U16     , false     , "Internal temp"     ) /* 28 */ \
+	_ENTRY( aref1          , uint16_t   , _U16     , false     , "Analog ref 1"      ) /* 29 */ \
+	_ENTRY( aref2          , uint16_t   , _U16     , false     , "Analog ref 2"      ) /* 30 */ \
+	_ENTRY( t_req_r        , int16_t    , _I16     , false     , "R torque request"  ) /* 31 */ \
+	_ENTRY( t_req_l        , int16_t    , _I16     , false     , "L torque request"  ) /* 32 */ \
+	_ENTRY( speed_l        , int16_t    , _I16     , false     , "Speed Left"        ) /* 33 */ \
+	_ENTRY( speed_r        , int16_t    , _I16     , false     , "Speed Right"       ) /* 34 */ \
+	_ENTRY( pwm_l          , int16_t    , _I16     , false     , "PWM-Left"          ) /* 35 */ \
+	_ENTRY( pwm_r          , int16_t    , _I16     , false     , "PWM-Right"         ) /* 36 */ \
+	_ENTRY( pos_l          , uint16_t   , _U16     , false     , "HALLPos-Left"      ) /* 37 */ \
+	_ENTRY( pos_r          , uint16_t   , _U16     , false     , "HALLPos-Right"     ) /* 38 */ \
+	_ENTRY( rdsonla        , int16_t    , _I16     , false     , "Rdson,lA"          ) /* 39 */ \
+	_ENTRY( rdsonlb        , int16_t    , _I16     , false     , "Rdson,lB"          ) /* 40 */ \
+	_ENTRY( rdsonrb        , int16_t    , _I16     , false     , "Rdson,rB"          ) /* 41 */ \
+	_ENTRY( rdsonrc        , int16_t    , _I16     , false     , "Rdson,rC"          ) /* 42 */ \
+	_ENTRY( l_angle_adv    , uint16_t   , _U16     , false     , "L angle advance"   ) /* 43 */ \
+	_ENTRY( r_angle_adv    , uint16_t   , _U16     , false     , "R angle advance"   ) /* 44 */
 
 
 
