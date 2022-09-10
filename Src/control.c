@@ -595,15 +595,14 @@ void TIM3_IRQHandler(void)
   //id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
   id_error_int_l += id_error / int_divisor;
   id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
-  angle_advance = id_error + fx_mul(id_error_int_l, ki_id);
-  angle_advance = fx_mul(angle_advance, kp_id) * 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
+  angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
+  angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
   //iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
   iq_error_int_l += iq_error;
   iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
-  ref_amplitude = iq_error + fx_mul(iq_error_int_l, ki_iq);
-  ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+  ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
 
   ref_sign = SIGN(ref_amplitude);
 
@@ -621,7 +620,7 @@ void TIM3_IRQHandler(void)
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-  torque_ref = ref_amplitude; // For debugging purposes only
+  //torque_ref = ref_amplitude; // TODO: For debugging purposes only
 
 #elif defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
   // TODO: U/f control for SVM without FOC?
@@ -771,8 +770,8 @@ void TIM3_IRQHandler(void)
   //id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
   id_error_int_r += id_error/int_divisor;
   id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
-  angle_advance = id_error + fx_mul(id_error_int_r, ki_id);
-  angle_advance = fx_mul(angle_advance, kp_id) * 8;
+  angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
+  angle_advance *= 8;
 
   // Invert phase advance if speed is reverse
   //if(speed_r < 0) angle_advance = -angle_advance;
@@ -782,8 +781,7 @@ void TIM3_IRQHandler(void)
   //iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
   iq_error_int_r += iq_error;
   iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
-  ref_amplitude = iq_error + fx_mul(iq_error_int_r, ki_iq);
-  ref_amplitude = fx_mul(ref_amplitude, kp_iq);
+  ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
 
   ref_sign = SIGN(ref_amplitude);
 
@@ -801,7 +799,7 @@ void TIM3_IRQHandler(void)
   // TODO: Angle advance polarity should change depending on speed direction
   __enable_irq();
 
-  torque_ref = ref_amplitude; // TODO: Debug
+  //torque_ref = ref_amplitude; // TODO: Debug
 
 
 #elif defined(RIGHT_MOTOR_SVM)  && !defined(RIGHT_MOTOR_FOC)
