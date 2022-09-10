@@ -76,10 +76,10 @@
 #define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
 
 #define OVERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
-#define OVERVOLTAGE_LIM_GAIN	5	// Gain of braking torque limitation in per-units when voltage > overvoltage warn
+#define OVERVOLTAGE_LIM_GAIN	8	// Gain of braking torque limitation in per-units when voltage > overvoltage warn
 
 #define UNDERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
-#define UNDERVOLTAGE_LIM_GAIN	5	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn
+#define UNDERVOLTAGE_LIM_GAIN	8	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn
 
 
 #define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
@@ -94,6 +94,9 @@
 
 // =============================
 // Other parameters
+
+// Enable this to force config bus to load defaults instead of reading from EEPROM
+#define CFGBUS_FORCE_DEFAULTS
 
 // HALL sensor wiring
 //#define HALL_GBYGBY					// Motor wiring U:Green, V:Blue, W:Yellow, board U:G, V:B, W:Y

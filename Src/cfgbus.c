@@ -127,6 +127,7 @@ void CfgInit()
     }
   }
 
+
   //=======================================
   //Initialize user entries here that should always have the
   //same value when starting the system. The rest will be
@@ -142,9 +143,14 @@ void CfgInit()
   if(cfg.vars.max_pwm_l == 0)
       cfg.vars.max_pwm_l = 200;
 
+  if(cfg.vars.max_tref_l == 0)
+    cfg.vars.max_tref_l = 512;
+
+  if(cfg.vars.max_tref_r == 0)
+    cfg.vars.max_tref_r = 512;
+
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
-  cfg.vars.buzzer = 1;
   cfg.vars.speed_l = 0;
   cfg.vars.speed_r = 0;
   cfg.vars.pwm_l = 0;
@@ -153,12 +159,22 @@ void CfgInit()
   cfg.vars.pos_r = 0;
   cfg.vars.v_battery = 0;
 
+#if defined(CFGBUS_FORCE_DEFAULTS)
+  // These are set as defalts only if so defined in config.h
+  cfg.vars.max_pwm_l = 200;
+  cfg.vars.max_pwm_r = 200;
+  cfg.vars.max_tref_l = 512;
+  cfg.vars.max_tref_r = 512;
+
   cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_iq = 328; 	// 0.08 * FIXED_ONE;
   cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_id = 41; 		// 0.01 * FIXED_ONE;
 
   cfg.vars.i_filter = 300;	// 0.0x * FIXED_ONE;
+
+  cfg.vars.buzzer = 1;
+#endif
 }
 
 

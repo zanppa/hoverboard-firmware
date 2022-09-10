@@ -33,8 +33,8 @@
 	_ENTRY( rate_limit     , uint16_t   , _U16     , true      , "Rate Limit (p/ms)" ) /* 14 */ \
 	_ENTRY( max_pwm_l      , uint16_t   , _U16     , true      , "Max PWM Left"      ) /* 15 */ \
 	_ENTRY( max_pwm_r      , uint16_t   , _U16     , true      , "Max PWM Right"     ) /* 16 */ \
-	_ENTRY( max_ref_l      , uint16_t   , _U16     , true      , "Max reference L"   ) /* 17 */ \
-	_ENTRY( max_ref_r      , uint16_t   , _U16     , true      , "Max reference R"   ) /* 18 */ \
+	_ENTRY( max_tref_l     , uint16_t   , _U16     , true      , "Max torque ref L"  ) /* 17 */ \
+	_ENTRY( max_tref_r     , uint16_t   , _U16     , true      , "Max torque ref R"  ) /* 18 */ \
 	_ENTRY( buzzer         , uint16_t   , _U16     , true      , "Buzzer enable"     ) /* 19 */ \
 	_ENTRY( kp_iq          , uint16_t   , _U16     , true      , "P term IQ"         ) /* 20 */ \
 	_ENTRY( ki_iq          , uint16_t   , _U16     , true      , "I term IQ"         ) /* 21 */ \

@@ -525,6 +525,10 @@ void TIM3_IRQHandler(void)
     torque_ref = 0;
   }
 
+  // Limit torque reference
+  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_l, cfg.vars.max_tref_l);
+
+
   // Torque reference limitation above overspeed
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
@@ -700,6 +704,9 @@ void TIM3_IRQHandler(void)
   } else {
     torque_ref = 0;
   }
+
+  // Limit torque reference
+  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_l, cfg.vars.max_tref_l);
 
 
   // Torque reference limitation above overspeed
