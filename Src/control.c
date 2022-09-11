@@ -37,6 +37,7 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
+
 // -----------
 // Torque control (FOC D and Q axis currents) parameters
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
@@ -91,6 +92,8 @@ const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 
 
 volatile uint8_t status_bits = 0;	// Status bits
+
+static uint8_t reset_ctrl = 0; // Force reseting the control state (integrators etc.)
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -238,16 +241,16 @@ void initialize_control_state(void) {
 
   // Initial rotor positions
   sector = read_left_hall();
-  motor_state[STATE_LEFT].act.sector = sector;
   __disable_irq();
+  motor_state[STATE_LEFT].act.sector = sector;
   motor_state[STATE_LEFT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume we're in the middle of a sector
   motor_state[STATE_LEFT].ctrl.amplitude = 0;
   motor_state[STATE_LEFT].ctrl.angle = sector * ANGLE_60DEG;;
   __enable_irq();
 
   sector = read_right_hall();
-  motor_state[STATE_RIGHT].act.sector = sector;
   __disable_irq();
+  motor_state[STATE_RIGHT].act.sector = sector;
   motor_state[STATE_RIGHT].act.angle = sector * ANGLE_60DEG;// + ANGLE_30DEG;	// Assume middle of a sector
   motor_state[STATE_RIGHT].ctrl.amplitude = 0;
   motor_state[STATE_RIGHT].ctrl.angle = sector * ANGLE_60DEG;
@@ -265,6 +268,8 @@ void initialize_control_state(void) {
   id_error_int_r = 0;
   iq_error_int_r = 0;
 #endif // RIGHT_MOTOR_FOC
+
+  reset_ctrl = 1; // Force control loop to re-do this
 }
 
 // Helper to set buzzer from outside functions
@@ -316,6 +321,11 @@ void TIM3_IRQHandler(void)
 #endif
 
   CTRL_TIM->SR = 0;
+
+  if(reset_ctrl) {
+    initialize_control_state();
+    reset_ctrl = 0;
+  }
 
   // Update motor speed from latest period information
   // Left motor
