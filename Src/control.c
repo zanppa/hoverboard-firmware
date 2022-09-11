@@ -278,6 +278,7 @@ void set_buzzer(uint16_t tone, uint16_t pattern, uint8_t enable)
 // Controller internal variables, i.e. ramped references
 static int16_t ref_l_ramp = 0;
 static int16_t ref_r_ramp = 0;
+static uint16_t rate_lim_remainder = 0;
 
 static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter accuracy, otherwise the error is something like 0.5 volts...
 
@@ -493,14 +494,19 @@ void TIM3_IRQHandler(void)
   ref_r = 0;
 #endif // REFERENCE_ADC
 
+
   // Apply ramps to references
+  rate_lim_remainder += cfg.vars.rate_limit;
+  uint16_t rate_limited = rate_lim_remainder / 1000;
+  rate_lim_remainder -= (rate_limited * 1000);
+
   ref_ramp_diff = ref_l - ref_l_ramp;
-  ref_ramp_diff = LIMIT(ref_ramp_diff, cfg.vars.rate_limit);
+  ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
   ref_l_ramp += ref_ramp_diff;
   motor_state[STATE_LEFT].ref.value = ref_l_ramp;
 
   ref_ramp_diff = ref_r - ref_r_ramp;
-  ref_ramp_diff = LIMIT(ref_ramp_diff, cfg.vars.rate_limit);
+  ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
   ref_r_ramp += ref_ramp_diff;
   motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
 
@@ -528,7 +534,7 @@ void TIM3_IRQHandler(void)
   }
 
   // Limit torque reference
-  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_l, cfg.vars.max_tref_l);
+  torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_l);
 
 
   // Torque reference limitation above overspeed
@@ -707,12 +713,12 @@ void TIM3_IRQHandler(void)
   }
 
   // Limit torque reference
-  torque_ref = CLAMP(torque_ref, -cfg.vars.max_tref_r, cfg.vars.max_tref_r);
-
+  torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_r);
 
   // Torque reference limitation above overspeed
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
+  torque_lim_speed = INT16_MAX;
   if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
     torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
@@ -728,15 +734,17 @@ void TIM3_IRQHandler(void)
 
   // Apply torque limitations
   if(speed_r > 0 && torque_ref > 0) {
-    // Positive motoring direction --> undervoltage & overspeed limitations
+    // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
     torque_ref = MIN(torque_ref, torque_lim_speed);
-    torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
+    if(torque_lim_volt > 0)
+      torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
   } else if(speed_r < 0 && torque_ref < 0) {
-    // Negative motoring direction --> undervoltage & overspeed limitations
+    // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
     torque_ref = MAX(torque_ref, -torque_lim_speed);
-    torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
-  } else {
-    // Braking --> overvoltage only
+    if(torque_lim_volt > 0)
+      torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
+  } else if(torque_lim_volt < 0) {
+    // Braking --> overvoltage only (negative)
     if(torque_ref > 0)
       torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
     else
