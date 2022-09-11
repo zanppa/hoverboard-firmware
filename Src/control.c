@@ -24,6 +24,7 @@
 // From adc.c
 extern ADC_HandleTypeDef hadc3;
 extern volatile adc_buf_t analog_meas;
+extern uint8_t imeas_calibration_done;
 
 #define LED_PERIOD (300)  //ms
 
@@ -363,29 +364,30 @@ void TIM3_IRQHandler(void)
   ia_r = -ib_r - ic_r;
   ic_l = -ia_l - ib_l;
 
-#if 0
   // Check if currents exceed overcurrent limits
   // and trip one both motors
-  if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
-     ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
-     ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
-    do_fault(0x01 | 0x02);	// Trip both motors
-    fault_bits |= FAULT_OVERCURRENT;
+  // But only check when we're ready to run, i.e. measurements are stable
+  if(status_bits & STATUS_READY) {
+    if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
+       ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
+       ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
+      do_fault(0x01 | 0x02);	// Trip both motors
+      fault_bits |= FAULT_OVERCURRENT;
 
-    buzzer_tone = 0x92A4;
-    buzzer_pattern = 0xC30C;
+      buzzer_tone = 0x92A4;
+      buzzer_pattern = 0xC30C;
+    }
+
+    if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
+       ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
+       ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
+      do_fault(0x01 | 0x02);	// Trip both motors
+      fault_bits |= FAULT_OVERCURRENT;
+
+      buzzer_tone = 0x92A4;
+      buzzer_pattern = 0xC30C;
+    }
   }
-
-  if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
-     ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
-     ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
-    do_fault(0x01 | 0x02);	// Trip both motors
-    fault_bits |= FAULT_OVERCURRENT;
-
-    buzzer_tone = 0x92A4;
-    buzzer_pattern = 0xC30C;
-  }
-#endif
 
 
   // Analog measurements (battery voltage, to be used in modulator)
@@ -461,7 +463,7 @@ void TIM3_IRQHandler(void)
     }
 
     // Check that filtered DC link voltage is high enough and indicate ready state
-    if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
+    if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu && imeas_calibration_done)
       status_bits |= STATUS_READY;
   }
 
@@ -572,8 +574,6 @@ void TIM3_IRQHandler(void)
       torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
   }
 
-
-  //torque_ref = motor_state[STATE_LEFT].ref.value;
 
 
 #if defined(LEFT_MOTOR_FOC)

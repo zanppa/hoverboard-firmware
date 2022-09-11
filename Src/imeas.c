@@ -31,6 +31,13 @@ ADC_HandleTypeDef adc_rdson;
 volatile uint16_t rdson_meas[4];
 volatile uint16_t rdson_offset[4];
 
+#if defined(I_MEAS_RDSON)
+uint8_t imeas_calibration_done = 0;
+#else
+uint8_t imeas_calibration_done = 1; // Pass this check if current measurement is not used
+#endif
+
+
 // Current measurement result structure
 volatile i_meas_t i_meas = {0};
 
@@ -142,6 +149,8 @@ void ADC1_calibrate(void) {
     offsets[j] /= ADC_OFFSET_SAMPLES;
     rdson_offset[j] = offsets[j];
   }
+
+  imeas_calibration_done = 1;
 }
 
 // End of transfer interrupt handler for DMA1 channel 1 (Rds,on measurement)
