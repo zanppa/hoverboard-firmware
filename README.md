@@ -3,7 +3,7 @@
 This is a fork of TomTinkering's hoverboard-firmware-hack, which is a fork of NiklasFauth's hoverboard-firmware-hack.
 
 Main purpose is to implement field oriented control with proper (sinusoidal) space vector modulation. At this point the basic 
-concepts are working but need more features (reference chains for example) and testing to be sure.
+concepts are working but need more testing and controller tuning.
 
 Code here is heavily under development and most likely is not directly compatible with other people's version. And may break 
 at any time without prior notice as I develop the features :)
@@ -19,9 +19,9 @@ at any time without prior notice as I develop the features :)
       - [ ] Control loops
  - [x] Add configs for Raspberry PI Zero W wireless flashing with OpenOCD
  - [x] Re-organize code
- - [ ] Implement mandatory features
+ - [x] Implement mandatory features
       - [x] Space vector modulation (requires more testing and reference chain)
-      - [ ] U/f control with IR compensation
+      - [x] U/f control with IR compensation
       - [x] Better current measurement
            - [x] Lower branch transistor Rds,on measurement
            - [ ] Shunt measurement synched to active vectors
@@ -33,11 +33,58 @@ at any time without prior notice as I develop the features :)
       - [ ] Current limiting
       - [x] Overcurrent trips
       - [x] Phase short circuit trip with shunt resistor
-      - [ ] Overvoltage and undervoltage limits
+      - [x] Overvoltage and undervoltage limits
       - [x] Overvoltage and undervoltage trips/warnings
       - [ ] LED indications
-      - [ ] Buzzer indications
+      - [x] Buzzer indications
       - [x] Figure out modbus and make example client (to be uploaded)
+
+
+## Turning on and off
+In normal power button mode the power up and down sequence is following:
+ - Press the power button down
+ - Release the power button
+ - Press the power button again quickly (in about half a second)
+ - Keep the power button pressed for roughly a second
+
+If the sequence was succesfull, power-up is indicated by a raising tone pattern and turn-off as a high-to-low tone pattern.
+
+DC voltage (battery voltage) must be above the undervoltage warning/limit level, otherwise the system will not power up.
+
+In emergency stop mode the power button directly indicates the power state. The board powers up when the button is pressed, 
+and the button must be kept pressed during operation. Releasing the button immediately powers down the board.
+
+
+## Notes
+Main configuration is done in `Inc/config.h`. It should be checked carefully so that everything is configured properly. 
+Some defaults are also set in `Src/cfgbus.c` (note also that storing those values to flash does not currently seem to work).
+
+Testing should always start with BLDC mode on both motors, and torque control. That is the simplest and most reliable method.
+
+SVM (U/f) control is very sensitive to motor parameters. Too low voltage for example leads to motor stall while 
+too high a voltage causes unnecessarily high motor current.
+
+In FOC torque control mode the speed can get very fast very quickly if there is no load on the motor. Be very 
+careful when testing (or add some load to the motors) and apply sensible speed and PWM limits.
+
+If you modify only header files, please run `touch Src/*` before building as the makefile does not detect changes 
+in header files.
+
+For flashing the power button must be pressed down. Flashing can happen even if the power-up sequence is not succesfull. 
+As long as the power button is pressed, the board is powered.
+
+
+## Fault tracing
+There are several faults and warning that the system may generate. They are indicated with buzzer beeps (if enabled) and 
+also via modbus in status and fault words.
+
+ - Undervoltage fault: continuous low frequency tone
+ - Undervoltage warning/limit: fast low frequency beeping: `B_B_B_B_B_B_B_B_`
+ - Overvoltage warning/limiy: fast high frequency beeping: `B_B_B_B_B_B_B_B_`
+ - Overvoltage fault: continuous high frequency tone
+ - Overspeed warning/limit: two beeps with two tones:  `B_B___B_B___`
+ - Overspeed fault: three beeps with two tones: `B_B_B__B_B_B__`
+ - Overcurrent fault: slow beeps with two tone: `BB___BB___BB___`
 
 
 ## TomTinkering's changes
