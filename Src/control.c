@@ -574,6 +574,11 @@ void TIM3_IRQHandler(void)
       torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
   }
 
+  // Back-apply the now limited reference to ramped reference
+  if(ctrl_mode == CONTROL_TORQUE)
+    ref_l_ramp = torque_ref;
+  // TODO: How to do similar thing in speed control...?
+
 
 
 #if defined(LEFT_MOTOR_FOC)
@@ -750,6 +755,12 @@ void TIM3_IRQHandler(void)
     else
       torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
   }
+
+  // Back-apply the now limited reference to ramped reference
+  if(ctrl_mode == CONTROL_TORQUE)
+    ref_r_ramp = torque_ref;
+  // TODO: How to do similar thing in speed control...?
+
 
 
 #if defined(RIGHT_MOTOR_FOC)
