@@ -135,19 +135,19 @@ void CfgInit()
   //=======================================
 
   if(cfg.vars.rate_limit == 0)
-    cfg.vars.rate_limit = 1;
+    cfg.vars.rate_limit = 400;
 
   if(cfg.vars.max_pwm_r == 0)
-    cfg.vars.max_pwm_r = 200;
+    cfg.vars.max_pwm_r = 1024;
 
   if(cfg.vars.max_pwm_l == 0)
-      cfg.vars.max_pwm_l = 200;
+      cfg.vars.max_pwm_l = 1024;
 
   if(cfg.vars.max_tref_l == 0)
-    cfg.vars.max_tref_l = 512;
+    cfg.vars.max_tref_l = 2048;
 
   if(cfg.vars.max_tref_r == 0)
-    cfg.vars.max_tref_r = 512;
+    cfg.vars.max_tref_r = 2048;
 
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
@@ -161,14 +161,19 @@ void CfgInit()
 
 #if defined(CFGBUS_FORCE_DEFAULTS)
   // These are set as defalts only if so defined in config.h
-  cfg.vars.max_pwm_l = 200;
-  cfg.vars.max_pwm_r = 200;
-  cfg.vars.max_tref_l = 512;
-  cfg.vars.max_tref_r = 512;
 
-  cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
+  cfg.vars.rate_limit = 400;
+
+  cfg.vars.max_pwm_l = 1024;
+  cfg.vars.max_pwm_r = 1024;
+  cfg.vars.max_tref_l = 2048;
+  cfg.vars.max_tref_r = 2048;
+
+  //cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
+  cfg.vars.kp_iq = 600; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_iq = 328; 	// 0.08 * FIXED_ONE;
-  cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
+  //cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
+  cfg.vars.kp_id = 600; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_id = 41; 		// 0.01 * FIXED_ONE;
 
   cfg.vars.i_filter = 300;	// 0.0x * FIXED_ONE;
