@@ -37,6 +37,7 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
+const uint16_t speed_filt_gain = FIXED_ONE * 0.2;
 
 // -----------
 // Torque control (FOC D and Q axis currents) parameters
@@ -291,7 +292,8 @@ static uint16_t battery_voltage_filt = 0;	// Multiplied by 16 to increase filter
 //called 64000000/64000 = 1000 times per second
 void TIM3_IRQHandler(void)
 {
-  int16_t speed_l, speed_r;
+  static int16_t speed_l, speed_r;
+  int16_t speed_new;
   uint16_t voltage_scale;
   int16_t ia_l, ib_l, ic_l;
   int16_t ia_r, ib_r, ic_r;
@@ -331,16 +333,18 @@ void TIM3_IRQHandler(void)
   // Left motor
   speed_tick[0] = motor_state[STATE_LEFT].act.period;
   if(speed_tick[0] != PERIOD_STOP && speed_tick[0] != -PERIOD_STOP)
-    speed_l = fx_div(motor_nominal_counts, speed_tick[0]);
+    speed_new = fx_div(motor_nominal_counts, speed_tick[0]);
   else
-    speed_l = 0;
+    speed_new = 0;
+  speed_l = FILTER(speed_new, speed_l, speed_filt_gain);
 
   // Right motor
   speed_tick[1] = motor_state[STATE_RIGHT].act.period;
   if(speed_tick[1] != PERIOD_STOP && speed_tick[1] != -PERIOD_STOP)
-    speed_r = fx_div(motor_nominal_counts, speed_tick[1]);
+    speed_new = fx_div(motor_nominal_counts, speed_tick[1]);
   else
-    speed_r = 0;
+    speed_new = 0;
+  speed_r = FILTER(speed_new, speed_r, speed_filt_gain);
 
 
   // Check overspeed trip
