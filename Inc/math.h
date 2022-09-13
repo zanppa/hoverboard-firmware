@@ -68,5 +68,8 @@ void inv_park(int16_t d, int16_t q, uint16_t theta, int16_t *alpha, int16_t *bet
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN3(a, b, c) MIN(a, MIN(b, c))
 #define MAX3(a, b, c) MAX(a, MAX(b, c))
-#define FILTER(a, b, t) (fx_mul((a), (t)) + fx_mul((b), (FIXED_ONE)-(t)))
-#define FILTERU(a, b, t) (fx_mulu((a), (t)) + fx_mulu((b), (FIXED_ONE)-(t)))
+//#define FILTER(a, b, t) (fx_mul((a), (t)) + fx_mul((b), (FIXED_ONE)-(t)))
+#define FILTER(a, b, t) (fx_mul((a) - (b), (t)) + (b))
+//#define FILTERU(a, b, t) (fx_mulu((a), (t)) + fx_mulu((b), (FIXED_ONE)-(t)))
+#define FILTERU(a, b, t) (fx_mulu((a) - (b), (t)) + (b))
+
