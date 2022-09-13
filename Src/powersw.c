@@ -197,7 +197,7 @@ void powersw_off_sequence(void) {
 static uint16_t powersw_reset_timer = 0;
 
 uint8_t powersw_fault_reset(void) {
-  if(generic_adc_conv_done && analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
+  if(analog_meas.v_switch >= ADC_POWERSW_THRESHOLD) {
     if((uint16_t)(control_tick - powersw_reset_timer) > POWERSW_FAULT_RESET)
       return 1; // Power button pressed long enough for reset
   } else {
