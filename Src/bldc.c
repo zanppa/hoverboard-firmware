@@ -288,7 +288,7 @@ void TIM8_UP_IRQHandler() {
 #endif
 
   // DEBUG: LED off
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
 }
 
