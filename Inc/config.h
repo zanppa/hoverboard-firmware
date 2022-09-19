@@ -15,8 +15,8 @@
 // #define RIGHT_SENSOR_SCOPE		// Enable uart scope on right sensor (UART2)
 
 // Configure power button operation
-//#define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
-#define POWER_BUTTON_ESTOP		// Emergency stop opeartion: Must be pressed for power on, release for shutdown
+#define POWER_BUTTON_NORMAL			// "Normal" operation: press twice for on, press twice for off, long press resets
+//#define POWER_BUTTON_ESTOP		// Emergency stop opeartion: Must be pressed for power on, release for shutdown
 
 
 // =============================
@@ -43,14 +43,14 @@
 // Right motor
 //#define RIGHT_MOTOR_BLDC		// BLDC for right motor
 #define RIGHT_MOTOR_SVM			// SVM for right motor
-//#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
+#define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
 // Current measurement using Rds,on
 #define I_MEAS_RDSON
 
 // Update SVM reference position from HALL sensors or not, this is required by FOC
-//#define FOC_HALL_UPDATE
+#define FOC_HALL_UPDATE
 
 // Use field weakening region in BLDC mode
 //#define BLDC_FIELD_WEAKENING
@@ -66,28 +66,27 @@
 //#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
 //#define REFERENCE_ADC_SINGLE		// Use only single channel ADC ref for both sides
 
-
 // =============================
 // Limits/warnings/faults
 
-#define OVERVOLTAGE_WARN	26		// Overvoltage warning level in volts
-#define OVERVOLTAGE_TRIP	28		// Overvoltage trip level in volts
+#define OVERVOLTAGE_WARN	29		// Overvoltage warning level in volts
+#define OVERVOLTAGE_TRIP	34		// Overvoltage trip level in volts
 #define UNDERVOLTAGE_WARN	22		// Undervoltage warning level in volts
 #define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
 
 #define OVERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
-#define OVERVOLTAGE_LIM_GAIN	8	// Gain of braking torque limitation in per-units when voltage > overvoltage warn
+//#define OVERVOLTAGE_LIM_GAIN	4	// Gain of braking torque limitation in per-units when voltage > overvoltage warn (TODO: causes SHAKING)
 
 #define UNDERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
-#define UNDERVOLTAGE_LIM_GAIN	8	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn
+//#define UNDERVOLTAGE_LIM_GAIN	4	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn (TODO: causes SHAKING)
 
 
 #define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
-#define OVERSPEED_TRIP		(0.5*FIXED_ONE)		// Compared to rated rotation speed
+#define OVERSPEED_TRIP		(1.2*FIXED_ONE)		// Compared to rated rotation speed
 
-#define OVERSPEED_LIMIT		(0.3*FIXED_ONE)		// Start limiting torque above this, also speed control max
-#define OVERSPEED_LIM_GAIN	1					// Gain of how much torque is removed above the overspeed limit
+#define OVERSPEED_LIMIT		(0.8*FIXED_ONE)		// Start limiting torque above this, also speed control max
+//#define OVERSPEED_LIM_GAIN	4					// Gain of how much torque is removed above the overspeed limit (TODO: causes SHAKING)
 #define OVERSPEED_LIM_OFFSET	(FIXED_ONE)
 
 
@@ -96,6 +95,7 @@
 // Other parameters
 
 // Enable this to force config bus to load defaults instead of reading from EEPROM
+// Note: EEPROM (or write to it) does not currently seem to work, so keep this for now!
 #define CFGBUS_FORCE_DEFAULTS
 
 // HALL sensor wiring
@@ -130,9 +130,9 @@
 #define ADC_POWERSW_THRESHOLD	((UNDERVOLTAGE_WARN) * 70)
 
 // Power switch time that it is allowed to be in off-state before next press (in control timer units)
-#define POWERSW_OFF_TIMER		1000
+#define POWERSW_OFF_TIMER		800
 // Power switch time that it has to be pressed the second time before we really turn on
-#define POWERSW_ON_TIMER		2000
+#define POWERSW_ON_TIMER		1200
 
 // Speed limit for normal power off, in fixed point per unit
 #define POWEROFF_SPEED_LIMIT	200		// About 5 % of rated speed
