@@ -32,9 +32,9 @@ volatile uint16_t rdson_meas[4];
 volatile uint16_t rdson_offset[4];
 
 #if defined(I_MEAS_RDSON)
-uint8_t imeas_calibration_done = 0;
+volatile uint8_t imeas_calibration_done = 0;
 #else
-uint8_t imeas_calibration_done = 1; // Pass this check if current measurement is not used
+volatile uint8_t imeas_calibration_done = 1; // Pass this check if current measurement is not used
 #endif
 
 
