@@ -150,6 +150,12 @@ void ADC1_calibrate(void) {
     rdson_offset[j] = offsets[j];
   }
 
+  // Apply few samples so the buffers are filled with sane values
+  for(int i = 0; i < 10; i++) {
+    while(!rdson_adc_conv_done);
+    rdson_adc_conv_done = 0;
+  }
+
   imeas_calibration_done = 1;
 }
 
