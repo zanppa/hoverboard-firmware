@@ -60,7 +60,8 @@
 	_ENTRY( rdsonrb        , int16_t    , _I16     , false     , "Rdson,rB"          ) /* 41 */ \
 	_ENTRY( rdsonrc        , int16_t    , _I16     , false     , "Rdson,rC"          ) /* 42 */ \
 	_ENTRY( l_angle_adv    , uint16_t   , _U16     , false     , "L angle advance"   ) /* 43 */ \
-	_ENTRY( r_angle_adv    , uint16_t   , _U16     , false     , "R angle advance"   ) /* 44 */
+	_ENTRY( r_angle_adv    , uint16_t   , _U16     , false     , "R angle advance"   ) /* 44 */ \
+	_ENTRY( debug    , int16_t   , _I16     , false     , "Debug register"   ) /* 45 */
 
 
 
