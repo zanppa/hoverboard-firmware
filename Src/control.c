@@ -24,7 +24,7 @@
 // From adc.c
 extern ADC_HandleTypeDef hadc3;
 extern volatile adc_buf_t analog_meas;
-extern uint8_t imeas_calibration_done;
+extern volatile uint8_t imeas_calibration_done;
 
 #define LED_PERIOD (300)  //ms
 
@@ -37,7 +37,7 @@ const uint16_t motor_voltage_scale = MOTOR_VOLTS / (MOTOR_POLEPAIRS * MOTOR_SPEE
 const uint32_t adc_battery_to_pu = (FIXED_ONE / (2.45*MOTOR_VOLTS)) * (FIXED_ONE * ADC_BATTERY_VOLTS); // 2.45=sqrt(2)*sqrt(3)=phase RMS to main peak
 const uint16_t adc_battery_filt_gain = FIXED_ONE / 10;		// Low-pass filter gain in fixed point for battery voltage
 
-const uint16_t speed_filt_gain = FIXED_ONE * 0.2;
+const uint16_t speed_filt_gain = FIXED_ONE * 0.1;
 
 // -----------
 // Torque control (FOC D and Q axis currents) parameters
@@ -69,7 +69,7 @@ static int16_t iq_error_int_l = 0;
 static int16_t id_error_int_r = 0;
 static int16_t iq_error_int_r = 0;
 #endif // RIGHT_MOTOR_FOC
-const int16_t idq_int_max = 30000;	// TODO: What is a sane value...?
+const int16_t idq_int_max = 8000;	// TODO: What is a sane value...?
 const uint8_t int_divisor = 10;
 #endif // LEFT_MOTOR_FOC || RIGHT_MOTOR_FOC
 
@@ -79,7 +79,7 @@ static uint16_t kp_speed = 0.6 * FIXED_ONE;
 static uint16_t ki_speed = 0.12 * FIXED_ONE;
 static int16_t speed_error_int_l = 0;
 static int16_t speed_error_int_r = 0;
-static const uint16_t speed_int_max = 15000;	// TODO: What is a sane value?
+static const uint16_t speed_int_max = 8000;	// TODO: What is a sane value?
 static const uint16_t speed_int_divisor = 30;
 
 uint16_t battery_volt_pu = 0;
@@ -94,7 +94,7 @@ const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 
 volatile uint8_t status_bits = 0;	// Status bits
 
-static uint8_t reset_ctrl = 0; // Force reseting the control state (integrators etc.)
+static volatile uint8_t reset_ctrl = 0; // Force reseting the control state (integrators etc.)
 
 volatile motor_state_t motor_state[2] = {0};
 
@@ -324,6 +324,8 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
+
   if(reset_ctrl) {
     initialize_control_state();
     reset_ctrl = 0;
@@ -337,6 +339,8 @@ void TIM3_IRQHandler(void)
   else
     speed_new = 0;
   speed_l = FILTER(speed_new, speed_l, speed_filt_gain);
+  //motor_state[STATE_LEFT].act.speed = speed_l;
+  cfg.vars.speed_l = speed_l;
 
   // Right motor
   speed_tick[1] = motor_state[STATE_RIGHT].act.period;
@@ -345,6 +349,8 @@ void TIM3_IRQHandler(void)
   else
     speed_new = 0;
   speed_r = FILTER(speed_new, speed_r, speed_filt_gain);
+  //motor_state[STATE_RIGHT].act.speed = speed_r;
+  cfg.vars.speed_r = speed_r;
 
 
   // Check overspeed trip
@@ -360,32 +366,37 @@ void TIM3_IRQHandler(void)
 
   // Current measurement and overcurrent trips
   // Left motor phase currents and position
-  __disable_irq();
-  ia_l = i_meas.i_lA;
-  ib_l = i_meas.i_lB;
+  if(imeas_calibration_done) {
+    __disable_irq();
+    ia_l = i_meas.i_lA;
+    ib_l = i_meas.i_lB;
 #if defined(LEFT_MOTOR_FOC)
-  angle_l = motor_state[STATE_LEFT].act.angle;
+    angle_l = motor_state[STATE_LEFT].act.angle;
 #endif
 
-  // Right motor phase currents and position
-  ib_r = i_meas.i_rB;
-  ic_r = i_meas.i_rC;
+    // Right motor phase currents and position
+    ib_r = i_meas.i_rB;
+    ic_r = i_meas.i_rC;
 #if defined(RIGHT_MOTOR_FOC)
-  angle_r = motor_state[STATE_RIGHT].act.angle;
+    angle_r = motor_state[STATE_RIGHT].act.angle;
 #endif
-  __enable_irq();
+    __enable_irq();
 
-  ia_r = -ib_r - ic_r;
-  ic_l = -ia_l - ib_l;
+    ia_r = -ib_r - ic_r;
+    ic_l = -ia_l - ib_l;
+  } else {
+    ia_l = ib_l = ic_l = 0;
+    ia_r = ib_r = ic_r = 0;
+  }
 
   // Check if currents exceed overcurrent limits
   // and trip one both motors
   // But only check when we're ready to run, i.e. measurements are stable
-  if(status_bits & STATUS_READY) {
+  if((status_bits & STATUS_READY) && imeas_calibration_done) {
     if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
        ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
        ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
-      do_fault(0x01 | 0x02);	// Trip both motors
+      //do_fault(0x01 | 0x02);	// Trip both motors
       fault_bits |= FAULT_OVERCURRENT;
 
       buzzer_tone = 0x92A4;
@@ -395,14 +406,13 @@ void TIM3_IRQHandler(void)
     if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
        ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
        ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
-      do_fault(0x01 | 0x02);	// Trip both motors
+      //do_fault(0x01 | 0x02);	// Trip both motors
       fault_bits |= FAULT_OVERCURRENT;
 
       buzzer_tone = 0x92A4;
       buzzer_pattern = 0xC30C;
     }
   }
-
 
   // Analog measurements (battery voltage, to be used in modulator)
   v_bat = analog_meas.v_battery + ADC_BATTERY_OFFSET;
@@ -477,11 +487,16 @@ void TIM3_IRQHandler(void)
     }
 
     // Check that filtered DC link voltage is high enough and indicate ready state
-    if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu && imeas_calibration_done)
+    if(!(status_bits & STATUS_READY) && battery_volt_pu > uv_warn_pu)
       status_bits |= STATUS_READY;
   }
 
 
+  // Handle reference & speed & torque control ONLY if we're ready
+  // and current measurement has been calibrated
+  if((status_bits & STATUS_READY) && imeas_calibration_done)
+  {
+    // TODO: Add indentations!
 
   // Reference generation
 
@@ -504,11 +519,20 @@ void TIM3_IRQHandler(void)
   // TODO: Add some configuration (offset, gain, deadband) to these?
   ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
   ref_r = ((int16_t)analog_meas.analog_ref_2 - 2048) * 2;
+  ref_l /= 4;
+  ref_r /= 4;
 #endif // REFERENCE_ADC_DIFF
 #else // REFERENCE_ADC
   ref_l = 0;
   ref_r = 0;
 #endif // REFERENCE_ADC
+
+
+  // Keep still until calibration is done
+  if(!imeas_calibration_done) {
+    ref_l = 0;
+    ref_r = 0;
+  }
 
 
   // Apply ramps to references
@@ -593,6 +617,7 @@ void TIM3_IRQHandler(void)
     ref_l_ramp = torque_ref;
   // TODO: How to do similar thing in speed control...?
 
+  cfg.vars.t_req_l = torque_ref;
 
 
 #if defined(LEFT_MOTOR_FOC)
@@ -610,6 +635,9 @@ void TIM3_IRQHandler(void)
   iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
   id_old_l = id;
   iq_old_l = iq;
+
+  cfg.vars.rdsonla = iq;
+  cfg.vars.rdsonlb = id;
 
   id_error = id;	// TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_l - iq;
@@ -630,6 +658,8 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
 
   ref_sign = SIGN(ref_amplitude);
+  angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+  cfg.vars.l_angle_adv = angle_advance;
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -705,8 +735,6 @@ void TIM3_IRQHandler(void)
 
 #endif // LEFT_MOTOR_BLDC
 
-  cfg.vars.t_req_l = torque_ref;
-
 
 
 
@@ -737,6 +765,7 @@ void TIM3_IRQHandler(void)
   // Torque reference limitation above overspeed
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
+#if 0
   torque_lim_speed = INT16_MAX;
   if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
@@ -775,6 +804,10 @@ void TIM3_IRQHandler(void)
     ref_r_ramp = torque_ref;
   // TODO: How to do similar thing in speed control...?
 
+#endif
+
+  cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
+
 
 
 #if defined(RIGHT_MOTOR_FOC)
@@ -793,6 +826,9 @@ void TIM3_IRQHandler(void)
   id_old_r = id;
   iq_old_r = iq;
 
+  cfg.vars.rdsonrb = iq;
+  cfg.vars.rdsonrc = id;
+
 
   id_error = id;    // TODO: Add id reference (from field weakening)
   //int16_t iq_error = cfg.vars.setpoint_r - iq;
@@ -801,7 +837,7 @@ void TIM3_IRQHandler(void)
   // Run the PI controllers
   // First for D axis current which sets the angle advance
   //id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
-  id_error_int_r += id_error/int_divisor;
+  id_error_int_r += id_error / int_divisor;
   id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
   angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
   angle_advance *= 8;
@@ -817,6 +853,8 @@ void TIM3_IRQHandler(void)
   ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
 
   ref_sign = SIGN(ref_amplitude);
+  angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+  cfg.vars.r_angle_adv = angle_advance;
 
   // Apply DC voltage scaling
   ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -889,8 +927,8 @@ void TIM3_IRQHandler(void)
 
 #endif // RIGHT_MOTOR_BLDC
 
-  cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
 
+  } // End status ready &  imeas calibration done
 
 
   // Update buzzer
@@ -968,4 +1006,6 @@ void TIM3_IRQHandler(void)
   // Launch ADC3 so that at next call we
   // have fresh analog measurements
   hadc3.Instance->CR2 |= ADC_CR2_SWSTART;
+
+  HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
 }
