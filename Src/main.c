@@ -74,6 +74,8 @@ int main(void) {
   //motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // SVM
   motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;  // BLDC
   motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // BLDC
+  //motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // FOC
+  //motor_state[STATE_RIGHT].ref.control_mode = CONTROL_SPEED; // FOC
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
@@ -125,7 +127,6 @@ int main(void) {
 #endif
 
 
-
   // Initialize UARTs
 #if defined(LEFT_SENSOR_MODBUS) || defined(LEFT_SENSOR_SCOPE)
   UART_Init(0, 1);	// Use UART3 for modbus
@@ -165,12 +166,14 @@ int main(void) {
     // Check if user requested power off
     powersw_off_sequence();
 
-    // Check if power button was pressed long for fault reset
-    if(powersw_fault_reset()) {
+    // Check if power button was pressed long for fault reset, but only if faults are active
+#if 0
+    if(powersw_fault_reset() && fault_bits) {
       initialize_control_state();
       clear_fault(0x01 | 0x02);		// Reset all faults
       enable_motors(0x01 | 0x02);
     }
+#endif
 
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
@@ -188,13 +191,15 @@ int main(void) {
     v_battery = (v_battery + ADC_BATTERY_OFFSET) * ADC_BATTERY_VOLTS;
     cfg.vars.v_battery = v_battery;
 
-    float act_speed = motor_state[STATE_LEFT].act.speed;
-    act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
-    cfg.vars.speed_l = act_speed;
+    //float act_speed = motor_state[STATE_LEFT].act.speed;
+    //act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
+    //cfg.vars.speed_l = act_speed;
+    //cfg.vars.speed_l = 15 ;//motor_state[STATE_LEFT].act.speed;
 
-    act_speed = motor_state[STATE_RIGHT].act.speed;
-    act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
-    cfg.vars.speed_r = act_speed;
+    //act_speed = motor_state[STATE_RIGHT].act.speed;
+    //act_speed = act_speed * MOTOR_SPEED / FIXED_ONE;
+    //cfg.vars.speed_r = act_speed;
+    //cfg.vars.speed_r = motor_state[STATE_RIGHT].act.speed;
 
 
     // Update rotor positions (sector)
@@ -208,17 +213,17 @@ int main(void) {
     cfg.vars.aref2 = analog_meas.analog_ref_2;
     cfg.vars.pwm_l = motor_state[STATE_LEFT].ctrl.amplitude;
     cfg.vars.pwm_r = motor_state[STATE_RIGHT].ctrl.amplitude;
-    cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
-    cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
+    //cfg.vars.l_angle_adv = motor_state[STATE_LEFT].ctrl.angle;
+    //cfg.vars.r_angle_adv = motor_state[STATE_RIGHT].ctrl.angle;
     cfg.vars.fault_code = fault_bits;
     cfg.vars.status_code = status_bits;
 
 
     // Copy raw rdson measurement values to configbus
-    cfg.vars.rdsonla = i_meas.i_lA;
-    cfg.vars.rdsonlb = i_meas.i_lB;
-    cfg.vars.rdsonrb = i_meas.i_rB;
-    cfg.vars.rdsonrc = i_meas.i_rC;
+    //cfg.vars.rdsonla = i_meas.i_lA;
+    //cfg.vars.rdsonlb = i_meas.i_lB;
+    //cfg.vars.rdsonrb = i_meas.i_rB;
+    //cfg.vars.rdsonrc = i_meas.i_rC;
   }
 }
 
