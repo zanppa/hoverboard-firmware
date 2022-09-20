@@ -49,8 +49,11 @@
 // Current measurement using Rds,on
 #define I_MEAS_RDSON
 
-// Update SVM reference position from HALL sensors or not, this is required by FOC
-#define FOC_HALL_UPDATE
+// Convert measured currents to id & iq
+// These are required for FOC but can be enabled also for other modes
+#define LEFT_CURRENT_TFORM
+#define RIGHT_CURRENT_TFORM
+
 
 // Use field weakening region in BLDC mode
 //#define BLDC_FIELD_WEAKENING
@@ -231,12 +234,12 @@
 
 #if defined(LEFT_MOTOR_FOC)
 #define LEFT_MOTOR_SVM
-#define FOC_HALL_UPDATE
+#define LEFT_CURRENT_TFORM
 #endif
 
 #if defined(RIGHT_MOTOR_FOC)
 #define RIGHT_MOTOR_SVM
-#define FOC_HALL_UPDATE
+#define RIGHT_CURRENT_TFORM
 #endif
 
 

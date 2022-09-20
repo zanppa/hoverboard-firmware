@@ -64,6 +64,10 @@ void TIM8_UP_IRQHandler() {
 #endif
 #endif
 
+#if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
+  uint8_t mode;
+#endif
+
   // Clear the update interrupt flag
   TIM8->SR = 0; //&= ~TIM_SR_UIF;
 
@@ -76,11 +80,15 @@ void TIM8_UP_IRQHandler() {
   motor_state[STATE_LEFT].act.sector = sector;
   angle = motor_state[STATE_LEFT].act.angle;
 
+#if defined(LEFT_MOTOR_SVM)
+  mode = motor_state[STATE_LEFT].ref.control_mode;
+#endif
+
   if(sector != prev_sector) {  // Sector changed, calculate new speed
     // Update rotor position
     angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
 
-#if defined(LEFT_MOTOR_FOC)
+#if defined(LEFT_MOTOR_FOC) || defined(LEFT_MOTOR_SVM)
     // Calculate min and max angles in this sector
     // To prevent the modulator angle estimation from exceeding the sector
     motor_state[STATE_LEFT].ctrl.angle_min = angle;
@@ -114,11 +122,14 @@ void TIM8_UP_IRQHandler() {
     motor_state[STATE_LEFT].act.period = left_period_tick;
     left_period_tick = 0;
 
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
-    if(left_period_tick == PERIOD_STOP || left_period_tick == -PERIOD_STOP)
-      motor_state[STATE_LEFT].ctrl.speed = 0; // Rotation speed to zero
-    else
-      motor_state[STATE_LEFT].ctrl.speed = ANGLE_60DEG / left_period_tick; // Rotation speed / modulator interrupt
+#if defined(LEFT_MOTOR_FOC) || defined(LEFT_MOTOR_SVM)
+    if(mode != CONTROL_UF && mode != CONTROL_ANGLE) {
+      // Actual speed should be reflected in control speed in FOC or normal SVM modes
+      if(left_period_tick == PERIOD_STOP || left_period_tick == -PERIOD_STOP)
+        motor_state[STATE_LEFT].ctrl.speed = 0; // Rotation speed to zero
+      else
+        motor_state[STATE_LEFT].ctrl.speed = ANGLE_60DEG / left_period_tick; // Rotation speed / modulator interrupt
+    }
 #endif
 
 
@@ -128,18 +139,24 @@ void TIM8_UP_IRQHandler() {
     } else {
       // Assume stall if rotating too slowly
       motor_state[STATE_LEFT].act.period = PERIOD_STOP;
-#if defined(FOC_HALL_UPDATE) && defined(LEFT_MOTOR_FOC)
+
+#if defined(LEFT_MOTOR_FOC) || defined(LEFT_MOTOR_SVM)
+    if(mode != CONTROL_UF && mode != CONTROL_ANGLE) {
       motor_state[STATE_LEFT].ctrl.speed = 0;
+    }
 #endif
+
     }
   }
 
-#if defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
+#if defined(LEFT_MOTOR_FOC) || defined(LEFT_MOTOR_SVM)
+  if(mode == CONTROL_UF || mode == CONTROL_ANGLE) {
     // Update the actual rotor position and SVM speed
     motor_state[STATE_LEFT].act.angle += motor_state[STATE_LEFT].ctrl.speed;
-#elif defined(LEFT_MOTOR_FOC)
+  } else {
     // Update the actual rotor position and SVM speed
     motor_state[STATE_LEFT].act.angle = angle + motor_state[STATE_LEFT].ctrl.speed;
+  }
 #endif
 
 
@@ -149,12 +166,15 @@ void TIM8_UP_IRQHandler() {
   motor_state[STATE_RIGHT].act.sector = sector;
   angle = motor_state[STATE_RIGHT].act.angle;
 
+#if defined(RIGHT_MOTOR_SVM)
+  mode = motor_state[STATE_RIGHT].ref.control_mode;
+#endif
 
   if(sector != prev_sector) {  // Sector changed, calculate new speed
     // Update rotor position
     angle = sector * ANGLE_60DEG - ANGLE_30DEG;    // New angle at the edge of a sector
 
-#if defined(RIGHT_MOTOR_FOC)
+#if defined(RIGHT_MOTOR_FOC) || defined(RIGHT_MOTOR_SVM)
     // Calculate min and max angles in this sector
     // To prevent the modulator angle estimation from exceeding the sector
     motor_state[STATE_RIGHT].ctrl.angle_min = angle;
@@ -186,11 +206,14 @@ void TIM8_UP_IRQHandler() {
     motor_state[STATE_RIGHT].act.period = right_period_tick;
     right_period_tick = 0;
 
-#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
-    if(right_period_tick == PERIOD_STOP || right_period_tick == -PERIOD_STOP)
-      motor_state[STATE_RIGHT].ctrl.speed = 0; // Rotation speed to zero
-    else
-      motor_state[STATE_RIGHT].ctrl.speed = ANGLE_60DEG / right_period_tick; // Rotation speed / modulator interrupt
+#if defined(RIGHT_MOTOR_FOC) || defined(RIGHT_MOTOR_SVM)
+    if(mode != CONTROL_UF && mode != CONTROL_ANGLE) {
+      // Actual speed should be reflected in control speed in FOC or normal SVM modes
+      if(right_period_tick == PERIOD_STOP || right_period_tick == -PERIOD_STOP)
+        motor_state[STATE_RIGHT].ctrl.speed = 0; // Rotation speed to zero
+      else
+        motor_state[STATE_RIGHT].ctrl.speed = ANGLE_60DEG / right_period_tick; // Rotation speed / modulator interrupt
+    }
 #endif
 
   } else {
@@ -199,18 +222,24 @@ void TIM8_UP_IRQHandler() {
     } else {
       // Assume stall if rotating too slowly
       motor_state[STATE_RIGHT].act.period = PERIOD_STOP;
-#if defined(FOC_HALL_UPDATE) && defined(RIGHT_MOTOR_FOC)
+
+#if defined(RIGHT_MOTOR_FOC) || defined(RIGHT_MOTOR_SVM)
+    if(mode != CONTROL_UF && mode != CONTROL_ANGLE) {
       motor_state[STATE_RIGHT].ctrl.speed = 0;
+    }
 #endif
+
     }
   }
 
-#if defined(RIGHT_MOTOR_SVM) && !defined(RIGHT_MOTOR_FOC)
+#if defined(RIGHT_MOTOR_FOC) || defined(RIGHT_MOTOR_SVM)
+  if(mode == CONTROL_UF || mode == CONTROL_ANGLE) {
     // Update the actual rotor position and SVM speed
     motor_state[STATE_RIGHT].act.angle += motor_state[STATE_RIGHT].ctrl.speed;
-#elif defined(RIGHT_MOTOR_FOC)
+  } else {
     // Update the actual rotor position and SVM speed
     motor_state[STATE_RIGHT].act.angle = angle + motor_state[STATE_RIGHT].ctrl.speed;
+  }
 #endif
 
 

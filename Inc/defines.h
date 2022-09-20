@@ -159,6 +159,7 @@ typedef struct {
 #define CONTROL_SPEED 		0
 #define CONTROL_TORQUE 		1
 #define CONTROL_ANGLE 		2
+#define CONTROL_UF			3
 
 // Stalled speed period limit
 #define PERIOD_STOP			0x7F00
