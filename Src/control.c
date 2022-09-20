@@ -345,8 +345,8 @@ void TIM3_IRQHandler(void)
   else
     speed_new = 0;
   speed_l = FILTER(speed_new, speed_l, speed_filt_gain);
-  //motor_state[STATE_LEFT].act.speed = speed_l;
-  cfg.vars.speed_l = speed_l;
+  motor_state[STATE_LEFT].act.speed = speed_l;
+  cfg.vars.speed_l = speed_l; // TODO: Debug
 
   // Right motor
   speed_tick[1] = motor_state[STATE_RIGHT].act.period;
@@ -355,8 +355,8 @@ void TIM3_IRQHandler(void)
   else
     speed_new = 0;
   speed_r = FILTER(speed_new, speed_r, speed_filt_gain);
-  //motor_state[STATE_RIGHT].act.speed = speed_r;
-  cfg.vars.speed_r = speed_r;
+  motor_state[STATE_RIGHT].act.speed = speed_r;
+  cfg.vars.speed_r = speed_r; // TODO: Debug
 
 
   // Check overspeed trip
@@ -371,9 +371,10 @@ void TIM3_IRQHandler(void)
 
 
   // Current measurement and overcurrent trips
-  // Left motor phase currents and position
   if(imeas_calibration_done) {
     __disable_irq();
+
+    // Left motor phase currents and position
     ia_l = i_meas.i_lA;
     ib_l = i_meas.i_lB;
 #if defined(LEFT_CURRENT_TFORM)
@@ -402,7 +403,7 @@ void TIM3_IRQHandler(void)
     if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
        ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
        ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
-      //do_fault(0x01 | 0x02);	// Trip both motors
+      //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
       fault_bits |= FAULT_OVERCURRENT;
 
       buzzer_tone = 0x92A4;
@@ -412,7 +413,7 @@ void TIM3_IRQHandler(void)
     if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
        ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
        ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
-      //do_fault(0x01 | 0x02);	// Trip both motors
+      //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
       fault_bits |= FAULT_OVERCURRENT;
 
       buzzer_tone = 0x92A4;
@@ -422,14 +423,12 @@ void TIM3_IRQHandler(void)
 
   // Analog measurements (battery voltage, to be used in modulator)
   v_bat = analog_meas.v_battery + ADC_BATTERY_OFFSET;
-  //battery_voltage_filt = fx_mulu(analog_meas.v_battery << 4, adc_battery_filt_gain) + fx_mulu(battery_voltage_filt, FIXED_ONE-adc_battery_filt);
   battery_voltage_filt = FILTERU(v_bat << 4, battery_voltage_filt, adc_battery_filt_gain);
   battery_volt_pu = fx_mulu((battery_voltage_filt >> 4), adc_battery_to_pu);
 
   // Reference scaling so that 1 (4096) results in 1 (motor nominal voltage) always
   // So we scale all references by battery_voltage / nominal voltage
   voltage_scale = fx_divu(FIXED_ONE, battery_volt_pu);
-  //voltage_scale = fx_div(FIXED_ONE, battery_volt_pu);
 
 
   // Check voltage limits
@@ -437,7 +436,6 @@ void TIM3_IRQHandler(void)
   if(battery_volt_pu > ov_trip_pu && (status_bits & STATUS_READY)) {
     do_fault(0x01 | 0x02);	// Trip both motors
     fault_bits |= FAULT_OVERVOLTAGE;
-    // TODO: Blink led
 
     buzzer_tone = 0xCCCC;
     buzzer_pattern = 0xFFFF;
@@ -453,8 +451,6 @@ void TIM3_IRQHandler(void)
                             (INT16_MAX - OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN) * OVERVOLTAGE_LIM_GAIN;
     torque_lim_volt = CLAMP(torque_lim_volt, INT16_MIN + OVERVOLTAGE_LIM_OFFSET, OVERVOLTAGE_LIM_OFFSET) - OVERVOLTAGE_LIM_OFFSET;
 #endif
-
-    // TODO: LED Blink?
 
     buzzer_tone = 0xCCCC;
     buzzer_pattern = 0xAAAA;
@@ -477,8 +473,6 @@ void TIM3_IRQHandler(void)
                             (INT16_MAX - UNDERVOLTAGE_LIM_OFFSET) / UNDERVOLTAGE_LIM_GAIN) * UNDERVOLTAGE_LIM_GAIN;
     torque_lim_volt = UNDERVOLTAGE_LIM_OFFSET - CLAMP(torque_lim_volt, INT16_MIN + UNDERVOLTAGE_LIM_OFFSET+1, UNDERVOLTAGE_LIM_OFFSET);
 #endif
-
-    // TODO: LED blink
 
     buzzer_tone = 0xF0F0;
     buzzer_pattern = 0xAAAA;
@@ -525,8 +519,8 @@ void TIM3_IRQHandler(void)
   // TODO: Add some configuration (offset, gain, deadband) to these?
   ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
   ref_r = ((int16_t)analog_meas.analog_ref_2 - 2048) * 2;
-  ref_l /= 4;
-  ref_r /= 4;
+  ref_l /= 4;  // TODO: Debug
+  ref_r /= 4;  // TODO: Debug
 #endif // REFERENCE_ADC_DIFF
 #else // REFERENCE_ADC
   ref_l = 0;
@@ -567,11 +561,8 @@ void TIM3_IRQHandler(void)
   if(ctrl_mode == CONTROL_SPEED) {
     // FOC and BLCD in speed control mode --> run PI controller
     speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
-    //speed_error_int_l = LIMIT(speed_error_int_l + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_l += speed_error / speed_int_divisor;
     speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
-    //torque_ref = speed_error + fx_mul(speed_error_int_l, ki_speed);
-    //torque_ref = fx_mul(torque_ref, kp_speed);
     torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_LEFT].ref.value;
@@ -646,19 +637,16 @@ void TIM3_IRQHandler(void)
   cfg.vars.rdsonlb = id;
 
   id_error = id;	// TODO: Add id reference (from field weakening)
-  //int16_t iq_error = cfg.vars.setpoint_l - iq;
   iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  //id_error_int_l = LIMIT(id_error_int_l + (id_error / int_divisor), idq_int_max);
   id_error_int_l += id_error / int_divisor;
   id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
   angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
   angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
   // Then for Q axis current which sets the reference amplitude
-  //iq_error_int_l = LIMIT(iq_error_int_l + iq_error, idq_int_max);
   iq_error_int_l += iq_error;
   iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
   ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
@@ -729,7 +717,7 @@ void TIM3_IRQHandler(void)
   // Limit pwm value
   torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
 
-#if defined(BLDC_FIELD_WEAKENING) && 0 // TODO: Debug remove
+#if defined(BLDC_FIELD_WEAKENING)
   // Apply field weakening if necessary
   uint16_t tref_abs = ABS(torque_ref);
   if(tref_abs > FIXED_ONE) {
@@ -769,11 +757,8 @@ void TIM3_IRQHandler(void)
     // Speed control loop for right motor
     // FOC and BLCD in speed mode --> run PI controller
     speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
-    //speed_error_int_r = LIMIT(speed_error_int_r + (speed_error / speed_int_divisor), speed_int_max);
     speed_error_int_r += speed_error / speed_int_divisor;
     speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
-    //torque_ref = speed_error + fx_mul(speed_error_int_r, ki_speed);
-    //torque_ref = fx_mul(torque_ref, kp_speed);
     torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
   } else if(ctrl_mode == CONTROL_TORQUE) {
     torque_ref = motor_state[STATE_RIGHT].ref.value;
@@ -787,7 +772,6 @@ void TIM3_IRQHandler(void)
   // Torque reference limitation above overspeed
   // Note! This only limits torque if torque is in the same direction as speed
   // During braking, limitation is not active but will brake until overspeed trip
-#if 0
   torque_lim_speed = INT16_MAX;
   if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
@@ -826,7 +810,6 @@ void TIM3_IRQHandler(void)
     ref_r_ramp = torque_ref;
   // TODO: How to do similar thing in speed control...?
 
-#endif
 
   cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
 
@@ -846,18 +829,17 @@ void TIM3_IRQHandler(void)
   }
 #endif
 
+  // TODO: Debug parameteres
   cfg.vars.rdsonrb = iq;
   cfg.vars.rdsonrc = id;
 
 
 #if defined(RIGHT_MOTOR_FOC)
   id_error = id;    // TODO: Add id reference (from field weakening)
-  //int16_t iq_error = cfg.vars.setpoint_r - iq;
   iq_error = torque_ref - iq;
 
   // Run the PI controllers
   // First for D axis current which sets the angle advance
-  //id_error_int_r = LIMIT(id_error_int_r + (id_error/int_divisor), idq_int_max);
   id_error_int_r += id_error / int_divisor;
   id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
   angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
@@ -868,7 +850,6 @@ void TIM3_IRQHandler(void)
   // TODO: Should probably be the reference, not actual...
 
   // Then for Q axis current which sets the reference amplitude
-  //iq_error_int_r = LIMIT(iq_error_int_r + iq_error, idq_int_max);
   iq_error_int_r += iq_error;
   iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
   ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
@@ -939,7 +920,7 @@ void TIM3_IRQHandler(void)
   // Limit pwm reference to maximum limits
   torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
 
-#if defined(BLDC_FIELD_WEAKENING) && 0 // TODO: Debug remove
+#if defined(BLDC_FIELD_WEAKENING)
   // Apply field weakening if necessary
   uint16_t tref_abs = ABS(torque_ref);
   if(tref_abs > FIXED_ONE) {
@@ -1004,12 +985,12 @@ void TIM3_IRQHandler(void)
     pattern_tick = (pattern_tick + 1) & 0xF;
 
 
-  motor_state[STATE_LEFT].act.current[0] = i_meas.i_lA;
-  motor_state[STATE_LEFT].act.current[1] = i_meas.i_lB;
-  motor_state[STATE_LEFT].act.current[2] = -i_meas.i_lA - i_meas.i_lB;
-  motor_state[STATE_RIGHT].act.current[0] = -i_meas.i_lB - i_meas.i_rC;
-  motor_state[STATE_RIGHT].act.current[1] = i_meas.i_rB;
-  motor_state[STATE_RIGHT].act.current[2] = i_meas.i_rC;
+  motor_state[STATE_LEFT].act.current[0] = ia_l; //i_meas.i_lA;
+  motor_state[STATE_LEFT].act.current[1] = ib_l; //i_meas.i_lB;
+  motor_state[STATE_LEFT].act.current[2] = ic_l; //-i_meas.i_lA - i_meas.i_lB;
+  motor_state[STATE_RIGHT].act.current[0] = ia_r; //-i_meas.i_lB - i_meas.i_rC;
+  motor_state[STATE_RIGHT].act.current[1] = ib_r; //i_meas.i_rB;
+  motor_state[STATE_RIGHT].act.current[2] = ic_r; //i_meas.i_rC;
 
 
   // Update controller tuning parameters
