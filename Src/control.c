@@ -496,251 +496,240 @@ void TIM3_IRQHandler(void)
   // and current measurement has been calibrated
   if((status_bits & STATUS_READY) && imeas_calibration_done)
   {
-    // TODO: Add indentations!
 
-  // Reference generation
+    // Reference generation
 
 #if defined(REFERENCE_MODBUS)
-  ref_l = cfg.vars.setpoint_l;
-  ref_r = cfg.vars.setpoint_r;
+    ref_l = cfg.vars.setpoint_l;
+    ref_r = cfg.vars.setpoint_r;
 #elif defined(REFERENCE_ADC)
 #if defined(REFERENCE_ADC_DIFF)
-  // This is simple and results in -8192 ... 8191 range
-  // TODO: Add scaling and offset and deadband?
-  ref_l = analog_meas.analog_ref_1 + analog_meas.analog_ref_2;
-  ref_r = analog_meas.analog_ref_2 - analog_meas.analog_ref_2;
-  ref_l = (ref_l - 4096) * 2;
-  ref_r = (ref_r - 4096) * 2;
+    // This is simple and results in -8192 ... 8191 range
+    // TODO: Add scaling and offset and deadband?
+    ref_l = analog_meas.analog_ref_1 + analog_meas.analog_ref_2;
+    ref_r = analog_meas.analog_ref_2 - analog_meas.analog_ref_2;
+    ref_l = (ref_l - 4096) * 2;
+    ref_r = (ref_r - 4096) * 2;
 #elif defined(REFERENCE_ADC_SINGLE)
-  ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
-  ref_r = ref_l;
+    ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
+    ref_r = ref_l;
 #else // REFERENCE_ADC_SINGLE
-  // ADC output is 0...4095, scale it to -4096 ... 4095
-  // TODO: Add some configuration (offset, gain, deadband) to these?
-  ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
-  ref_r = ((int16_t)analog_meas.analog_ref_2 - 2048) * 2;
-  ref_l /= 4;  // TODO: Debug
-  ref_r /= 4;  // TODO: Debug
+    // ADC output is 0...4095, scale it to -4096 ... 4095
+    // TODO: Add some configuration (offset, gain, deadband) to these?
+    ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
+    ref_r = ((int16_t)analog_meas.analog_ref_2 - 2048) * 2;
+    ref_l /= 4;  // TODO: Debug
+    ref_r /= 4;  // TODO: Debug
 #endif // REFERENCE_ADC_DIFF
 #else // REFERENCE_ADC
-  ref_l = 0;
-  ref_r = 0;
+    ref_l = 0;
+    ref_r = 0;
 #endif // REFERENCE_ADC
 
 
-  // Keep still until calibration is done
-  if(!imeas_calibration_done) {
-    ref_l = 0;
-    ref_r = 0;
-  }
+    // Apply ramps to references
+    rate_lim_remainder += cfg.vars.rate_limit;
+    uint16_t rate_limited = rate_lim_remainder / 1000;
+    rate_lim_remainder -= (rate_limited * 1000);
 
+    ref_ramp_diff = ref_l - ref_l_ramp;
+    ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
+    ref_l_ramp += ref_ramp_diff;
+    motor_state[STATE_LEFT].ref.value = ref_l_ramp;
 
-  // Apply ramps to references
-  rate_lim_remainder += cfg.vars.rate_limit;
-  uint16_t rate_limited = rate_lim_remainder / 1000;
-  rate_lim_remainder -= (rate_limited * 1000);
-
-  ref_ramp_diff = ref_l - ref_l_ramp;
-  ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
-  ref_l_ramp += ref_ramp_diff;
-  motor_state[STATE_LEFT].ref.value = ref_l_ramp;
-
-  ref_ramp_diff = ref_r - ref_r_ramp;
-  ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
-  ref_r_ramp += ref_ramp_diff;
-  motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
+    ref_ramp_diff = ref_r - ref_r_ramp;
+    ref_ramp_diff = LIMIT(ref_ramp_diff, rate_limited);
+    ref_r_ramp += ref_ramp_diff;
+    motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
 
 
 
-  // --------------
-  // Left motor
+    // --------------
+    // Left motor
 
-  // Speed control loop for left motor
-  ctrl_mode = motor_state[STATE_LEFT].ref.control_mode;
+    // Speed control loop for left motor
+    ctrl_mode = motor_state[STATE_LEFT].ref.control_mode;
 
-  if(ctrl_mode == CONTROL_SPEED) {
-    // FOC and BLCD in speed control mode --> run PI controller
-    speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
-    speed_error_int_l += speed_error / speed_int_divisor;
-    speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
-    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
-  } else if(ctrl_mode == CONTROL_TORQUE) {
-    torque_ref = motor_state[STATE_LEFT].ref.value;
-  } else {
-    torque_ref = 0;
-  }
+    if(ctrl_mode == CONTROL_SPEED) {
+      // FOC and BLCD in speed control mode --> run PI controller
+      speed_error = motor_state[STATE_LEFT].ref.value - speed_l;
+      speed_error_int_l += speed_error / speed_int_divisor;
+      speed_error_int_l = LIMIT(speed_error_int_l, speed_int_max);
+      torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_l, ki_speed);
+    } else if(ctrl_mode == CONTROL_TORQUE) {
+      torque_ref = motor_state[STATE_LEFT].ref.value;
+    } else {
+      torque_ref = 0;
+    }
 
-  // Limit torque reference
-  torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_l);
+    // Limit torque reference
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_l);
 
 
-  // Torque reference limitation above overspeed
-  // Note! This only limits torque if torque is in the same direction as speed
-  // During braking, limitation is not active but will brake until overspeed trip
-  if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
+    // Torque reference limitation above overspeed
+    // Note! This only limits torque if torque is in the same direction as speed
+    // During braking, limitation is not active but will brake until overspeed trip
+    if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
-    torque_lim_speed = CLAMP(ABS(speed_l) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
-                       (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
-    torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
+      torque_lim_speed = CLAMP(ABS(speed_l) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
+                         (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+      torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
 #endif
 
-    status_bits |= STATUS_OVERSPEED_WARN_L;
-    buzzer_pattern = 0x9120;
-    buzzer_tone = 0xAA88;
-  } else status_bits &= ~STATUS_OVERSPEED_WARN_L;
+      status_bits |= STATUS_OVERSPEED_WARN_L;
+      buzzer_pattern = 0x9120;
+      buzzer_tone = 0xAA88;
+    } else status_bits &= ~STATUS_OVERSPEED_WARN_L;
 
 
-  // Apply torque limitations
-  if(speed_l > 0 && torque_ref > 0) {
-    // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
-    torque_ref = MIN(torque_ref, torque_lim_speed);
-    if(torque_lim_volt > 0)
-      torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
-  } else if(speed_l < 0 && torque_ref < 0) {
-    // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
-    torque_ref = MAX(torque_ref, -torque_lim_speed);
-    if(torque_lim_volt > 0)
-      torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
-  } else if(torque_lim_volt < 0) {
-    // Braking --> overvoltage only (negative)
-    if(torque_ref > 0)
-      torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
-    else
-      torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
-  }
+    // Apply torque limitations
+    if(speed_l > 0 && torque_ref > 0) {
+      // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
+      torque_ref = MIN(torque_ref, torque_lim_speed);
+      if(torque_lim_volt > 0)
+        torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
+    } else if(speed_l < 0 && torque_ref < 0) {
+      // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
+      torque_ref = MAX(torque_ref, -torque_lim_speed);
+      if(torque_lim_volt > 0)
+        torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
+    } else if(torque_lim_volt < 0) {
+      // Braking --> overvoltage only (negative)
+      if(torque_ref > 0)
+        torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
+      else
+        torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
+    }
 
-  // Back-apply the now limited reference to ramped reference
-  if(ctrl_mode == CONTROL_TORQUE)
-    ref_l_ramp = torque_ref;
-  // TODO: How to do similar thing in speed control...?
+    // Back-apply the now limited reference to ramped reference
+    if(ctrl_mode == CONTROL_TORQUE)
+      ref_l_ramp = torque_ref;
+    // TODO: How to do similar thing in speed control...?
 
-  cfg.vars.t_req_l = torque_ref;
+    cfg.vars.t_req_l = torque_ref;
 
 #if defined(LEFT_CURRENT_TFORM)
-  if(imeas_calibration_done) {
-    // Transform to rotor coordinate frame
-    clarke(ia_l, ib_l, &ialpha, &ibeta);
-    park(ialpha, ibeta, angle_l, &id, &iq);
+    if(imeas_calibration_done) {
+      // Transform to rotor coordinate frame
+      clarke(ia_l, ib_l, &ialpha, &ibeta);
+      park(ialpha, ibeta, angle_l, &id, &iq);
 
-    // Filter id and iq
-    id = FILTER(id, id_old_l, cfg.vars.i_filter);
-    iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
-    id_old_l = id;
-    iq_old_l = iq;
-  }
+      // Filter id and iq
+      id = FILTER(id, id_old_l, cfg.vars.i_filter);
+      iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
+      id_old_l = id;
+      iq_old_l = iq;
+    }
 #endif
 
 
 #if defined(LEFT_MOTOR_FOC)
 
-  cfg.vars.rdsonla = iq;
-  cfg.vars.rdsonlb = id;
+    cfg.vars.rdsonla = iq;
+    cfg.vars.rdsonlb = id;
 
-  id_error = id;	// TODO: Add id reference (from field weakening)
-  iq_error = torque_ref - iq;
+    id_error = id;	// TODO: Add id reference (from field weakening)
+    iq_error = torque_ref - iq;
 
-  // Run the PI controllers
-  // First for D axis current which sets the angle advance
-  id_error_int_l += id_error / int_divisor;
-  id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
-  angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
-  angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
+    // Run the PI controllers
+    // First for D axis current which sets the angle advance
+    id_error_int_l += id_error / int_divisor;
+    id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
+    angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
+    angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
-  // Then for Q axis current which sets the reference amplitude
-  iq_error_int_l += iq_error;
-  iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
-  ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
+    // Then for Q axis current which sets the reference amplitude
+    iq_error_int_l += iq_error;
+    iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
+    ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
 
-  ref_sign = ISIGN(ref_amplitude);
-  angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
-  cfg.vars.l_angle_adv = angle_advance;
+    ref_sign = ISIGN(ref_amplitude);
+    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+    cfg.vars.l_angle_adv = angle_advance;
 
-  // Apply DC voltage scaling
-  ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+    // Apply DC voltage scaling
+    ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
-  // Apply limiter
-  ref_amplitude = ABS(ref_amplitude);
-  ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_l);
+    // Apply limiter
+    ref_amplitude = ABS(ref_amplitude);
+    ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_l);
 
-  // Apply references
-  __disable_irq();
-  motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Should start with 90 degree phase shift
-  // TODO: Angle advance polarity should change depending on speed direction
-  __enable_irq();
+    // Apply references
+    __disable_irq();
+    motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
+    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Should start with 90 degree phase shift
+    // TODO: Angle advance polarity should change depending on speed direction
+    __enable_irq();
 
-  //torque_ref = ref_amplitude; // TODO: For debugging purposes only
+    //torque_ref = ref_amplitude; // TODO: For debugging purposes only
 
 #elif defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)
-  if(ctrl_mode == CONTROL_UF) {
-    // Simple U/F control where voltage and rotation speed are set manually
-    torque_ref =  fx_mul(motor_state[STATE_LEFT].ref.value, voltage_scale);
-    speed_ctrl = ISIGN(torque_ref);
-    torque_ref = ABS(torque_ref);
+    if(ctrl_mode == CONTROL_UF) {
+      // Simple U/F control where voltage and rotation speed are set manually
+      torque_ref =  fx_mul(motor_state[STATE_LEFT].ref.value, voltage_scale);
+      speed_ctrl = ISIGN(torque_ref);
+      torque_ref = ABS(torque_ref);
 
-    speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
 
-    __disable_irq();
-    motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-    motor_state[STATE_LEFT].ctrl.speed = speed_ctrl;
-    __enable_irq();
-  } else if(ctrl_mode == CONTROL_ANGLE) {
-    __disable_irq();
-    motor_state[STATE_LEFT].ctrl.speed = 0;
-    motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;
-    motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
-    __enable_irq();
-  } else {
-    // Torque or speed control mode with SVM
-    // Scale ramped reference according to DC voltage
-    torque_ref = fx_mul(torque_ref, voltage_scale);
-    // Limit pwm value
-    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
-    ref_sign = ISIGN(torque_ref);
-    torque_ref = ABS(torque_ref);
+      __disable_irq();
+      motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+      motor_state[STATE_LEFT].ctrl.speed = speed_ctrl;
+      __enable_irq();
+    } else if(ctrl_mode == CONTROL_ANGLE) {
+      __disable_irq();
+      motor_state[STATE_LEFT].ctrl.speed = 0;
+      motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;
+      motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
+      __enable_irq();
+    } else {
+      // Torque or speed control mode with SVM
+      // Scale ramped reference according to DC voltage
+      torque_ref = fx_mul(torque_ref, voltage_scale);
+      // Limit pwm value
+      torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+      ref_sign = ISIGN(torque_ref);
+      torque_ref = ABS(torque_ref);
 
-    // Apply the reference
-    __disable_irq();
-    motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-    motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_90DEG;
-    __enable_irq();
-  }
+      // Apply the reference
+      __disable_irq();
+      motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+      motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_90DEG;
+      __enable_irq();
+    }
 
 
 
 #elif defined(LEFT_MOTOR_BLDC)
-  // Torque (voltage) control of left motor in BLDC mode
+    // Torque (voltage) control of left motor in BLDC mode
 
-  // Scale ramped reference according to DC voltage
-  torque_ref = fx_mul(torque_ref, voltage_scale);
+    // Scale ramped reference according to DC voltage
+    torque_ref = fx_mul(torque_ref, voltage_scale);
 
-  // Limit pwm value
-  torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+    // Limit pwm value
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
 
 #if defined(BLDC_FIELD_WEAKENING)
-  // Apply field weakening if necessary
-  uint16_t tref_abs = ABS(torque_ref);
-  if(tref_abs > FIXED_ONE) {
-    // "Excess" torque reference
-    tref_abs = tref_abs - FIXED_ONE;
+    // Apply field weakening if necessary
+    uint16_t tref_abs = ABS(torque_ref);
+    if(tref_abs > FIXED_ONE) {
+      // "Excess" torque reference
+      tref_abs = tref_abs - FIXED_ONE;
 
-    // Limit the torque reference to one (full modulation amplitude)
-    torque_ref = LIMIT(torque_ref, FIXED_ONE);
+      // Limit the torque reference to one (full modulation amplitude)
+      torque_ref = LIMIT(torque_ref, FIXED_ONE);
 
+      __disable_irq();
+      // Excess is directly applied as the field weakening ref
+      motor_state[STATE_LEFT].ctrl.angle = tref_abs;
+      motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+      __enable_irq();
+   }
+#else
+    // Apply the reference
     __disable_irq();
-    // Excess is directly applied as the field weakening ref
-    motor_state[STATE_LEFT].ctrl.angle = tref_abs;
     motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
     __enable_irq();
-
-  }
-#else
-
-  // Apply the reference
-  __disable_irq();
-  motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-  __enable_irq();
-
 #endif
 
 #endif // LEFT_MOTOR_BLDC
@@ -748,199 +737,199 @@ void TIM3_IRQHandler(void)
 
 
 
-  // ------------
-  // Right motor
+    // ------------
+    // Right motor
 
-  ctrl_mode = motor_state[STATE_RIGHT].ref.control_mode;
+    ctrl_mode = motor_state[STATE_RIGHT].ref.control_mode;
 
-  if(ctrl_mode == CONTROL_SPEED) {
-    // Speed control loop for right motor
-    // FOC and BLCD in speed mode --> run PI controller
-    speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
-    speed_error_int_r += speed_error / speed_int_divisor;
-    speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
-    torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
-  } else if(ctrl_mode == CONTROL_TORQUE) {
-    torque_ref = motor_state[STATE_RIGHT].ref.value;
-  } else {
-    torque_ref = 0;
-  }
+    if(ctrl_mode == CONTROL_SPEED) {
+      // Speed control loop for right motor
+      // FOC and BLCD in speed mode --> run PI controller
+      speed_error = motor_state[STATE_RIGHT].ref.value - speed_r;
+      speed_error_int_r += speed_error / speed_int_divisor;
+      speed_error_int_r = LIMIT(speed_error_int_r, speed_int_max);
+      torque_ref = fx_mul(speed_error, kp_speed) + fx_mul(speed_error_int_r, ki_speed);
+    } else if(ctrl_mode == CONTROL_TORQUE) {
+      torque_ref = motor_state[STATE_RIGHT].ref.value;
+    } else {
+      torque_ref = 0;
+    }
 
-  // Limit torque reference
-  torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_r);
+    // Limit torque reference
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_tref_r);
 
-  // Torque reference limitation above overspeed
-  // Note! This only limits torque if torque is in the same direction as speed
-  // During braking, limitation is not active but will brake until overspeed trip
-  torque_lim_speed = INT16_MAX;
-  if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
+    // Torque reference limitation above overspeed
+    // Note! This only limits torque if torque is in the same direction as speed
+    // During braking, limitation is not active but will brake until overspeed trip
+    torque_lim_speed = INT16_MAX;
+    if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
-    torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
-                       (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
-    torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
+      torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
+                         (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+      torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
 #endif
 
-    status_bits |= STATUS_OVERSPEED_WARN_R;
-    buzzer_pattern = 0x9120;
-    buzzer_tone = 0xAA88;
-  } else status_bits &= ~STATUS_OVERSPEED_WARN_R;
+      status_bits |= STATUS_OVERSPEED_WARN_R;
+      buzzer_pattern = 0x9120;
+      buzzer_tone = 0xAA88;
+    } else status_bits &= ~STATUS_OVERSPEED_WARN_R;
 
 
-  // Apply torque limitations
-  if(speed_r > 0 && torque_ref > 0) {
-    // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
-    torque_ref = MIN(torque_ref, torque_lim_speed);
-    if(torque_lim_volt > 0)
-      torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
-  } else if(speed_r < 0 && torque_ref < 0) {
-    // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
-    torque_ref = MAX(torque_ref, -torque_lim_speed);
-    if(torque_lim_volt > 0)
-      torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
-  } else if(torque_lim_volt < 0) {
-    // Braking --> overvoltage only (negative)
-    if(torque_ref > 0)
-      torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
-    else
-      torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
-  }
+    // Apply torque limitations
+    if(speed_r > 0 && torque_ref > 0) {
+      // Positive motoring direction --> undervoltage & overspeed limitations (both positive)
+      torque_ref = MIN(torque_ref, torque_lim_speed);
+      if(torque_lim_volt > 0)
+        torque_ref = MIN(torque_ref, MAX(0, torque_lim_volt));
+    } else if(speed_r < 0 && torque_ref < 0) {
+      // Negative motoring direction --> undervoltage & overspeed limitations (both positive)
+      torque_ref = MAX(torque_ref, -torque_lim_speed);
+      if(torque_lim_volt > 0)
+        torque_ref = MAX(torque_ref, -MAX(0, torque_lim_volt));
+    } else if(torque_lim_volt < 0) {
+      // Braking --> overvoltage only (negative)
+      if(torque_ref > 0)
+        torque_ref = MIN(torque_ref, -MIN(0, torque_lim_volt));
+      else
+        torque_ref = MAX(torque_ref, MIN(0, torque_lim_volt));
+    }
 
-  // Back-apply the now limited reference to ramped reference
-  if(ctrl_mode == CONTROL_TORQUE)
-    ref_r_ramp = torque_ref;
-  // TODO: How to do similar thing in speed control...?
+    // Back-apply the now limited reference to ramped reference
+    if(ctrl_mode == CONTROL_TORQUE)
+      ref_r_ramp = torque_ref;
+    // TODO: How to do similar thing in speed control...?
 
 
-  cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
+    cfg.vars.t_req_r = torque_ref; // TODO: DEBUG
 
 
 
 #if defined(RIGHT_CURRENT_TFORM)
-  if(imeas_calibration_done) {
-    // Transform to rotor coordinate frame
-    clarke(ia_r, ib_r, &ialpha, &ibeta);
-    park(ialpha, ibeta, angle_r, &id, &iq);
+    if(imeas_calibration_done) {
+      // Transform to rotor coordinate frame
+      clarke(ia_r, ib_r, &ialpha, &ibeta);
+      park(ialpha, ibeta, angle_r, &id, &iq);
 
-    // Filter id and iq
-    id = FILTER(id, id_old_r, cfg.vars.i_filter);
-    iq = FILTER(iq, iq_old_r, cfg.vars.i_filter);
-    id_old_r = id;
-    iq_old_r = iq;
-  }
+      // Filter id and iq
+      id = FILTER(id, id_old_r, cfg.vars.i_filter);
+      iq = FILTER(iq, iq_old_r, cfg.vars.i_filter);
+      id_old_r = id;
+      iq_old_r = iq;
+    }
 #endif
 
-  // TODO: Debug parameteres
-  cfg.vars.rdsonrb = iq;
-  cfg.vars.rdsonrc = id;
+    // TODO: Debug parameteres
+    cfg.vars.rdsonrb = iq;
+    cfg.vars.rdsonrc = id;
 
 
 #if defined(RIGHT_MOTOR_FOC)
-  id_error = id;    // TODO: Add id reference (from field weakening)
-  iq_error = torque_ref - iq;
+    id_error = id;    // TODO: Add id reference (from field weakening)
+    iq_error = torque_ref - iq;
 
-  // Run the PI controllers
-  // First for D axis current which sets the angle advance
-  id_error_int_r += id_error / int_divisor;
-  id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
-  angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
-  angle_advance *= 8;
+    // Run the PI controllers
+    // First for D axis current which sets the angle advance
+    id_error_int_r += id_error / int_divisor;
+    id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
+    angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
+    angle_advance *= 8;
 
-  // Invert phase advance if speed is reverse
-  //if(speed_r < 0) angle_advance = -angle_advance;
-  // TODO: Should probably be the reference, not actual...
+    // Invert phase advance if speed is reverse
+    //if(speed_r < 0) angle_advance = -angle_advance;
+    // TODO: Should probably be the reference, not actual...
 
-  // Then for Q axis current which sets the reference amplitude
-  iq_error_int_r += iq_error;
-  iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
-  ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
+    // Then for Q axis current which sets the reference amplitude
+    iq_error_int_r += iq_error;
+    iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
+    ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
 
-  ref_sign = ISIGN(ref_amplitude);
-  angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
-  cfg.vars.r_angle_adv = angle_advance;
+    ref_sign = ISIGN(ref_amplitude);
+    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+    cfg.vars.r_angle_adv = angle_advance;
 
-  // Apply DC voltage scaling
-  ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+    // Apply DC voltage scaling
+    ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
-  // Apply limiter
-  ref_amplitude = ABS(ref_amplitude);
-  ref_amplitude = MIN(ref_amplitude,cfg.vars.max_pwm_r);
+    // Apply limiter
+    ref_amplitude = ABS(ref_amplitude);
+    ref_amplitude = MIN(ref_amplitude,cfg.vars.max_pwm_r);
 
-  // Apply references
-  __disable_irq();
-  motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
-  motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);
-  // TODO: Angle advance polarity should change depending on speed direction
-  __enable_irq();
+    // Apply references
+    __disable_irq();
+    motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
+    motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);
+    // TODO: Angle advance polarity should change depending on speed direction
+    __enable_irq();
 
-  //torque_ref = ref_amplitude; // TODO: Debug
+    //torque_ref = ref_amplitude; // TODO: Debug
 
 
 #elif defined(RIGHT_MOTOR_SVM)  && !defined(RIGHT_MOTOR_FOC)
-  if(ctrl_mode == CONTROL_UF) {
-    // Simple U/F control where voltage and rotation speed are set manually
-    torque_ref =  fx_mul(motor_state[STATE_RIGHT].ref.value, voltage_scale);
-    speed_ctrl = ISIGN(torque_ref);
-    torque_ref = ABS(torque_ref);
+    if(ctrl_mode == CONTROL_UF) {
+      // Simple U/F control where voltage and rotation speed are set manually
+      torque_ref =  fx_mul(motor_state[STATE_RIGHT].ref.value, voltage_scale);
+      speed_ctrl = ISIGN(torque_ref);
+      torque_ref = ABS(torque_ref);
 
-    speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
 
-    __disable_irq();
-    motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-    motor_state[STATE_RIGHT].ctrl.speed = speed_ctrl;
-    __enable_irq();
-  } else if(ctrl_mode == CONTROL_ANGLE) {
-    // Direct angle control for debugging purposes
-    __disable_irq();
-    motor_state[STATE_RIGHT].ctrl.speed = 0;
-    motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;
-    motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
-    __enable_irq();
-  } else {
-    // Torque or speed control mode with SVM
+      __disable_irq();
+      motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+      motor_state[STATE_RIGHT].ctrl.speed = speed_ctrl;
+      __enable_irq();
+    } else if(ctrl_mode == CONTROL_ANGLE) {
+      // Direct angle control for debugging purposes
+      __disable_irq();
+      motor_state[STATE_RIGHT].ctrl.speed = 0;
+      motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;
+      motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
+      __enable_irq();
+    } else {
+      // Torque or speed control mode with SVM
+      // Scale ramped reference according to DC voltage
+      torque_ref = fx_mul(torque_ref, voltage_scale);
+      // Limit pwm value
+      torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+      ref_sign = ISIGN(torque_ref);
+      torque_ref = ABS(torque_ref);
+
+      // Apply the reference
+      __disable_irq();
+      motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+      motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_90DEG;
+      __enable_irq();
+    }
+
+#elif defined(RIGHT_MOTOR_BLDC)
+    // Torque (voltage) control of left motor in BLDC mode
+
     // Scale ramped reference according to DC voltage
     torque_ref = fx_mul(torque_ref, voltage_scale);
-    // Limit pwm value
-    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
-    ref_sign = ISIGN(torque_ref);
-    torque_ref = ABS(torque_ref);
 
+    // Limit pwm reference to maximum limits
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+
+#if defined(BLDC_FIELD_WEAKENING)
+    // Apply field weakening if necessary
+    uint16_t tref_abs = ABS(torque_ref);
+    if(tref_abs > FIXED_ONE) {
+      // "Excess" torque reference
+      tref_abs = tref_abs - FIXED_ONE;
+
+      // Limit the torque reference to one (full modulation amplitude)
+      torque_ref = LIMIT(torque_ref, FIXED_ONE);
+
+      // Excess is directly applied as the field weakening ref
+      __disable_irq();
+      motor_state[STATE_RIGHT].ctrl.angle = tref_abs;
+      motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+      __enable_irq();
+    }
+#else
     // Apply the reference
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-    motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_90DEG;
     __enable_irq();
-  }
-
-#elif defined(RIGHT_MOTOR_BLDC)
-  // Torque (voltage) control of left motor in BLDC mode
-
-  // Scale ramped reference according to DC voltage
-  torque_ref = fx_mul(torque_ref, voltage_scale);
-
-  // Limit pwm reference to maximum limits
-  torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
-
-#if defined(BLDC_FIELD_WEAKENING)
-  // Apply field weakening if necessary
-  uint16_t tref_abs = ABS(torque_ref);
-  if(tref_abs > FIXED_ONE) {
-    // "Excess" torque reference
-    tref_abs = tref_abs - FIXED_ONE;
-
-    // Limit the torque reference to one (full modulation amplitude)
-    torque_ref = LIMIT(torque_ref, FIXED_ONE);
-
-    // Excess is directly applied as the field weakening ref
-    __disable_irq();
-    motor_state[STATE_RIGHT].ctrl.angle = tref_abs;
-    motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-    __enable_irq();
-  }
-#else
-  // Apply the reference
-  __disable_irq();
-  motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-  __enable_irq();
 #endif
 
 #endif // RIGHT_MOTOR_BLDC
