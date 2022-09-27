@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define RDSON_MEAS_COUNT	4
 
 ADC_HandleTypeDef adc_rdson;
+ADC_HandleTypeDef hadc2;
 
 // Rds,on measurement order:
 // Left A, Left B, Right B, Right C phases
@@ -52,6 +53,7 @@ const uint16_t rdson_to_i = (3.3 / RDSON) / MOTOR_CUR; // --> FIXED_ONE equals M
 
 // ADC1 init function. ADC1 is used to measure motor currents from lower switch Rds,on
 void ADC1_init(void) {
+  ADC_MultiModeTypeDef multimode;
   ADC_ChannelConfTypeDef sConfig;
 
   __HAL_RCC_ADC1_CLK_ENABLE();
@@ -64,26 +66,22 @@ void ADC1_init(void) {
   // TODO: Could use timer 8 update (or underflow?) event as the source so software would not need to trigger ADC
   //adc_rdson.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;	// Trigger ADC on timer8 update event (right timer)
   adc_rdson.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  adc_rdson.Init.NbrOfConversion       = RDSON_MEAS_COUNT;	// 2 currents for both motors
+  adc_rdson.Init.NbrOfConversion       = 2; //RDSON_MEAS_COUNT;	// 2 currents for both motors
   HAL_ADC_Init(&adc_rdson);
+
+  // Configure ADC1 and ADC2 multi mode, regular simultaneous mode
+  multimode.Mode = ADC_DUALMODE_REGSIMULT;
+  HAL_ADCEx_MultiModeConfigChannel(&adc_rdson, &multimode);
 
   // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-  sConfig.Channel = ADC_CHANNEL_0;  // PA0 Left A phase voltage
+  sConfig.Channel = ADC_CHANNEL_13;  // PC3 Left B phase voltage
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_13;  // PC3 Left B phase voltage
-  sConfig.Rank    = 2;
-  HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
-
-  sConfig.Channel = ADC_CHANNEL_14;  // PC4 Right B phase voltage (Blue cable)
-  sConfig.Rank    = 3;
-  HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
-
   sConfig.Channel = ADC_CHANNEL_15;  // PC5 Right C phase voltage (Yellow cable)
-  sConfig.Rank    = 4;
+  sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
   // Enable DMA for ADC1 i.e. current sampling
@@ -97,9 +95,10 @@ void ADC1_init(void) {
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
   DMA1_Channel1->CMAR  = (uint32_t)&rdson_meas[0];
 
-  // 32 bit peripheral to 16 bit memory --> only low 16 bits copied
-  // no end-of-conversion interrupt
-  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
+  // Old: 32 bit peripheral (psize_1) to 16 bit memory (msize_0) --> only low 16 bits copied
+  // New: 32 bit peripheral (psize_1) to 2x16 bit memory (msize_1) (ADC1 and ADC2 simultaneously transfered)
+  // Old: DMA1_Channel1->CCR   = DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
+  DMA1_Channel1->CCR   = DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1 | DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
   DMA1_Channel1->CCR  |= DMA_CCR_EN;
 
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
@@ -114,17 +113,55 @@ void ADC1_init(void) {
   __HAL_ADC_ENABLE(&adc_rdson);
 }
 
+// ADC2 init function
+// ADC2 is used to sample other phase voltage simultaneously to ADC1
+// to decrease total sampling time to half
+void ADC2_init(void) {
+  ADC_ChannelConfTypeDef sConfig;
 
-// This function samples ADC1 multiple times and
+  __HAL_RCC_ADC2_CLK_ENABLE();
+
+  hadc2.Instance                   = ADC2;
+  hadc2.Init.ScanConvMode          = ADC_SCAN_ENABLE;
+  hadc2.Init.ContinuousConvMode    = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion       = 2;
+  HAL_ADC_Init(&hadc2);
+
+  // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+
+  sConfig.Channel = ADC_CHANNEL_0;  // PA0 Left A phase voltage
+  sConfig.Rank    = 1;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+  sConfig.Channel = ADC_CHANNEL_14;  // PC4 Right B phase voltage (Blue cable)
+  sConfig.Rank    = 2;
+  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+
+  hadc2.Instance->CR2 |= ADC_CR2_DMA;
+  __HAL_ADC_ENABLE(&hadc2);
+}
+
+
+// This function samples ADC1 and ADC2 multiple times and
 // averages the output to offset register(s)
-// ADC1 must be initialized first
-void ADC1_calibrate(void) {
+// ADC1 and ADC2 must be initialized first
+void ADC12_calibrate(void) {
   uint32_t offsets[RDSON_MEAS_COUNT] = {0};
 
-  // Do internal ADC calibration
+  // Do internal ADC1 calibration
   adc_rdson.Instance->CR2 |= ADC_CR2_CAL;
   // Wait until internal calibration is finished
   while(adc_rdson.Instance->CR2 & ADC_CR2_CAL);
+
+  // Do internal ADC2 calibration
+  hadc2.Instance->CR2 |= ADC_CR2_CAL;
+  // Wait until internal calibration is finished
+  while(hadc2.Instance->CR2 & ADC_CR2_CAL);
 
   // Calibrate zero point offsets
   for(int i=0; i < ADC_OFFSET_SAMPLES; i++) {

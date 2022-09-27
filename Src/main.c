@@ -98,6 +98,7 @@ int main(void) {
 #ifdef I_MEAS_RDSON
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
+  ADC2_init();
   HAL_ADC_Start(&adc_rdson);
 #endif
 
@@ -123,7 +124,7 @@ int main(void) {
 #ifdef I_MEAS_RDSON
   // Rds,on measurement must be calibrated when modulator is running
   // without load (0 reference)
-  ADC1_calibrate();
+  ADC12_calibrate();
 #endif
 
 
