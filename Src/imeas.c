@@ -91,7 +91,7 @@ void ADC1_init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   DMA1_Channel1->CCR   = 0;
-  DMA1_Channel1->CNDTR = RDSON_MEAS_COUNT;
+  DMA1_Channel1->CNDTR = 2; //RDSON_MEAS_COUNT;
   DMA1_Channel1->CPAR  = (uint32_t)&(ADC1->DR);
   DMA1_Channel1->CMAR  = (uint32_t)&rdson_meas[0];
 
