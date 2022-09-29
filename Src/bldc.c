@@ -55,7 +55,7 @@ static const uint8_t bldc_mod_pattern[6][3] = {
 // This timer runs at twice the switching frequency
 void TIM8_UP_IRQHandler() {
   uint8_t sector, prev_sector;
-  uint16_t angle;
+  uint16_t angle, angle_min, angle_max;
 #if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
   int16_t ampl_pos, ampl_neg;
   int16_t ampl_zero = 0;
@@ -142,7 +142,25 @@ void TIM8_UP_IRQHandler() {
     motor_state[STATE_LEFT].act.angle += motor_state[STATE_LEFT].ctrl.speed;
   } else {
     // Update the actual rotor position and SVM speed
-    motor_state[STATE_LEFT].act.angle = angle + motor_state[STATE_LEFT].ctrl.speed;
+    angle += motor_state[STATE_LEFT].ctrl.speed;
+
+    // Clamp the actual angle according to current HALL sensor sector
+    // In FOC and normal SVM modes the actual angle is clamped (position feedback)
+    angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
+    angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
+
+    // Check that the new angle is inside the sector limits
+    if(angle_min < angle_max) {
+      // Normal situation
+      angle = CLAMP(angle, angle_min, angle_max);
+    } else {
+      // Sector 0, angle 0 is inside the sector
+      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+    }
+
+    // Store the new, clamped and rotated angle
+    motor_state[STATE_LEFT].act.angle = angle;
   }
 
 
@@ -216,9 +234,25 @@ void TIM8_UP_IRQHandler() {
     motor_state[STATE_RIGHT].act.angle += motor_state[STATE_RIGHT].ctrl.speed;
   } else {
     // Update the actual rotor position and SVM speed
-    // TODO: Should probably clamp the actual angle here, otherwise it will rotate
-    // even after stopping the motor
-    motor_state[STATE_RIGHT].act.angle = angle + motor_state[STATE_RIGHT].ctrl.speed;
+    angle += motor_state[STATE_RIGHT].ctrl.speed;
+
+    // Clamp the actual angle according to current HALL sensor sector
+    // In FOC and normal SVM modes the actual angle is clamped (position feedback)
+    angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
+    angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
+
+    // Check that the new angle is inside the sector limits
+    if(angle_min < angle_max) {
+      // Normal situation
+      angle = CLAMP(angle, angle_min, angle_max);
+    } else {
+      // Sector 0, angle 0 is inside the sector
+      if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
+      else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
+    }
+
+    // Store the new, clamped and rotated angle
+    motor_state[STATE_RIGHT].act.angle = angle;
   }
 
 
