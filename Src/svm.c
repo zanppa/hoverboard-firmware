@@ -122,7 +122,6 @@ void TIM1_UP_IRQHandler() {
   uint16_t t0, t1, t2;
   uint16_t angle;
   uint8_t sector;
-  uint16_t angle_min, angle_max;
   uint8_t mode;
 #endif
 
@@ -150,22 +149,6 @@ void TIM1_UP_IRQHandler() {
   } else {
     angle = motor_state[STATE_LEFT].act.angle;
 
-    if(mode != CONTROL_UF) {
-      // In FOC and normal SVM modes the actual angle is clamped (position feedback)
-      angle_min = motor_state[STATE_LEFT].ctrl.angle_min;
-      angle_max = motor_state[STATE_LEFT].ctrl.angle_max;
-
-      // Check that the new angle is inside the sector limits
-      if(angle_min < angle_max) {
-        // Normal situation
-        angle = CLAMP(angle, angle_min, angle_max);
-      } else {
-        // Sector 0, angle 0 is inside the sector
-        if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
-        else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
-      }
-    }
-
     // Phase advance according to ctrl angle
     angle += motor_state[STATE_LEFT].ctrl.angle;
   }
@@ -192,22 +175,6 @@ void TIM1_UP_IRQHandler() {
     angle = motor_state[STATE_RIGHT].ctrl.angle;
   } else {
     angle = motor_state[STATE_RIGHT].act.angle;
-
-    if(mode != CONTROL_UF) {
-      // In FOC and normal SVM modes the actual angle is clamped (position feedback)
-      angle_min = motor_state[STATE_RIGHT].ctrl.angle_min;
-      angle_max = motor_state[STATE_RIGHT].ctrl.angle_max;
-
-      // Check that the new angle is inside the sector limits
-      if(angle_min < angle_max) {
-        // Normal situation
-        angle = CLAMP(angle, angle_min, angle_max);
-      } else {
-        // Sector 0, angle 0 is inside the sector
-        if(angle > angle_max && angle <= ANGLE_180DEG) angle = angle_max;
-        else if(angle < angle_min && angle >= ANGLE_180DEG) angle = angle_min;
-      }
-    }
 
     // Phase advance according to ctrl angle
     angle += motor_state[STATE_RIGHT].ctrl.angle;
