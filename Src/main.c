@@ -98,7 +98,9 @@ int main(void) {
 #ifdef I_MEAS_RDSON
   // Initialize Rds,on measurements with ADC1
   ADC1_init();
+#if defined(DUAL_ADC_MODE)
   ADC2_init();
+#endif
   HAL_ADC_Start(&adc_rdson);
 #endif
 
