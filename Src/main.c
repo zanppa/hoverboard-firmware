@@ -35,6 +35,7 @@
 void SystemClock_Config(void);
 
 extern ADC_HandleTypeDef adc_rdson;
+extern ADC_HandleTypeDef hadc2; // In DUAL ADC mode
 extern ADC_HandleTypeDef hadc3;
 
 extern volatile motor_state_t motor_state[2];
@@ -100,6 +101,7 @@ int main(void) {
   ADC1_init();
 #if defined(DUAL_ADC_MODE)
   ADC2_init();
+  HAL_ADC_Start(&hadc2);
 #endif
   HAL_ADC_Start(&adc_rdson);
 #endif
