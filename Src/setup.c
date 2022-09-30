@@ -216,7 +216,7 @@ void MX_TIM_Init(void) {
   htim_right.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_right.Init.Period            = PWM_PERIOD;
   htim_right.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  htim_right.Init.RepetitionCounter = 0;
+  htim_right.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition for ADC1 auto-trigger (was 0)
   htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   //htim_right.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_right);
@@ -224,6 +224,10 @@ void MX_TIM_Init(void) {
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
   sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_right, &sMasterConfig);
+
+  // Start RIGHT_TIM, i.e. TIM8 a bit early so that when in triggers ADC, scans right
+  // motor currents first and when left motor is scanned, LEFT_TIM is at underflow (middle of low zero)
+  RIGHT_TIM->CNT = TIMER_OFFSET_FOR_ADC;
 
   sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
@@ -245,12 +249,12 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_right, &sBreakDeadTimeConfig);
 
-  htim_left.Instance               = LEFT_TIM;
+  htim_left.Instance               = LEFT_TIM;	// TIM1
   htim_left.Init.Prescaler         = 0;
   htim_left.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_left.Init.Period            = PWM_PERIOD;
   htim_left.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  htim_left.Init.RepetitionCounter = 0;
+  htim_left.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition (was 0)
   htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   //htim_left.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_left);

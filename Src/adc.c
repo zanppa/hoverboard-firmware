@@ -167,50 +167,6 @@ void ADC3_calibrate(void) {
 }
 
 
-/* ADC2 init function */
-// This is not used at the moment
-void MX_ADC2_Init(void) {
-#if 0
-  ADC_ChannelConfTypeDef sConfig;
-
-  __HAL_RCC_ADC2_CLK_ENABLE();
-
-  hadc2.Instance                   = ADC2;
-  hadc2.Init.ScanConvMode          = ADC_SCAN_ENABLE;
-  hadc2.Init.ContinuousConvMode    = DISABLE;
-  hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
-  hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion       = 4;
-  HAL_ADC_Init(&hadc2);
-
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
-
-  sConfig.Channel = ADC_CHANNEL_15; //right motor phace C sense
-  sConfig.Rank    = 1;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  sConfig.Channel = ADC_CHANNEL_13; //left motor phace B sense
-  sConfig.Rank    = 2;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-
-  sConfig.Channel = ADC_CHANNEL_10; //left motor shunt current
-  sConfig.Rank    = 3;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR; //internal temperature
-  sConfig.Rank    = 4;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-  hadc2.Instance->CR2 |= ADC_CR2_DMA;
-  __HAL_ADC_ENABLE(&hadc2);
-#endif
-}
-
-
-
 // Handle ADC3 end-of-conversion interrupt
 // This function copies all data from the DMA buffer
 // to correct variales
