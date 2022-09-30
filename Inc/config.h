@@ -127,8 +127,7 @@
 // How much offset between left and right timers so that
 // currents of both sides is sampled at the middle of lower zero vector
 // Note! if DUAL_ADC_MODE is not enabled, this should be twice the value here
-//#define TIMER_OFFSET_FOR_ADC	(14*8) // 1.5 cycles sampling + 12.5 cycles conversion times clock divider of 8 (see AdcClockSelection in main.c)
-#define TIMER_OFFSET_FOR_ADC	0 // TODO: Debug
+#define TIMER_OFFSET_FOR_ADC	(14*8) // 1.5 cycles sampling + 12.5 cycles conversion times clock divider of 8 (see AdcClockSelection in main.c)
 
 // Enable dual ADC mode for current measurement
 #define DUAL_ADC_MODE
