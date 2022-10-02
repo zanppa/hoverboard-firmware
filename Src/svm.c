@@ -181,15 +181,6 @@ void TIM1_UP_IRQHandler() {
   // DEBUG: LED on
   //HAL_GPIO_TogglePin(LED_PORT,LED_PIN);
 
-// TODO: Debug: moved to bldc.c
-// Trigger RDSon measurement here
-//  if(!(TIM1->CR1 & TIM_CR1_DIR)) {
-    // Trigger ADC rdson measurement when we have 000 zero vector
-    // TODO: Use automatic trigger from timer?
-//#if defined(I_MEAS_RDSON)
-//    adc_rdson.Instance->CR2 |= ADC_CR2_SWSTART;
-//#endif
-  //}// else return; // TODO: Debug, only do SVM calculations on upcounting interrupt TODO: This did not help!
 
 #if defined(LEFT_MOTOR_SVM)
   mode = motor_state[STATE_LEFT].ref.control_mode;
