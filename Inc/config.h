@@ -108,16 +108,16 @@
 // Modulation parameters
 #define PWM_FREQ         16000		// PWM frequency in Hz
 
-#define DEAD_TIME        	32		// PWM deadtime (see ST32F103 datasheet for values)
-#define BLDC_SHORT_PULSE	10		// Shortest pulse length in BLDC, in 1/64 MHz
+#define DEAD_TIME        	32		// PWM deadtime (see STM32F103 datasheet for values)
+#define BLDC_SHORT_PULSE	112		// Shortest pulse length in BLDC, in 1/64 MHz (112 = 1.75 us)
 
-#define SVM_SHORT_PULSE		30		// Shortest active pulse length, in 1/64 MHz
-#define SVM_SHORT_ZPULSE	30		// Minimum zero pulse length, in 1/64 MHz
+#define SVM_SHORT_PULSE		0		// Shortest active pulse length, in 1/64 MHz (64 = 1 us)
+#define SVM_SHORT_ZPULSE	112		// Minimum zero pulse length, in 1/64 MHz (64 = 1 us, 112 = 1.75 us). This should be the time required by rdson current meas
 #define SVM_DEAD_TIME_COMP	10		// 64 = 1us
 
 
 // ADC calibration values
-// ADC reading to volts
+// ADC battery reading to volts
 #define ADC_BATTERY_VOLTS   0.024	// Approximately: (3.3 V / 4096) * (15k+15k+1k) / 1k, but calibrated by hand
 #define ADC_BATTERY_OFFSET	102		// ADC offset when reading zero volts, in ADC units
 
@@ -131,6 +131,9 @@
 
 // Enable dual ADC mode for current measurement
 #define DUAL_ADC_MODE
+
+// Enable this to use DPWMMIN modulation method, i.e. use only lower zero 000, never upper zero 111
+//#define DPWMMIN
 
 // Power button pressed threshold
 // The measurement has a gain of about 0.06 until battery voltage is 21 V, then the gain drops
