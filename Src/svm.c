@@ -23,6 +23,46 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "math.h"
 #include "svm.h"
 
+// Different minimum (zero) pulse limitation modes
+// 1 = limit modulation index directly. This guarantees long enough zero pulse without distorting voltages
+// 2 = subtract from the active vectors to achieve desired minimum zero pulse. This distorts voltage but might give higher amplitude
+#define MINP_LIMIT_MODE 1
+
+// Sanity check for zero pulse limit mode
+#if MINP_LIMIT_MODE == 2
+
+#if defined(DPWMMIN)
+
+#if (1000*SVM_SHORT_ZPULSE / PWM_PERIOD) > 168
+#error "Too long short zpulse for minp limit mode 2 and considering PWM period and dpwmmin modulation"
+#endif
+
+#else // DPWMMIN
+
+#if (2000 * SVM_SHORT_ZPULSE / PWM_PERIOD) > 168
+#error "Too long short zpulse for minp limit mode 2 and considering PWM period and continuous modulation"
+#endif
+
+#endif // DPWMMIN
+
+#endif // MINP_LIMIT_MODE == 2
+
+
+// Calculate maximum modulation index depending on modulation mode and limit type
+#if MINP_LIMIT_MODE == 1
+#if defined(DPWMMIN)
+// For DPWMMIN the modulation index limit is zero pulse length directy
+#define MIDX_MAX ((1 - SVM_SHORT_ZPULSE / PWM_PERIOD) * FIXED_ONE)
+#else
+// For continuous modulation index limit must be twice the required short pulse length
+#define MIDX_MAX ((1 - 2 * SVM_SHORT_ZPULSE / PWM_PERIOD) * FIXED_ONE)
+#endif
+
+#else // MINP_LIMIT_MODE
+#define MIDX_MAX (FIXED_ONE)
+#endif
+
+
 extern volatile motor_state_t motor_state[2];
 
 // RDSon measurement trigger
@@ -56,8 +96,8 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
 
   // Clamp < 0 modulation index to zero
   if(midx <= 0) midx = 0;
-  // Clamp modulation index to 1.0
-  else if(midx >= 4096) midx = 4096;
+  // Clamp modulation index to maximum (e.g. 1.0)
+  else if(midx > MIDX_MAX) midx = MIDX_MAX;
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
@@ -70,18 +110,28 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   ta2 = fx_mulu(midx, array_sin(angle));
   ta2 = fx_mulu(ta2, PWM_PERIOD);
 
-  tz = (PWM_PERIOD - ta1 - ta2) / 2;
+  tz = (PWM_PERIOD - ta1 - ta2);
+#if !defined(DPWMMIN)
+  tz /= 2; // In continuous modulation the zero pulse is divided between lower and upper zeros
+#endif
 
+#if MINP_LIMIT_MODE == 2
   // Minimum pulse limitations
-/*  if(tz < SVM_SHORT_ZPULSE) {
+  if(tz < SVM_SHORT_ZPULSE) {
     terr = SVM_SHORT_ZPULSE - tz;
+    terr >>= 1;
     tz = SVM_SHORT_ZPULSE;
   }
 
+  // TODO: Short zero pulse must be less than ~17 % or the active vector lengths may wrap..
+  ta1 -= terr;
+  ta2 -= terr;
+#endif
+
+/*
   ta1 = CLAMP(ta1 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
   ta2 = CLAMP(ta2 - (terr>>1), SVM_SHORT_PULSE, SVM_LONG_PULSE);
 */
-
   // Dead time compensation
   // Downcounting -> Update values for next upcounting part (000 -> 111)
 /*
