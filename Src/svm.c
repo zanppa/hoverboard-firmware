@@ -62,6 +62,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MIDX_MAX (FIXED_ONE)
 #endif
 
+#if defined(DATALOGGER_ENABLE)
+extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][4];
+extern volatile DATALOGGER_COUNT_TYPE datalogger_write_offset;
+extern volatile uint8_t datalogger_trigger;
+extern void *datalogger_var0;
+extern void *datalogger_var1;
+extern void *datalogger_var2;
+extern void *datalogger_var3;
+extern volatile uint8_t datalogger_period;
+#endif
+
 
 extern volatile motor_state_t motor_state[2];
 
@@ -233,6 +244,31 @@ void TIM1_UP_IRQHandler() {
   else // Even sectors uses "left" vector first
     *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][1])) = t0 + t1;
   *((uint16_t *)(RIGHT_TIM_BASE + svm_mod_pattern[sector][2])) = t0 + t1 + t2;
+#endif
+
+
+  // Handle datalogger variables if enabled
+#if defined(DATALOGGER_ENABLE)
+  if(datalogger_trigger) {
+    if(datalogger_period) {
+      datalogger_period--;
+    } else {
+      // Store values
+      if(datalogger_var0) datalogger[datalogger_write_offset][0] = *((DATALOGGER_TYPE *)datalogger_var0);
+      if(datalogger_var1) datalogger[datalogger_write_offset][1] = *((DATALOGGER_TYPE *)datalogger_var1);
+      if(datalogger_var2) datalogger[datalogger_write_offset][2] = *((DATALOGGER_TYPE *)datalogger_var2);
+      if(datalogger_var3) datalogger[datalogger_write_offset][3] = *((DATALOGGER_TYPE *)datalogger_var3);
+
+      datalogger_period = DATALOGGER_DIVIDER;
+
+      if(datalogger_write_offset)
+        datalogger_write_offset--;
+      else {
+        datalogger_trigger = 0;     // Disable writing when buffer is full
+        datalogger_write_offset = DATALOGGER_MAX;
+      }
+    }
+  }
 #endif
 
   // Debug: LED off

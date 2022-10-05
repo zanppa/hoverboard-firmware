@@ -32,6 +32,15 @@
 #include "imeas.h"
 #include "powersw.h"
 
+#if defined(DATALOGGER_ENABLE)
+extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX][4];
+extern volatile uint8_t datalogger_trigger;
+extern void *datalogger_var0;
+extern void *datalogger_var1;
+extern void *datalogger_var2;
+extern void *datalogger_var3;
+#endif
+
 void SystemClock_Config(void);
 
 extern ADC_HandleTypeDef adc_rdson;
@@ -149,6 +158,16 @@ int main(void) {
 #endif
 
 
+  // Configure datalogger variables
+  // for debugging purposes
+#if defined(DATALOGGER_ENABLE)
+  datalogger_var0 = (void *)&motor_state[STATE_LEFT].act.angle;
+  datalogger_var1 = (void *)&i_meas.i_lA;
+  datalogger_var2 = (void *)&i_meas.i_lB;
+  datalogger_var3 = (void *)&motor_state[STATE_LEFT].act.sector;
+#endif
+
+
   // Play a turn-on tune when we're ready to start
   // Play after config bus enable so buzzer enable status is known
   power_tune(1);
@@ -229,6 +248,31 @@ int main(void) {
     //cfg.vars.rdsonlb = i_meas.i_lB;
     //cfg.vars.rdsonrb = i_meas.i_rB;
     //cfg.vars.rdsonrc = i_meas.i_rC;
+
+#if defined(DATALOGGER_ENABLE)
+  // Handle datalogger control
+  if(cfg.vars.dlog_ctrl & 1) { // Trigger manually
+    if(!datalogger_trigger) {
+      datalogger_trigger = 1;
+      cfg.vars.dlog_ctrl &= ~3; // Clear trigger & ready bits from cfgbus register
+    } else {
+      cfg.vars.dlog_ctrl &= ~1; // Clear trigger since datalogger is running
+    }
+  } else {
+    if(!datalogger_trigger)
+      cfg.vars.dlog_ctrl |= 2;	// Raise ready flag
+  }
+
+  // Transfer data through config bus
+  uint16_t addr = cfg.vars.dlog_ctrl >> 2;
+  if(addr > DATALOGGER_MAX) addr = DATALOGGER_MAX;
+  char *dlog_ptr = (char *)&datalogger[addr][0];
+  for(uint8_t i=0;i<8;i++) { // TODO: Size currently hard coded
+    cfg.vars.dlog_data[i] = *dlog_ptr;
+    dlog_ptr++;
+  }
+#endif
+
   }
 }
 
