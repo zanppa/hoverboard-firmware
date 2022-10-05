@@ -37,7 +37,8 @@ at any time without prior notice as I develop the features :)
       - [x] Overvoltage and undervoltage trips/warnings
       - [ ] LED indications
       - [x] Buzzer indications
-      - [x] Figure out modbus and make example client (to be uploaded)
+      - [x] Modbus Python examples
+      - [x] [High-speed datalogger](Docs/datalogger.md)
 
 
 ## Turning on and off
