@@ -33,7 +33,7 @@
 #include "powersw.h"
 
 #if defined(DATALOGGER_ENABLE)
-extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX][4];
+extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][4];
 extern volatile uint8_t datalogger_trigger;
 extern void *datalogger_var0;
 extern void *datalogger_var1;
