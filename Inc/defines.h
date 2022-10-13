@@ -112,6 +112,13 @@
 #define CHARGER_PIN GPIO_PIN_12
 #define CHARGER_PORT GPIOA
 
+
+#define LEFT_A_ADC_CH	ADC_CHANNEL_0
+#define LEFT_B_ADC_CH	ADC_CHANNEL_13
+#define RIGHT_B_ADC_CH	ADC_CHANNEL_14
+#define RIGHT_C_ADC_CH	ADC_CHANNEL_15
+
+
 // Structure that stores analog measurements
 typedef struct {
   uint16_t v_battery;

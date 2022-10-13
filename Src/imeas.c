@@ -92,29 +92,29 @@ void ADC1_init(void) {
 
 #if defined(DUAL_ADC_MODE)
   // Dual ADC config
-  sConfig.Channel = ADC_CHANNEL_15;  // PC5 Right C phase voltage (Yellow cable)
+  sConfig.Channel = RIGHT_C_ADC_CH;  // PC5 Right C phase voltage (Yellow cable)
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_13;  // PC3 Left B phase voltage
+  sConfig.Channel = LEFT_B_ADC_CH;  // PC3 Left B phase voltage (Blue cable)
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
 #else
   // Single ADC config
-  sConfig.Channel = ADC_CHANNEL_14;  // PC4 Right B phase voltage (Blue cable)
+  sConfig.Channel = RIGHT_B_ADC_CH;  // PC4 Right B phase voltage (Blue cable)
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_15;  // PC5 Right C phase voltage (Yellow cable)
+  sConfig.Channel = RIGHT_C_ADC_CH;  // PC5 Right C phase voltage (Yellow cable)
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_0;  // PA0 Left A phase voltage
+  sConfig.Channel = LEFT_A_ADC_CH;  // PA0 Left A phase voltage (Green cable)
   sConfig.Rank    = 3;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_13;  // PC3 Left B phase voltage
+  sConfig.Channel = LEFT_B_ADC_CH;  // PC3 Left B phase voltage (Blue cable)
   sConfig.Rank    = 4;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 #endif
@@ -172,11 +172,11 @@ void ADC2_init(void) {
   // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-  sConfig.Channel = ADC_CHANNEL_14;  // PC4 Right B phase voltage (Blue cable)
+  sConfig.Channel = RIGHT_B_ADC_CH;  // PC4 Right B phase voltage (Blue cable)
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
-  sConfig.Channel = ADC_CHANNEL_0;  // PA0 Left A phase voltage
+  sConfig.Channel = LEFT_A_ADC_CH;  // PA0 Left A phase voltage (Green cable)
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
