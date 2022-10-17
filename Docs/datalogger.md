@@ -5,7 +5,7 @@ This document is part of the hoverboard firmware documentation.
 This document describes the high-speed datalogger feature that can be 
 used to sample several variables at a high speed for later analysis.
 
-The datalogger can sample 4 variables simultaneously and at it runs at 
+The datalogger can sample 8 variables simultaneously and at it runs at 
 the PWM frequency, which can also be divided by an integer if slower 
 sampling is required. This allows sampling for example rotor angle, currents 
 and modulation vector length at a rate necessary for debugging the system.
@@ -21,6 +21,7 @@ The basic features, like number of samples and sampling speed, are in `Inc/confi
 #define DATALOGGER_TYPE         uint16_t
 #define DATALOGGER_COUNT_TYPE   uint8_t
 #define DATALOGGER_DIVIDER      7
+#define DATALOGGER_CHANNELS		8
 ```
 
 If the `DATALOGGER_ENABLE` is defined, then the datalogger feature will be compiled in.
@@ -34,8 +35,11 @@ the type to be used for the index counter. The first cannot really be changed as
 hardcoded in several places like in config bus. The latter must be changed so that the 
 amount of samples fits inside that.
 
-Finally, the `DATALOGGER_DIVIDER` tells how often to sample the variables. Setting 0 here 
+The `DATALOGGER_DIVIDER` tells how often to sample the variables. Setting 0 here 
 samples every PWM period while 1 samples every other and 7 samples only every 8th PWM period.
+
+Finally, the `DATALOGGER_CHANNELS` define how many channels there is. Currently some parts of 
+the code (transfering the data over modbus) are hard coded to support 8 channels only.
 
 ### Triggering and loading data
 Triggering of the datalogger is currently done only from modbus. There is a control word called
@@ -56,9 +60,13 @@ addresses 46...50. To read data from the datalogger:
 
 Note that the data is stored in reverse order, i.e. the sample with address 0 is the last sample.
 
+The lowest bit tells whether to transfer the first 4 or last 4 sampled variables. I.e. reading 
+address 0 results in the first 4 channels and address 1 the last 4 channels. For this reason 
+you need to read addresses up to two times the number of samples.
+
 ### Implementation
 The variables are configured in `Src/main.c` so that the pointers to the variables to be sampled are 
-written to `datalogger_var0` through `datalogger_var3`. These are (void *) pointers, but internally 
+written to `datalogger_var[0]` through `datalogger_var[7]`. These are (void *) pointers, but internally 
 currently sample 16 bits. If the variable is less wide (e.g. byte), other bits of the sample may 
 contain rubbish and must be cleaned after fetching the data.
 

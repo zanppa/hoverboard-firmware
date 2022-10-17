@@ -167,10 +167,11 @@
 // ============================
 // Datalogger
 #define DATALOGGER_ENABLE
-#define DATALOGGER_MAX			0xFF		// Size of dataloggger, how many samples times 4 variables
+#define DATALOGGER_MAX			0xFF		// Size of dataloggger, how many samples times n variables
 #define DATALOGGER_TYPE			uint16_t	// Type of the variables the datalogger can store
-#define DATALOGGER_COUNT_TYPE	uint8_t
-#define DATALOGGER_DIVIDER		7			// Divide PWM rate by this+1 to get datalogger sampling rate
+#define DATALOGGER_COUNT_TYPE	uint8_t		// Type of counter variable to hold write offset, must hold DATALOGGER_MAX
+#define DATALOGGER_DIVIDER		3			// Divide PWM rate by this+1 to get datalogger sampling rate
+#define DATALOGGER_CHANNELS		8			// How many channels to sample
 
 
 // =============================

@@ -33,12 +33,9 @@
 #include "powersw.h"
 
 #if defined(DATALOGGER_ENABLE)
-extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][4];
+extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][DATALOGGER_CHANNELS];
 extern volatile uint8_t datalogger_trigger;
-extern void *datalogger_var0;
-extern void *datalogger_var1;
-extern void *datalogger_var2;
-extern void *datalogger_var3;
+extern void *datalogger_var[DATALOGGER_CHANNELS];
 #endif
 
 void SystemClock_Config(void);
@@ -161,10 +158,21 @@ int main(void) {
   // Configure datalogger variables
   // for debugging purposes
 #if defined(DATALOGGER_ENABLE)
-  datalogger_var0 = (void *)&motor_state[STATE_LEFT].act.angle;
-  datalogger_var1 = (void *)&i_meas.i_lA;
-  datalogger_var2 = (void *)&i_meas.i_lB;
-  datalogger_var3 = (void *)&motor_state[STATE_LEFT].act.sector;
+  // Sample rotor position
+  datalogger_var[0] = (void *)&motor_state[STATE_LEFT].act.angle;
+  datalogger_var[1] = (void *)&motor_state[STATE_LEFT].act.sector;
+
+  // Sample current measurements
+  datalogger_var[2] = (void *)&i_meas.i_lA;
+  datalogger_var[3] = (void *)&i_meas.i_lB;
+
+  // Sample modulator output --> PWM references
+  datalogger_var[4] = (void *)&LEFT_TIM->LEFT_TIM_U;
+  datalogger_var[5] = (void *)&LEFT_TIM->LEFT_TIM_V;
+  datalogger_var[6] = (void *)&LEFT_TIM->LEFT_TIM_W;
+
+  // Sample battery voltage
+  datalogger_var[7] = (void *)&analog_meas.v_battery;
 #endif
 
 
@@ -264,10 +272,11 @@ int main(void) {
   }
 
   // Transfer data through config bus
-  uint16_t addr = cfg.vars.dlog_ctrl >> 2;
-  if(addr > DATALOGGER_MAX) addr = DATALOGGER_MAX;
-  char *dlog_ptr = (char *)&datalogger[addr][0];
-  for(uint8_t i=0;i<8;i++) { // TODO: Size currently hard coded
+  uint16_t addr = cfg.vars.dlog_ctrl >> 2; // Remove the lowest two bits
+  if(addr > (DATALOGGER_MAX * (DATALOGGER_CHANNELS/4) + (DATALOGGER_CHANNELS-1))) addr = 0; // Simplified clamping
+
+  char *dlog_ptr = ((char *)datalogger) + 8*addr;
+  for(uint8_t i=0;i<8;i++) { // Move channels in 4 channel chunks
     cfg.vars.dlog_data[i] = *dlog_ptr;
     dlog_ptr++;
   }

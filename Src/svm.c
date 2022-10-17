@@ -63,13 +63,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #endif
 
 #if defined(DATALOGGER_ENABLE)
-extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][4];
+extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][DATALOGGER_CHANNELS];
 extern volatile DATALOGGER_COUNT_TYPE datalogger_write_offset;
 extern volatile uint8_t datalogger_trigger;
-extern void *datalogger_var0;
-extern void *datalogger_var1;
-extern void *datalogger_var2;
-extern void *datalogger_var3;
+extern void *datalogger_var[DATALOGGER_CHANNELS];
 extern volatile uint8_t datalogger_period;
 #endif
 
@@ -254,10 +251,8 @@ void TIM1_UP_IRQHandler() {
       datalogger_period--;
     } else {
       // Store values
-      if(datalogger_var0) datalogger[datalogger_write_offset][0] = *((DATALOGGER_TYPE *)datalogger_var0);
-      if(datalogger_var1) datalogger[datalogger_write_offset][1] = *((DATALOGGER_TYPE *)datalogger_var1);
-      if(datalogger_var2) datalogger[datalogger_write_offset][2] = *((DATALOGGER_TYPE *)datalogger_var2);
-      if(datalogger_var3) datalogger[datalogger_write_offset][3] = *((DATALOGGER_TYPE *)datalogger_var3);
+      for(uint8_t i=0; i<DATALOGGER_CHANNELS; i++)
+        if(datalogger_var[i]) datalogger[datalogger_write_offset][i] = *((DATALOGGER_TYPE *)datalogger_var[i]);
 
       datalogger_period = DATALOGGER_DIVIDER;
 
