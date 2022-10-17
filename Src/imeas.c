@@ -92,29 +92,29 @@ void ADC1_init(void) {
 
 #if defined(DUAL_ADC_MODE)
   // Dual ADC config
-  sConfig.Channel = RIGHT_C_ADC_CH;  // PC5 Right C phase voltage (Yellow cable)
+  sConfig.Channel = RIGHT_B_ADC_CH;
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = LEFT_B_ADC_CH;  // PC3 Left B phase voltage (Blue cable)
+  sConfig.Channel = LEFT_C_ADC_CH;
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
 #else
   // Single ADC config
-  sConfig.Channel = RIGHT_B_ADC_CH;  // PC4 Right B phase voltage (Blue cable)
+  sConfig.Channel = RIGHT_A_ADC_CH;
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = RIGHT_C_ADC_CH;  // PC5 Right C phase voltage (Yellow cable)
+  sConfig.Channel = RIGHT_B_ADC_CH;
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = LEFT_A_ADC_CH;  // PA0 Left A phase voltage (Green cable)
+  sConfig.Channel = LEFT_B_ADC_CH;
   sConfig.Rank    = 3;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = LEFT_B_ADC_CH;  // PC3 Left B phase voltage (Blue cable)
+  sConfig.Channel = LEFT_C_ADC_CH;
   sConfig.Rank    = 4;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 #endif
@@ -172,11 +172,11 @@ void ADC2_init(void) {
   // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-  sConfig.Channel = RIGHT_B_ADC_CH;  // PC4 Right B phase voltage (Blue cable)
+  sConfig.Channel = RIGHT_A_ADC_CH;
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
-  sConfig.Channel = LEFT_A_ADC_CH;  // PA0 Left A phase voltage (Green cable)
+  sConfig.Channel = LEFT_B_ADC_CH;
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
@@ -247,10 +247,10 @@ void DMA1_Channel1_IRQHandler(void) {
   // the offsets
   // The values are valid after the calibration is done
   // Measurement is from motor into inverter, while we want it the other way so it is inverted
-  i_meas.i_rB = (rdson_offset[0] - rdson_meas[0]) * rdson_to_i;
-  i_meas.i_rC = (rdson_offset[1] - rdson_meas[1]) * rdson_to_i;
-  i_meas.i_lA = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;
-  i_meas.i_lB = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
+  i_meas.i_rA = (rdson_offset[0] - rdson_meas[0]) * rdson_to_i;
+  i_meas.i_rB = (rdson_offset[1] - rdson_meas[1]) * rdson_to_i;
+  i_meas.i_lB = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;
+  i_meas.i_lC = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
 
   rdson_adc_conv_done = 1;	// This is used for calibration
 }

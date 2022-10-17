@@ -211,7 +211,7 @@ void MX_TIM_Init(void) {
   // down to 1 and creates underflow event. Then it restarts.
   // pre-scaler = 0 and divier = 1 i.e.
   // the timer runs at crystal(?) frequency
-  htim_tim8.Instance               = TIM8;
+  htim_tim8.Instance               = TIM1;
   htim_tim8.Init.Prescaler         = 0;
   htim_tim8.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_tim8.Init.Period            = PWM_PERIOD;
@@ -227,7 +227,7 @@ void MX_TIM_Init(void) {
 
   // Start TIM8 a bit early so that when in triggers ADC, scans one
   // motor currents first and when the next motor is scanned, TIM1 is at underflow (middle of low zero)
-  TIM8->CNT = TIMER_OFFSET_FOR_ADC;
+  TIM1->CNT = TIMER_OFFSET_FOR_ADC;
 
   sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
@@ -249,7 +249,7 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_tim8, &sBreakDeadTimeConfig);
 
-  htim_tim1.Instance               = TIM1;	// TIM1
+  htim_tim1.Instance               = TIM8;	// TIM1
   htim_tim1.Init.Prescaler         = 0;
   htim_tim1.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_tim1.Init.Period            = PWM_PERIOD;
