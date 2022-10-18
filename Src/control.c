@@ -118,6 +118,10 @@ static int16_t speed_tick[2] = {0};
 static uint8_t buzzer_tone_tick = 0;
 static uint8_t pattern_tick = 0;
 
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+extern volatile uint8_t datalogger_trigger;
+#endif
+
 // Array to convert HALL sensor readings (order CBA, MSB first) to sector number
 // Note that index 0 and 7 are "guards" and should never happen when sensors work properly
 //static const uint8_t hall_to_sector[8] = { 0, 5, 1, 0, 3, 4, 2, 0 };
@@ -188,6 +192,10 @@ void check_sc() {
   if((LEFT_TIM->SR & TIM_SR_BIF) || (RIGHT_TIM->SR & TIM_SR_BIF)) {
     fault_bits |= FAULT_SHORT;
     // TODO: Fault the other side as well?
+
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+    datalogger_trigger = 1; // Trigger datalogger on short circuit trip
+#endif
   }
 }
 
@@ -407,6 +415,10 @@ void TIM3_IRQHandler(void)
       //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
       fault_bits |= FAULT_OVERCURRENT;
 
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+    datalogger_trigger = 1; // Trigger datalogger on overcurrent trip
+#endif
+
       buzzer_tone = 0x92A4;
       buzzer_pattern = 0xC30C;
     }
@@ -416,6 +428,10 @@ void TIM3_IRQHandler(void)
        ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
       //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
       fault_bits |= FAULT_OVERCURRENT;
+
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+    datalogger_trigger = 1; // Trigger datalogger on overcurrent trip
+#endif
 
       buzzer_tone = 0x92A4;
       buzzer_pattern = 0xC30C;

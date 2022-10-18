@@ -172,6 +172,8 @@
 #define DATALOGGER_COUNT_TYPE	uint8_t		// Type of counter variable to hold write offset, must hold DATALOGGER_MAX
 #define DATALOGGER_DIVIDER		3			// Divide PWM rate by this+1 to get datalogger sampling rate
 #define DATALOGGER_CHANNELS		8			// How many channels to sample
+#define DATALOGGER_TRIG_TRIP				// If defined, datalogger will trigger to (some) trips
+#define DATALOGGER_SAMPLES_AFTER	32		// If defined, datalogger will roll continuously and sample this amount after the trigger
 
 
 // =============================

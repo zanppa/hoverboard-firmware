@@ -36,6 +36,10 @@
 extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][DATALOGGER_CHANNELS];
 extern volatile uint8_t datalogger_trigger;
 extern void *datalogger_var[DATALOGGER_CHANNELS];
+extern volatile DATALOGGER_COUNT_TYPE datalogger_write_offset;
+#if defined(DATALOGGER_SAMPLES_AFTER)
+extern volatile DATALOGGER_COUNT_TYPE datalogger_after_samples;
+#endif
 #endif
 
 void SystemClock_Config(void);
@@ -255,7 +259,7 @@ int main(void) {
 
 #if defined(DATALOGGER_ENABLE)
   // Handle datalogger control
-  if(cfg.vars.dlog_ctrl & 1) { // Trigger manually
+  if(cfg.vars.dlog_ctrl & 1) { // Trigger manually, bit 0
     if(!datalogger_trigger) {
       datalogger_trigger = 1;
       cfg.vars.dlog_ctrl &= ~3; // Clear trigger & ready bits from cfgbus register
@@ -263,12 +267,26 @@ int main(void) {
       cfg.vars.dlog_ctrl &= ~1; // Clear trigger since datalogger is running
     }
   } else {
-    if(!datalogger_trigger)
-      cfg.vars.dlog_ctrl |= 2;	// Raise ready flag
+    if(!datalogger_trigger) {
+      cfg.vars.dlog_ctrl |= 2;	// Raise ready flag, bit 1
+
+#if defined(DATALOGGER_SAMPLES_AFTER)
+      cfg.vars.dlog_ctrl = (cfg.vars.dlog_ctrl & 0b111) | (datalogger_write_offset << 3);
+#endif
+    }
+  }
+
+  if(cfg.vars.dlog_ctrl & 4) { // Reset datalogger, bit 2 (intended to be used with trip (fault) trigger)
+    datalogger_trigger = 0;
+    datalogger_write_offset = DATALOGGER_MAX;
+#if defined(DATALOGGER_SAMPLES_AFTER)
+    datalogger_after_samples = DATALOGGER_SAMPLES_AFTER;
+#endif
+    cfg.vars.dlog_ctrl = 0; // Clear control word
   }
 
   // Transfer data through config bus
-  uint16_t addr = cfg.vars.dlog_ctrl >> 2; // Remove the lowest two bits
+  uint16_t addr = cfg.vars.dlog_ctrl >> 3; // Remove the lowest three bits
   if(addr > (DATALOGGER_MAX * (DATALOGGER_CHANNELS/4) + (DATALOGGER_CHANNELS-1))) addr = 0; // Simplified clamping
 
   char *dlog_ptr = ((char *)datalogger) + 8*addr;

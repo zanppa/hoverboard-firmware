@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-# Example modbus code to trigger & read the datalogger
+# Example modbus python code to read the datalogger after trigger
+# when DATALOGGER_SAMPLES_AFTER is enabled (e.g. after a fault)
 
 import minimalmodbus
 from time import sleep
+
+BYTES = 256
 
 # integers should be swapped, strings not
 def swap(uint16):
@@ -26,23 +29,21 @@ data_reg = 46
 
 ct = swap(instrument.read_register(ctrl_reg))
 
-print("Control byte: ", hex(ct))
-print("Press enter to trigger")
-input()
-ct = ct | 1
-instrument.write_register(ctrl_reg, swap(ct), 0)
-
-print("Wait until ready...")
+print("Wait until triggered...")
 ct = swap(instrument.read_register(ctrl_reg))
 while not (ct & 2):
   sleep(0.01)
   ct = swap(instrument.read_register(ctrl_reg))
 
+# Read the offset after which the writing was stopped (oldest sample)
+offset = ct >> 3
 
 print("Reading data...")
 print("Index,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7")
-for i in range(256):
-  addr = (255-i) * 2 * 8 # Last index is the first stored value. Keep low 3 bits zero to not trigger again
+for i in range(BYTES):
+  offset -= 1 # Counting downwards to get the values in correct order
+  if offset < 0: offset = BYTES - 1
+  addr = addr * 2 * 8 # Reading as 2x4 bytes. Keep low 3 bits zero to not trigger again
 
   # Read first 4 channels
   instrument.write_register(ctrl_reg, swap(addr), 0)
@@ -64,3 +65,9 @@ for i in range(256):
   data.insert(0, i)
 
   print(','.join(map(str, data)))
+
+
+# Reset the datalogger
+ct = swap(instrument.read_register(ctrl_reg))
+ct |= 4 # Reset bit high
+instrument.write_register(ctrl_reg, swap(ct), 0)

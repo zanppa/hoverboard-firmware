@@ -22,6 +22,8 @@ The basic features, like number of samples and sampling speed, are in `Inc/confi
 #define DATALOGGER_COUNT_TYPE   uint8_t
 #define DATALOGGER_DIVIDER      7
 #define DATALOGGER_CHANNELS		8
+#define DATALOGGER_TRIG_TRIP
+#define DATALOGGER_SAMPLES_AFTER    32
 ```
 
 If the `DATALOGGER_ENABLE` is defined, then the datalogger feature will be compiled in.
@@ -38,8 +40,17 @@ amount of samples fits inside that.
 The `DATALOGGER_DIVIDER` tells how often to sample the variables. Setting 0 here 
 samples every PWM period while 1 samples every other and 7 samples only every 8th PWM period.
 
-Finally, the `DATALOGGER_CHANNELS` define how many channels there is. Currently some parts of 
+`DATALOGGER_CHANNELS` define how many channels there is. Currently some parts of 
 the code (transfering the data over modbus) are hard coded to support 8 channels only.
+
+`DATALOGGER_TRIG_TRIP` controls whether some faults (like overcurrent & short circuit) trigger 
+the datalogger or not. If this is defined, then the faults trigger datalogger. Should be used 
+together with `DATALOGGER_SAMPLES_AFTER`.
+
+Finally, the `DATALOGGER_SAMPLES_AFTER` controls whether sampling is done also before the trigger 
+and only the defined amount of samples is stored after trigger. If not defined, everything is 
+samples after the trigger. This is useful with the `DATALOGGER_TRIG_TRIP` to see what happened 
+just before the trip.
 
 ### Triggering and loading data
 Triggering of the datalogger is currently done only from modbus. There is a control word called
@@ -47,7 +58,8 @@ Triggering of the datalogger is currently done only from modbus. There is a cont
 
  - 0th bit (LSB) is the trigger bit. Setting this to 1 triggers the datalogger
  - 1st bit indicates whether the datalogger is stopped. 0 means logger is running while 1 means it is stopped
- - bits 2...15 address of the sample to read. Note that the largest address is the first sampled
+ - 2nd bit is used to reset the datalogger (write offsets etc)
+ - bits 3...15 address of the sample to read. Note that the largest address is the first sampled
 
 The data to read from the datalogger is in register dlog_data, which is a 8 byte register spanning 
 addresses 46...50. To read data from the datalogger:
@@ -63,6 +75,11 @@ Note that the data is stored in reverse order, i.e. the sample with address 0 is
 The lowest bit tells whether to transfer the first 4 or last 4 sampled variables. I.e. reading 
 address 0 results in the first 4 channels and address 1 the last 4 channels. For this reason 
 you need to read addresses up to two times the number of samples.
+
+If `DATALOGGER_SAMPLES_AFTER` is defined, after 1st bit indicates that the datalogger has stopped, 
+the address (bits 3...15) indicate the position after where the datalogger stopped writing in the ring 
+buffer, i.e. it contains the offset of the oldest sample. Note that as the logger writes in reverse 
+order, the address should be then decreased from this offset to read the values in order.
 
 ### Implementation
 The variables are configured in `Src/main.c` so that the pointers to the variables to be sampled are 

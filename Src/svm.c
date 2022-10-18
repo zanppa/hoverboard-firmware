@@ -68,6 +68,11 @@ extern volatile DATALOGGER_COUNT_TYPE datalogger_write_offset;
 extern volatile uint8_t datalogger_trigger;
 extern void *datalogger_var[DATALOGGER_CHANNELS];
 extern volatile uint8_t datalogger_period;
+
+#if defined(DATALOGGER_SAMPLES_AFTER)
+volatile DATALOGGER_COUNT_TYPE datalogger_after_samples = DATALOGGER_SAMPLES_AFTER;
+#endif
+
 #endif
 
 
@@ -246,7 +251,12 @@ void TIM1_UP_IRQHandler() {
 
   // Handle datalogger variables if enabled
 #if defined(DATALOGGER_ENABLE)
+#if !defined(DATALOGGER_SAMPLES_AFTER)
   if(datalogger_trigger) {
+#else
+  if(datalogger_after_samples) {
+#endif
+
     if(datalogger_period) {
       datalogger_period--;
     } else {
@@ -259,11 +269,23 @@ void TIM1_UP_IRQHandler() {
       if(datalogger_write_offset)
         datalogger_write_offset--;
       else {
+#if !defined(DATALOGGER_SAMPLES_AFTER)
         datalogger_trigger = 0;     // Disable writing when buffer is full
+#endif
         datalogger_write_offset = DATALOGGER_MAX;
       }
     }
   }
+
+#if defined(DATALOGGER_SAMPLES_AFTER)
+  if(datalogger_trigger) {
+    if(datalogger_after_samples)
+      datalogger_after_samples--;
+    else
+      datalogger_trigger = 0;
+  }
+#endif
+
 #endif
 
   // Debug: LED off
