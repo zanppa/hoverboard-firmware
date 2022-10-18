@@ -77,12 +77,8 @@ int main(void) {
   SystemClock_Config();
 
   // Initialize control modes
-  //motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // BLDC
-  //motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // SVM
-  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;  // BLDC
-  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE; // BLDC
-  //motor_state[STATE_LEFT].ref.control_mode = CONTROL_SPEED;  // FOC
-  //motor_state[STATE_RIGHT].ref.control_mode = CONTROL_SPEED; // FOC
+  motor_state[STATE_LEFT].ref.control_mode = CONTROL_TORQUE;
+  motor_state[STATE_RIGHT].ref.control_mode = CONTROL_TORQUE;
 
   __HAL_RCC_DMA1_CLK_DISABLE();
   __HAL_RCC_DMA2_CLK_DISABLE();
@@ -159,17 +155,17 @@ int main(void) {
   // for debugging purposes
 #if defined(DATALOGGER_ENABLE)
   // Sample rotor position
-  datalogger_var[0] = (void *)&motor_state[STATE_RIGHT].act.angle;
-  datalogger_var[1] = (void *)&motor_state[STATE_RIGHT].act.sector;
+  datalogger_var[0] = (void *)&motor_state[STATE_LEFT].act.angle;
+  datalogger_var[1] = (void *)&motor_state[STATE_LEFT].act.sector;
 
   // Sample current measurements
-  datalogger_var[2] = (void *)&i_meas.i_rA;
-  datalogger_var[3] = (void *)&i_meas.i_rB;
+  datalogger_var[2] = (void *)&i_meas.i_lA;
+  datalogger_var[3] = (void *)&i_meas.i_lB;
 
   // Sample modulator output --> PWM references
-  datalogger_var[4] = (void *)&RIGHT_TIM->RIGHT_TIM_U;
-  datalogger_var[5] = (void *)&RIGHT_TIM->RIGHT_TIM_V;
-  datalogger_var[6] = (void *)&RIGHT_TIM->RIGHT_TIM_W;
+  datalogger_var[4] = (void *)&LEFT_TIM->LEFT_TIM_U;
+  datalogger_var[5] = (void *)&LEFT_TIM->LEFT_TIM_V;
+  datalogger_var[6] = (void *)&LEFT_TIM->LEFT_TIM_W;
 
   // Sample battery voltage
   datalogger_var[7] = (void *)&analog_meas.v_battery;

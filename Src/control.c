@@ -21,6 +21,7 @@
 
 #include <stm32f1xx_hal_gpio.h>
 
+
 // From adc.c
 extern ADC_HandleTypeDef hadc3;
 extern volatile adc_buf_t analog_meas;
@@ -330,7 +331,7 @@ void TIM3_IRQHandler(void)
 
   CTRL_TIM->SR = 0;
 
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
 
   if(reset_ctrl) {
     initialize_control_state();
@@ -377,11 +378,13 @@ void TIM3_IRQHandler(void)
     // Left motor phase currents and position
     ia_l = i_meas.i_lA;
     ib_l = i_meas.i_lB;
+    ic_l = i_meas.i_lC;
 #if defined(LEFT_CURRENT_TFORM)
     angle_l = motor_state[STATE_LEFT].act.angle;
 #endif
 
     // Right motor phase currents and position
+    ia_r = i_meas.i_rA;
     ib_r = i_meas.i_rB;
     ic_r = i_meas.i_rC;
 #if defined(RIGHT_CURRENT_TFORM)
@@ -389,8 +392,6 @@ void TIM3_IRQHandler(void)
 #endif
     __enable_irq();
 
-    ia_r = -ib_r - ic_r;
-    ic_l = -ia_l - ib_l;
   } else {
     ia_l = ib_l = ic_l = 0;
     ia_r = ib_r = ic_r = 0;
@@ -619,14 +620,14 @@ void TIM3_IRQHandler(void)
       iq = FILTER(iq, iq_old_l, cfg.vars.i_filter);
       id_old_l = id;
       iq_old_l = iq;
+
+      cfg.vars.rdsonla = ia_l;
+      cfg.vars.rdsonlb = ib_l;
     }
 #endif
 
 
 #if defined(LEFT_MOTOR_FOC)
-
-    cfg.vars.rdsonla = iq;
-    cfg.vars.rdsonlb = id;
 
     id_error = id;	// TODO: Add id reference (from field weakening)
     iq_error = torque_ref - iq;
@@ -670,7 +671,7 @@ void TIM3_IRQHandler(void)
       speed_ctrl = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
 
-      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_LEFT].ref.value) / (FIXED_ONE * motor_nominal_counts);
 
       __disable_irq();
       motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
@@ -680,7 +681,7 @@ void TIM3_IRQHandler(void)
       __disable_irq();
       motor_state[STATE_LEFT].ctrl.speed = 0;
       motor_state[STATE_LEFT].ctrl.angle = motor_state[STATE_LEFT].ref.value;
-      motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
+      motor_state[STATE_LEFT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 1.5;
       __enable_irq();
     } else {
       // Torque or speed control mode with SVM
@@ -694,7 +695,7 @@ void TIM3_IRQHandler(void)
       // Apply the reference
       __disable_irq();
       motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-      motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_90DEG;
+      motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_120DEG;
       __enable_irq();
     }
 
@@ -815,12 +816,12 @@ void TIM3_IRQHandler(void)
       iq = FILTER(iq, iq_old_r, cfg.vars.i_filter);
       id_old_r = id;
       iq_old_r = iq;
+
+      cfg.vars.rdsonra = ia_r;
+      cfg.vars.rdsonrb = ib_r;
     }
 #endif
 
-    // TODO: Debug parameteres
-    cfg.vars.rdsonrb = iq;
-    cfg.vars.rdsonrc = id;
 
 
 #if defined(RIGHT_MOTOR_FOC)
@@ -871,7 +872,7 @@ void TIM3_IRQHandler(void)
       speed_ctrl = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
 
-      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts * 2);
+      speed_ctrl *= (ANGLE_60DEG * motor_state[STATE_RIGHT].ref.value) / (FIXED_ONE * motor_nominal_counts);
 
       __disable_irq();
       motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
@@ -882,7 +883,7 @@ void TIM3_IRQHandler(void)
       __disable_irq();
       motor_state[STATE_RIGHT].ctrl.speed = 0;
       motor_state[STATE_RIGHT].ctrl.angle = motor_state[STATE_RIGHT].ref.value;
-      motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE;
+      motor_state[STATE_RIGHT].ctrl.amplitude = IR_MINIMUM_VOLTAGE * 1.5;
       __enable_irq();
     } else {
       // Torque or speed control mode with SVM
@@ -896,7 +897,7 @@ void TIM3_IRQHandler(void)
       // Apply the reference
       __disable_irq();
       motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-      motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_90DEG;
+      motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_120DEG;
       __enable_irq();
     }
 
@@ -1014,5 +1015,5 @@ void TIM3_IRQHandler(void)
   // have fresh analog measurements
   hadc3.Instance->CR2 |= ADC_CR2_SWSTART;
 
-  HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
+  //HAL_GPIO_TogglePin(LED_PORT,LED_PIN); // TODO: Debug LED
 }
