@@ -195,8 +195,8 @@ void control_timer_init(void)
  */
 
 void MX_TIM_Init(void) {
-  TIM_HandleTypeDef htim_tim8;
   TIM_HandleTypeDef htim_tim1;
+  TIM_HandleTypeDef htim_tim8;
 
   __HAL_RCC_TIM1_CLK_ENABLE();
   __HAL_RCC_TIM8_CLK_ENABLE();
@@ -207,65 +207,23 @@ void MX_TIM_Init(void) {
   TIM_SlaveConfigTypeDef sTimConfig;
 
   // Initialize timer as center-aligned mode
-  // Timer counts from 0 to "period"-1, creates overflow event, then counts
+  // Timer counts from 0 to "period"-1, (does not create overflow event due to repetitioncounter), then counts
   // down to 1 and creates underflow event. Then it restarts.
   // pre-scaler = 0 and divier = 1 i.e.
   // the timer runs at crystal(?) frequency
-  htim_tim8.Instance               = TIM1;
-  htim_tim8.Init.Prescaler         = 0;
-  htim_tim8.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
-  htim_tim8.Init.Period            = PWM_PERIOD;
-  htim_tim8.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  htim_tim8.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition for ADC1 auto-trigger (was 0)
-  htim_tim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  //htim_tim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  HAL_TIM_PWM_Init(&htim_tim8);
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
-  sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim_tim8, &sMasterConfig);
-
-  // Start TIM8 a bit early so that when in triggers ADC, scans one
-  // motor currents first and when the next motor is scanned, TIM1 is at underflow (middle of low zero)
-  TIM1->CNT = TIMER_OFFSET_FOR_ADC;
-
-  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
-  sConfigOC.Pulse        = 0;
-  sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
-  sConfigOC.OCFastMode   = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_SET;
-  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_1);
-  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_2);
-  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_3);
-
-  sBreakDeadTimeConfig.OffStateRunMode  = TIM_OSSR_ENABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
-  sBreakDeadTimeConfig.LockLevel        = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime         = DEAD_TIME;
-  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_ENABLE;		// Overcurrent stops timer
-  sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_LOW;
-  sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
-  HAL_TIMEx_ConfigBreakDeadTime(&htim_tim8, &sBreakDeadTimeConfig);
-
-  htim_tim1.Instance               = TIM8;	// TIM1
+  htim_tim1.Instance               = TIM1;
   htim_tim1.Init.Prescaler         = 0;
   htim_tim1.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
   htim_tim1.Init.Period            = PWM_PERIOD;
   htim_tim1.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  htim_tim1.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition (was 0)
+  htim_tim1.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition for ADC1 auto-trigger (was 0)
   htim_tim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   //htim_tim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   HAL_TIM_PWM_Init(&htim_tim1);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-  sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_ENABLE;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
+  sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
   HAL_TIMEx_MasterConfigSynchronization(&htim_tim1, &sMasterConfig);
-
-  sTimConfig.InputTrigger = TIM_TS_ITR0;
-  sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
-  HAL_TIM_SlaveConfigSynchronization(&htim_tim1, &sTimConfig);
 
   sConfigOC.OCMode       = TIM_OCMODE_PWM2;
   sConfigOC.Pulse        = 0;
@@ -286,6 +244,48 @@ void MX_TIM_Init(void) {
   sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim_tim1, &sBreakDeadTimeConfig);
+
+  htim_tim8.Instance               = TIM8;
+  htim_tim8.Init.Prescaler         = 0;
+  htim_tim8.Init.CounterMode       = TIM_COUNTERMODE_CENTERALIGNED3; // Interrupts at up- and downcounting
+  htim_tim8.Init.Period            = PWM_PERIOD;
+  htim_tim8.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  htim_tim8.Init.RepetitionCounter = 1; // TODO: Set to 1 to generate update event/interrupt only on bottom transition (was 0)
+  htim_tim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  //htim_tim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  HAL_TIM_PWM_Init(&htim_tim8);
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_ENABLE;
+  HAL_TIMEx_MasterConfigSynchronization(&htim_tim8, &sMasterConfig);
+
+  sTimConfig.InputTrigger = TIM_TS_ITR0;
+  sTimConfig.SlaveMode    = TIM_SLAVEMODE_GATED;
+  HAL_TIM_SlaveConfigSynchronization(&htim_tim8, &sTimConfig);
+
+  // Start TIM8 a bit early so that when it triggers ADC, ADC scans one
+  // motor's currents first and when the next motor is scanned, TIM1 is at underflow (middle of low zero)
+  TIM8->CNT = TIMER_OFFSET_FOR_ADC;
+
+  sConfigOC.OCMode       = TIM_OCMODE_PWM2;
+  sConfigOC.Pulse        = 0;
+  sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_LOW;
+  sConfigOC.OCFastMode   = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_SET;
+  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_1);
+  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_2);
+  HAL_TIM_PWM_ConfigChannel(&htim_tim8, &sConfigOC, TIM_CHANNEL_3);
+
+  sBreakDeadTimeConfig.OffStateRunMode  = TIM_OSSR_ENABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
+  sBreakDeadTimeConfig.LockLevel        = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime         = DEAD_TIME;
+  sBreakDeadTimeConfig.BreakState       = TIM_BREAK_ENABLE;		// Overcurrent stops timer
+  sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_LOW;
+  sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
+  HAL_TIMEx_ConfigBreakDeadTime(&htim_tim8, &sBreakDeadTimeConfig);
 
   // Enable update interrupts
   //LEFT_TIM->DIER |= TIM_DIER_UIE;
@@ -314,13 +314,6 @@ void MX_TIM_Init(void) {
   TIM8->BDTR &= ~TIM_BDTR_MOE;
 
   // Start the timers
-  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_3);
-  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_3);
-
   HAL_TIM_PWM_Start_IT(&htim_tim8, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start_IT(&htim_tim8, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start_IT(&htim_tim8, TIM_CHANNEL_3);
@@ -328,7 +321,14 @@ void MX_TIM_Init(void) {
   HAL_TIMEx_PWMN_Start(&htim_tim8, TIM_CHANNEL_2);
   HAL_TIMEx_PWMN_Start(&htim_tim8, TIM_CHANNEL_3);
 
-  htim_tim1.Instance->RCR = 1;
+  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim_tim1, TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim_tim1, TIM_CHANNEL_3);
 
-  __HAL_TIM_ENABLE(&htim_tim8);
+  htim_tim8.Instance->RCR = 1;
+
+  __HAL_TIM_ENABLE(&htim_tim1);
 }
