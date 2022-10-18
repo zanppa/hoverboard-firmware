@@ -92,11 +92,11 @@ void ADC1_init(void) {
 
 #if defined(DUAL_ADC_MODE)
   // Dual ADC config
-  sConfig.Channel = RIGHT_B_ADC_CH;
+  sConfig.Channel = RIGHT_A_ADC_CH;
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
-  sConfig.Channel = LEFT_C_ADC_CH;
+  sConfig.Channel = LEFT_B_ADC_CH;
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&adc_rdson, &sConfig);
 
@@ -172,11 +172,11 @@ void ADC2_init(void) {
   // Use the fastest possible sampling time => 1.75 us * 4 = 7 us total
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
 
-  sConfig.Channel = RIGHT_A_ADC_CH;
+  sConfig.Channel = RIGHT_B_ADC_CH;
   sConfig.Rank    = 1;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
-  sConfig.Channel = LEFT_B_ADC_CH;
+  sConfig.Channel = LEFT_C_ADC_CH;
   sConfig.Rank    = 2;
   HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 
@@ -249,8 +249,11 @@ void DMA1_Channel1_IRQHandler(void) {
   // Measurement is from motor into inverter, while we want it the other way so it is inverted
   i_meas.i_rA = (rdson_offset[0] - rdson_meas[0]) * rdson_to_i;
   i_meas.i_rB = (rdson_offset[1] - rdson_meas[1]) * rdson_to_i;
+  i_meas.i_rC = -i_meas.i_rA - i_meas.i_rB;
+
   i_meas.i_lB = (rdson_offset[2] - rdson_meas[2]) * rdson_to_i;
   i_meas.i_lC = (rdson_offset[3] - rdson_meas[3]) * rdson_to_i;
+  i_meas.i_lA = -i_meas.i_lB - i_meas.i_lC;
 
   rdson_adc_conv_done = 1;	// This is used for calibration
 }
