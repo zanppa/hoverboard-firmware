@@ -4,7 +4,7 @@
 #include "uart.h"
 #include "eeprom.h"
 #include <string.h>
-
+#include "math.h"
 
 //these function pointers should point to a user configurable function
 //that stores/reads the 16bit value array in a non-volatile memory such as an eeprom
@@ -178,8 +178,7 @@ void CfgInit()
 //  cfg.vars.kp_id = 400; 	// 0.6 * FIXED_ONE;
 //  cfg.vars.ki_id = 60; 		// 0.01 * FIXED_ONE;
 
-//  cfg.vars.i_filter = 300;	// 0.0x * FIXED_ONE;
-  cfg.vars.i_filter = 100;	// 0.0x * FIXED_ONE;
+  cfg.vars.i_filter = 2048;	// 0.5 * FIXED_ONE;
 
   cfg.vars.buzzer = 1;
 #endif
