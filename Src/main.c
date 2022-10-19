@@ -58,7 +58,7 @@ extern volatile uint8_t status_bits;
 extern volatile uint8_t fault_bits;
 
 int main(void) {
-  //uint16_t button_time = 0;
+  uint8_t charger_filt = 0;
 
   HAL_Init();
   __HAL_RCC_AFIO_CLK_ENABLE();
@@ -89,6 +89,12 @@ int main(void) {
 
   MX_GPIO_Init();
 
+  // If trying to power up with charger connected (charge pin low), stop here
+  if(!HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN)) {
+    // TODO: Could be some indication but nothing is yet available...
+    while(1);
+  }
+
   // Enable power latch here so that the board keeps
   // powered on during initialization
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
@@ -117,7 +123,6 @@ int main(void) {
 
   // Initialize PWM timers
   MX_TIM_Init();
-
 
 #ifdef POWER_BUTTON_NORMAL
   // Check the power-up sequence
@@ -207,13 +212,16 @@ int main(void) {
     }
 #endif
 
+    // If charger is connected on the fly, stop everything and power off
+    if(!HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN)) {
+      charger_filt++;
+      if(charger_filt >= 5)
+        power_off();
+    } else charger_filt = 0;
+
     // Clear the ADC flag for next loop
     generic_adc_conv_done = 0;
 
-    // Update references
-    // TODO: Select reference source (e.g. analog or modbus)
-    // motor_state[STATE_LEFT].ref.value = cfg.vars.setpoint_l;
-    // motor_state[STATE_RIGHT].ref.value = cfg.vars.setpoint_r;
 
     // Do all "slow" calculations here, on background
     // These will be pre-empted by everything more important
