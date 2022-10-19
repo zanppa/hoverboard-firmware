@@ -330,8 +330,9 @@ void TIM3_IRQHandler(void)
 
 #if defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
   int16_t id_error, iq_error;
-  int16_t angle_advance, ref_amplitude;
+  int16_t ref_amplitude;
 #endif
+  int16_t angle_advance;
 
 #if (defined(LEFT_MOTOR_SVM) && !defined(LEFT_MOTOR_FOC)) || (defined(RIGHT_MOTOR_SVM) && !defined(RIGHT_MOTOR_FOC))
   int16_t speed_ctrl;
@@ -682,7 +683,7 @@ void TIM3_IRQHandler(void)
     // Apply references
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Should start with 90 degree phase shift
+    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Start with 90 degree phase shift to guarantee starting
     // TODO: Angle advance polarity should change depending on speed direction
     __enable_irq();
 
@@ -716,10 +717,14 @@ void TIM3_IRQHandler(void)
       ref_sign = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
 
+      // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
+      if(ABS(speed_l) < 200) angle_advance = ANGLE_120DEG;
+      else angle_advance = ANGLE_90DEG;
+
       // Apply the reference
       __disable_irq();
       motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-      motor_state[STATE_LEFT].ctrl.angle = ref_sign * ANGLE_120DEG;
+      motor_state[STATE_LEFT].ctrl.angle = ref_sign * angle_advance;
       __enable_irq();
     }
 
@@ -918,10 +923,14 @@ void TIM3_IRQHandler(void)
       ref_sign = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
 
+      // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
+      if(ABS(speed_r) < 200) angle_advance = ANGLE_120DEG;
+      else angle_advance = ANGLE_90DEG;
+
       // Apply the reference
       __disable_irq();
       motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-      motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ANGLE_120DEG;
+      motor_state[STATE_RIGHT].ctrl.angle = ref_sign * angle_advance;
       __enable_irq();
     }
 
