@@ -457,6 +457,10 @@ void TIM3_IRQHandler(void)
     buzzer_tone = 0xCCCC;
     buzzer_pattern = 0xFFFF;
 
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+    datalogger_trigger = 1; // Trigger datalogger on overvoltage trip
+#endif
+
   } else if(battery_volt_pu > ov_warn_pu) {
     status_bits |= STATUS_OVERVOLTAGE_WARN;
 
@@ -478,6 +482,10 @@ void TIM3_IRQHandler(void)
 
     buzzer_tone = 0xF0F0;
     buzzer_pattern = 0xFFFF;
+
+#if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
+    datalogger_trigger = 1; // Trigger datalogger on undervoltage trip
+#endif
 
   } else if(battery_volt_pu < uv_warn_pu) {
     status_bits |= STATUS_UNDERVOLTAGE_WARN;
