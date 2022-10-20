@@ -35,6 +35,7 @@
 #if defined(DATALOGGER_ENABLE)
 extern volatile DATALOGGER_TYPE datalogger[DATALOGGER_MAX+1][DATALOGGER_CHANNELS];
 extern volatile uint8_t datalogger_trigger;
+extern volatile uint8_t datalogger_full;
 extern void *datalogger_var[DATALOGGER_CHANNELS];
 extern volatile DATALOGGER_COUNT_TYPE datalogger_write_offset;
 #if defined(DATALOGGER_SAMPLES_AFTER)
@@ -275,12 +276,14 @@ int main(void) {
       cfg.vars.dlog_ctrl &= ~1; // Clear trigger since datalogger is running
     }
   } else {
-    if(!datalogger_trigger) {
-      cfg.vars.dlog_ctrl |= 2;	// Raise ready flag, bit 1
-
+    if(datalogger_full) {
 #if defined(DATALOGGER_SAMPLES_AFTER)
-      cfg.vars.dlog_ctrl = (cfg.vars.dlog_ctrl & 0b111) | (datalogger_write_offset << 3);
+      // Prevent writing the offset continuously
+      if(!(cfg.vars.dlog_ctrl & 2))
+        cfg.vars.dlog_ctrl = (cfg.vars.dlog_ctrl & 0b111) | (datalogger_write_offset << 3);
 #endif
+
+      cfg.vars.dlog_ctrl |= 2;	// Raise ready flag, bit 1
     }
   }
 
@@ -290,6 +293,7 @@ int main(void) {
 #if defined(DATALOGGER_SAMPLES_AFTER)
     datalogger_after_samples = DATALOGGER_SAMPLES_AFTER;
 #endif
+    datalogger_full = 0;
     cfg.vars.dlog_ctrl = 0; // Clear control word
   }
 
