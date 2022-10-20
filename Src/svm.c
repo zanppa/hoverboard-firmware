@@ -33,13 +33,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #if defined(DPWMMIN)
 
-#if (1000*SVM_SHORT_ZPULSE / PWM_PERIOD) > 168
+#if (1000.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) > 168
 #error "Too long short zpulse for minp limit mode 2 and considering PWM period and dpwmmin modulation"
 #endif
 
 #else // DPWMMIN
 
-#if (2000 * SVM_SHORT_ZPULSE / PWM_PERIOD) > 168
+#if (2000.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) > 168
 #error "Too long short zpulse for minp limit mode 2 and considering PWM period and continuous modulation"
 #endif
 
@@ -52,10 +52,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #if MINP_LIMIT_MODE == 1
 #if defined(DPWMMIN)
 // For DPWMMIN the modulation index limit is zero pulse length directy
-#define MIDX_MAX ((1 - SVM_SHORT_ZPULSE / PWM_PERIOD) * FIXED_ONE)
+// Note that zero is divided on upcounting and downcounting periods, thus 2 times
+#define MIDX_MAX ((1.0 - 2.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE)
 #else
 // For continuous modulation index limit must be twice the required short pulse length
-#define MIDX_MAX ((1 - 2 * SVM_SHORT_ZPULSE / PWM_PERIOD) * FIXED_ONE)
+// Needs to be twice as long as in DPWMMIN
+#define MIDX_MAX ((1.0 - 4.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE)
 #endif
 
 #else // MINP_LIMIT_MODE
