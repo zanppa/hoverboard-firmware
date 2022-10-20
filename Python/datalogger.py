@@ -4,6 +4,8 @@
 import minimalmodbus
 from time import sleep
 
+CHANNELS = 8
+
 # integers should be swapped, strings not
 def swap(uint16):
   hi = (uint16 & 0xff00)
@@ -25,8 +27,15 @@ ctrl_reg = 45
 data_reg = 46
 
 ct = swap(instrument.read_register(ctrl_reg))
-
 print("Control byte: ", hex(ct))
+
+print("Reseting datalogger...")
+ct = ct | 4
+instrument.write_register(ctrl_reg, swap(ct), 0)
+
+ct = swap(instrument.read_register(ctrl_reg))
+print("Control byte: ", hex(ct))
+
 print("Press enter to trigger")
 input()
 ct = ct | 1
@@ -38,22 +47,24 @@ while not (ct & 2):
   sleep(0.01)
   ct = swap(instrument.read_register(ctrl_reg))
 
-
+print("control word was ", ct)
 print("Reading data...")
 print("Index,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7")
 for i in range(256):
-  addr = (255-i) * 2 * 8 # Last index is the first stored value. Keep low 3 bits zero to not trigger again
+  addr = (255-i) * (CHANNELS//4) * 8 # Stored in reverse order. Keep low 3 bits as zero to not trigger again
+  addr |= ct & 0x07  # Keep the low 3 bits to prevent reset..
 
   # Read first 4 channels
   instrument.write_register(ctrl_reg, swap(addr), 0)
   data = instrument.read_registers(data_reg, 4)
 
-  # Read last 4 channels
-  instrument.write_register(ctrl_reg, swap(addr + (1*8)), 0) # offset times 8 to keep the low 3 bits zero
-  data2 = instrument.read_registers(data_reg, 4)
-  data.extend(data2)
+  # Read rest of the channels
+  for j in range(1, CHANNELS//4):
+    instrument.write_register(ctrl_reg, swap(addr+(j*8)), 0)
+    data2 = instrument.read_registers(data_reg, 4)
+    data.extend(data2)
 
-  for j in range(8):
+  for j in range(CHANNELS):
     data[j] = swap(data[j])
 
   # Handle data type dependent magic here
@@ -64,3 +75,9 @@ for i in range(256):
   data.insert(0, i)
 
   print(','.join(map(str, data)))
+
+
+print("Reseting datalogger...")
+ct = swap(instrument.read_register(ctrl_reg))
+ct = ct | 4
+instrument.write_register(ctrl_reg, swap(ct), 0)

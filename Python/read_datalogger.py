@@ -28,6 +28,7 @@ ctrl_reg = 45
 data_reg = 46
 
 ct = swap(instrument.read_register(ctrl_reg))
+print("Control word is ", ct)
 
 print("Wait until triggered...")
 ct = swap(instrument.read_register(ctrl_reg))
@@ -38,12 +39,14 @@ while not (ct & 2):
 # Read the offset after which the writing was stopped (oldest sample)
 offset = ct >> 3
 
+print("Offset is ", offset)
 print("Reading data...")
 print("Index,Data0,Data1,Data2,Data3,Data4,Data5,Data6,Data7")
 for i in range(BYTES):
   offset -= 1 # Counting downwards to get the values in correct order
   if offset < 0: offset = BYTES - 1
-  addr = addr * 2 * 8 # Reading as 2x4 bytes. Keep low 3 bits zero to not trigger again
+  addr = offset * 2 * 8 # Reading as 2x4 bytes. Keep low 3 bits zero to not trigger again
+  addr |= ct & 0x07 # Keep low 3 bits to prevent reset
 
   # Read first 4 channels
   instrument.write_register(ctrl_reg, swap(addr), 0)
@@ -68,6 +71,10 @@ for i in range(BYTES):
 
 
 # Reset the datalogger
-ct = swap(instrument.read_register(ctrl_reg))
-ct |= 4 # Reset bit high
-instrument.write_register(ctrl_reg, swap(ct), 0)
+print("Press Y to reset datalogger, other to not")
+key = input()
+if key == 'y' or key == 'Y':
+  print("Reset datalogger")
+  ct = swap(instrument.read_register(ctrl_reg))
+  ct |= 4 # Reset bit high
+  instrument.write_register(ctrl_reg, swap(ct), 0)
