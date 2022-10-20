@@ -30,6 +30,9 @@ extern volatile uint8_t generic_adc_conv_done;
 // Control tick is used to make power on/off sounds
 extern volatile uint16_t control_tick;
 
+// Status bits
+extern volatile uint8_t status_bits;
+extern volatile uint8_t imeas_calibration_done; // TODO: Trying this hack...
 
 static uint16_t powersw_timer = 0;
 #if defined(POWER_BUTTON_NORMAL)
@@ -64,6 +67,8 @@ void power_tune(uint8_t tune)
 // Disable motors, release power latch and wait forever
 void power_off(void) {
   disable_motors(0x01 | 0x02);
+  status_bits &= ~STATUS_READY;	// Clear ready flag
+  imeas_calibration_done = 0; // TODO: Hack to prevent some control functions from running during power off..
 
   // Play a turn-off tune (if buzzer is enabled), if the
   // power button is kept pressed, board will not power
