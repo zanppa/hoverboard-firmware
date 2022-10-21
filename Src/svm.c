@@ -53,15 +53,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #if defined(DPWMMIN)
 // For DPWMMIN the modulation index limit is zero pulse length directy
 // Note that zero is divided on upcounting and downcounting periods, thus 2 times
-#define MIDX_MAX ((1.0 - 2.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE)
+const uint16_t midx_max = ((1.0 - 2.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE);
 #else
 // For continuous modulation index limit must be twice the required short pulse length
 // Needs to be twice as long as in DPWMMIN
-#define MIDX_MAX ((1.0 - 4.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE)
+const uint16_t midx_max = ((1.0 - 4.0 * (float)SVM_SHORT_ZPULSE / (float)PWM_PERIOD) * FIXED_ONE);
 #endif
 
 #else // MINP_LIMIT_MODE
-#define MIDX_MAX (FIXED_ONE)
+const uint16_t midx_max = FIXED_ONE;
 #endif
 
 #if defined(DATALOGGER_ENABLE)
@@ -110,10 +110,8 @@ static void calculate_modulator(int16_t midx, uint16_t angle, uint16_t *t0, uint
   uint16_t tz;
   //uint16_t terr = 0;
 
-  // Clamp < 0 modulation index to zero
-  if(midx <= 0) midx = 0;
-  // Clamp modulation index to maximum (e.g. 1.0)
-  else if(midx > MIDX_MAX) midx = MIDX_MAX;
+  // Clamp < 0 modulation index to zero and max
+  midx = CLAMP(midx, 0, midx_max);
 
   // Clamp angle to 0...60 degrees
   // angle &= FIXED_MASK;	// 0...360 degrees
