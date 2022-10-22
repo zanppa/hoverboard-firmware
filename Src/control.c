@@ -551,6 +551,16 @@ void TIM3_IRQHandler(void)
 #elif defined(REFERENCE_ADC_SINGLE)
     ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
     ref_r = ref_l;
+#elif defined(REFERENCE_ADC_EBIKE)
+    // Ebike style reference which only allows reference to one
+    // direction, and re-generation (braking) only, not reverse
+    ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;  // TODO: Change the offset so that 0 = zero, not halfway
+    ref_r = ref_l;
+
+    // Only allow regeneration, not reversing
+    if(speed_l <= 0 && ref_l < 0) ref_l = 0;
+    if(speed_r <= 0 && ref_r < 0) ref_r = 0;
+
 #else // REFERENCE_ADC_SINGLE
     // ADC output is 0...4095, scale it to -4096 ... 4095
     // TODO: Add some configuration (offset, gain, deadband) to these?
