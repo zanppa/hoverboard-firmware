@@ -93,6 +93,20 @@ const uint16_t ov_trip_pu = FIXED_ONE * OVERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 const uint16_t uv_warn_pu = FIXED_ONE * UNDERVOLTAGE_WARN / (2.45*MOTOR_VOLTS);
 const uint16_t uv_trip_pu = FIXED_ONE * UNDERVOLTAGE_TRIP / (2.45*MOTOR_VOLTS);
 
+// Limitation constants to prevent overflow
+#if defined(OVERVOLTAGE_LIM_GAIN) && OVERVOLTAGE_LIM_GAIN > 0
+const int16_t ov_lim_min = (INT16_MIN + OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN;
+const int16_t ov_lim_max = (INT16_MAX - OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN;
+#endif
+#if defined(UNDERVOLTAGE_LIM_GAIN) && UNDERVOLTAGE_LIM_GAIN > 0
+const int16_t uv_lim_min = (INT16_MIN + UNDERVOLTAGE_LIM_OFFSET) / UNDERVOLTAGE_LIM_GAIN;
+const int16_t uv_lim_max = (INT16_MAX - UNDERVOLTAGE_LIM_OFFSET) / UNDERVOLTAGE_LIM_GAIN;
+#endif
+#if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
+const int16_t overspeed_lim_min = (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN;
+const int16_t overspeed_lim_max = (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN;
+#endif
+
 
 volatile uint8_t status_bits = 0;	// Status bits
 
@@ -469,8 +483,7 @@ void TIM3_IRQHandler(void)
     // At low voltage this results in INT16_MIN (negative), then goes to zero when voltage is increased
     // i.e. allow braking current (that charges battery) only when voltage is low enough
 #if defined(OVERVOLTAGE_LIM_GAIN) && OVERVOLTAGE_LIM_GAIN > 0
-    torque_lim_volt = CLAMP(battery_volt_pu - ov_warn_pu, (INT16_MIN + OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN,
-                            (INT16_MAX - OVERVOLTAGE_LIM_OFFSET) / OVERVOLTAGE_LIM_GAIN) * OVERVOLTAGE_LIM_GAIN;
+    torque_lim_volt = CLAMP(battery_volt_pu - ov_warn_pu, ov_lim_min, ov_lim_max) * OVERVOLTAGE_LIM_GAIN;
     torque_lim_volt = CLAMP(torque_lim_volt, INT16_MIN + OVERVOLTAGE_LIM_OFFSET, OVERVOLTAGE_LIM_OFFSET) - OVERVOLTAGE_LIM_OFFSET;
 #endif
 
@@ -495,8 +508,7 @@ void TIM3_IRQHandler(void)
     // At high voltage this results in INT16_MAX (positive), then goes to zero when voltage is increased
     // i.e. allows motoring (battery discharging) current only at high enough voltage
 #if defined(UNDERVOLTAGE_LIM_GAIN) && UNDERVOLTAGE_LIM_GAIN > 0
-    torque_lim_volt = CLAMP(ov_warn_pu - battery_volt_pu, (INT16_MIN + UNDERVOLTAGE_LIM_OFFSET) / UNDERVOLTAGE_LIM_GAIN,
-                            (INT16_MAX - UNDERVOLTAGE_LIM_OFFSET) / UNDERVOLTAGE_LIM_GAIN) * UNDERVOLTAGE_LIM_GAIN;
+    torque_lim_volt = CLAMP(ov_warn_pu - battery_volt_pu, uv_lim_min, uv_lim_max) * UNDERVOLTAGE_LIM_GAIN;
     torque_lim_volt = UNDERVOLTAGE_LIM_OFFSET - CLAMP(torque_lim_volt, INT16_MIN + UNDERVOLTAGE_LIM_OFFSET+1, UNDERVOLTAGE_LIM_OFFSET);
 #endif
 
@@ -597,8 +609,7 @@ void TIM3_IRQHandler(void)
     // During braking, limitation is not active but will brake until overspeed trip
     if(speed_l > OVERSPEED_LIMIT || speed_l < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
-      torque_lim_speed = CLAMP(ABS(speed_l) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
-                         (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+      torque_lim_speed = CLAMP(ABS(speed_l) - OVERSPEED_LIMIT, overspeed_lim_min, overspeed_lim_max) * OVERSPEED_LIM_GAIN;
       torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
 #endif
 
@@ -794,8 +805,7 @@ void TIM3_IRQHandler(void)
     torque_lim_speed = INT16_MAX;
     if(speed_r > OVERSPEED_LIMIT || speed_r < -OVERSPEED_LIMIT) {
 #if defined(OVERSPEED_LIM_GAIN) && OVERSPEED_LIM_GAIN > 0
-      torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, (INT16_MIN + OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN,
-                         (INT16_MAX - OVERSPEED_LIM_OFFSET) / OVERSPEED_LIM_GAIN) * OVERSPEED_LIM_GAIN;
+      torque_lim_speed = CLAMP(ABS(speed_r) - OVERSPEED_LIMIT, overspeed_lim_min, overspeed_lim_max) * OVERSPEED_LIM_GAIN;
       torque_lim_speed = OVERSPEED_LIM_OFFSET - CLAMP(torque_lim_speed, INT16_MIN + OVERSPEED_LIM_OFFSET + 1, OVERSPEED_LIM_OFFSET);
 #endif
 
