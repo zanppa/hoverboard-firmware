@@ -14,7 +14,9 @@
 //add defines for your MCU
 #ifndef EEPROM_START_ADDRESS
 	#if defined (STM32F103xE)
-		#define EEPROM_START_ADDRESS ((uint32_t)(0x8000000 + 512 * 1024 - 2 * EEPROM_PAGE_SIZE))
+//		#define EEPROM_START_ADDRESS ((uint32_t)(0x8000000 + 512 * 1024 - 2 * EEPROM_PAGE_SIZE))
+//		#define EEPROM_START_ADDRESS ((uint32_t)(0x8000000 + 384 * 1024 - 2 * EEPROM_PAGE_SIZE))
+		#define EEPROM_START_ADDRESS ((uint32_t)(0x8000000 + 256 * 1024 - 2 * EEPROM_PAGE_SIZE))
 	#else
 		#error	"No known MCU type specified to determine EEPROM start address."
 	#endif
