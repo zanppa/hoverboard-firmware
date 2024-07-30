@@ -71,7 +71,7 @@ static int16_t iq_error_int_l = 0;
 static int16_t id_error_int_r = 0;
 static int16_t iq_error_int_r = 0;
 #endif // RIGHT_MOTOR_FOC
-const int16_t idq_int_max = 8000;	// TODO: What is a sane value...?
+const int16_t idq_int_max = 12000;	// TODO: What is a sane value...?
 const uint8_t int_divisor = 10;
 #endif // LEFT_MOTOR_FOC || RIGHT_MOTOR_FOC
 
@@ -427,7 +427,7 @@ void TIM3_IRQHandler(void)
     if(ia_l > OVERCURRENT_TRIP || ia_l < -OVERCURRENT_TRIP ||
        ib_l > OVERCURRENT_TRIP || ib_l < -OVERCURRENT_TRIP ||
        ic_l > OVERCURRENT_TRIP || ic_l < -OVERCURRENT_TRIP) {
-      //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
+      do_fault(0x01 | 0x02);	// Trip both motors
       fault_bits |= FAULT_OVERCURRENT;
 
 #if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
@@ -441,7 +441,7 @@ void TIM3_IRQHandler(void)
     if(ia_r > OVERCURRENT_TRIP || ia_r < -OVERCURRENT_TRIP ||
        ib_r > OVERCURRENT_TRIP || ib_r < -OVERCURRENT_TRIP ||
        ic_r > OVERCURRENT_TRIP || ic_r < -OVERCURRENT_TRIP) {
-      //do_fault(0x01 | 0x02);	// Trip both motors // TODO: Debug removed
+      do_fault(0x01 | 0x02);	// Trip both motors
       fault_bits |= FAULT_OVERCURRENT;
 
 #if defined(DATALOGGER_ENABLE) && defined(DATALOGGER_TRIG_TRIP)
@@ -554,21 +554,26 @@ void TIM3_IRQHandler(void)
 #elif defined(REFERENCE_ADC_EBIKE)
     // Ebike style reference which only allows reference to one
     // direction, and re-generation (braking) only, not reverse
-    ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;  // TODO: Change the offset so that 0 = zero, not halfway
+    ref_l = ((int16_t)analog_meas.analog_ref_1 - 512);		// Below about 10% ref. use regenerative braking
     ref_r = ref_l;
 
     // Only allow regeneration, not reversing
-    if(speed_l <= 0 && ref_l < 0) ref_l = 0;
-    if(speed_r <= 0 && ref_r < 0) ref_r = 0;
+    // Currently enabled only above roughly 5 % of rated motor speed
+    if(speed_l <= 200 && ref_l < 0) {
+      ref_l = 0;
+      ref_l_ramp = 0;	// Also force the ramped reference immediately to zero, otherwise it may take long to ramp down...
+    }
+    if(speed_r <= 200 && ref_r < 0) {
+      ref_r = 0;
+      ref_r_ramp = 0; // Also force ramped to zero
+    }
 
-#else // REFERENCE_ADC_SINGLE
+#else // Different analog references for both motors
     // ADC output is 0...4095, scale it to -4096 ... 4095
     // TODO: Add some configuration (offset, gain, deadband) to these?
     ref_l = ((int16_t)analog_meas.analog_ref_1 - 2048) * 2;
     ref_r = ((int16_t)analog_meas.analog_ref_2 - 2048) * 2;
-    ref_l /= 4;  // TODO: Debug
-    ref_r /= 4;  // TODO: Debug
-#endif // REFERENCE_ADC_DIFF
+#endif // REFERENCE_ADC_X
 #else // REFERENCE_ADC
     ref_l = 0;
     ref_r = 0;
@@ -704,7 +709,7 @@ void TIM3_IRQHandler(void)
     // Apply references
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Start with 90 degree phase shift to guarantee starting
+    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Start with 120 degree phase shift to guarantee starting
     // TODO: Angle advance polarity should change depending on speed direction
     __enable_irq();
 
