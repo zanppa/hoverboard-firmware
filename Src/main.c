@@ -60,6 +60,7 @@ extern volatile uint8_t fault_bits;
 
 int main(void) {
   uint8_t charger_filt = 0;
+  uint16_t ready_timer = 0;
 
   HAL_Init();
   __HAL_RCC_AFIO_CLK_ENABLE();
@@ -96,7 +97,7 @@ int main(void) {
     while(1);
   }
 
-  // Enable power latch here so that the board keeps
+  // Enable power latch here so that the board stays
   // powered on during initialization
   HAL_GPIO_WritePin(OFF_PORT, OFF_PIN, 1);
 
@@ -131,7 +132,17 @@ int main(void) {
 #endif
 
   // Wait until we're ready to start (continue forward)
-  while(!(status_bits && STATUS_READY));
+  while(!(status_bits && STATUS_READY)) {
+    if(generic_adc_conv_done) {
+      generic_adc_conv_done = 0;
+      ready_timer++;
+
+      // Check if we have waited too long for ready status which did not come
+      // --> Shut down, some error has occurred
+      if(ready_timer > 2000) // 2 seconds
+        power_off();
+    }
+  }
 
 
   // Enable both motor drivers
