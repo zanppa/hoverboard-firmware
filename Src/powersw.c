@@ -25,7 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Power switch voltage is an analog measurement
 extern volatile adc_buf_t analog_meas;
-extern volatile uint8_t generic_adc_conv_done;
 
 // Control tick is used to make power on/off sounds
 extern volatile uint16_t control_tick;
