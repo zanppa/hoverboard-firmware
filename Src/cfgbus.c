@@ -1,3 +1,4 @@
+#include "stm32f1xx_hal.h"
 #include "config.h"
 #include "cfgbus.h"
 #include "modbus.h"
@@ -5,6 +6,10 @@
 #include "eeprom.h"
 #include <string.h>
 #include "math.h"
+
+
+#define EEPROM_MAGIC	0xC0DE	// Magic value for eeprom data
+
 
 //these function pointers should point to a user configurable function
 //that stores/reads the 16bit value array in a non-volatile memory such as an eeprom
@@ -101,53 +106,71 @@ void CfgInit()
   //=======================================
   //DO NOT CHANGE:: cfgbus required entries
   //=======================================
-
-  if(ee_load(cfg.regs,CFG_NR_REGISTERS) != CFG_NR_REGISTERS)
+  if(ee_load(cfg.regs,CFG_NR_REGISTERS) != CFG_NR_REGISTERS || cfg.vars.magic != EEPROM_MAGIC)
   {
+    // Assume something is not right with the eeprom --> format just in case
+    // then we should be able to write values through config bus
+	ee_format();
+
     for(int i=0; i<CFG_NR_REGISTERS; i++)
       cfg.regs[i] = 0; //if load was not succesfull, set all entries to 0 to be safe.
+
+    cfg.vars.magic = EEPROM_MAGIC;
+
+    strncpy((char *)cfg.vars.dev_name,CFG_DEVICE_NAME,10);
+    cfg.vars.dev_name[11] = 0x00;
   }
-
-  cfg.vars.magic = 0xC0DE;
-
-  strncpy((char *)cfg.vars.dev_name,CFG_DEVICE_NAME,10);
-  cfg.vars.dev_name[11] = 0x00;
 
   cfg.vars.err_cnt = 0;
   cfg.vars.err_code = cfg_ok;
   cfg.vars.nr_entries = CFG_NR_ENTRIES;
 
-  //initialize writeMask here, so writeability can be determined fast after init
+  // initialize writeMask here, so writeability can be determined fast after init
   for(int i=0; i<CFG_NR_ENTRIES; i++)
   {
     if(!cfg_entries[i].writeable)
     {
-      //set corresponding writeMask entries to 1
+      // set corresponding writeMask entries to 1
       _setWriteMask(cfg_entries[i].address,(cfg_entries[i].size+1)/2);
     }
   }
 
 
   //=======================================
-  //Initialize user entries here that should always have the
-  //same value when starting the system. The rest will be
-  //loaded from eeprom
+  // Initialize user entries here that should always have the
+  // same value when starting the system. The rest were
+  // loaded from eeprom
   //=======================================
 
   if(cfg.vars.rate_limit == 0)
-    cfg.vars.rate_limit = 400;
+    cfg.vars.rate_limit = 2000;
 
   if(cfg.vars.max_pwm_r == 0)
-    cfg.vars.max_pwm_r = 1024;
+    cfg.vars.max_pwm_r = 4096;
 
   if(cfg.vars.max_pwm_l == 0)
-      cfg.vars.max_pwm_l = 1024;
+      cfg.vars.max_pwm_l = 4096;
 
   if(cfg.vars.max_tref_l == 0)
     cfg.vars.max_tref_l = 2048;
 
   if(cfg.vars.max_tref_r == 0)
     cfg.vars.max_tref_r = 2048;
+
+  if(cfg.vars.kp_iq == 0)
+    cfg.vars.kp_iq = 1000;
+
+  if(cfg.vars.ki_iq == 0)
+    cfg.vars.ki_iq = 600;
+
+  if(cfg.vars.kp_id == 0)
+    cfg.vars.kp_id = 600;
+
+  if(cfg.vars.ki_id == 0)
+    cfg.vars.ki_id = 400;
+
+  if(cfg.vars.i_filter == 0)
+    cfg.vars.i_filter = 2048;
 
   cfg.vars.setpoint_l = 0;
   cfg.vars.setpoint_r = 0;
@@ -161,19 +184,20 @@ void CfgInit()
 
 #if defined(CFGBUS_FORCE_DEFAULTS)
   // These are set as defalts only if so defined in config.h
+  // instead of reading from eeprom (flash)
 
-  cfg.vars.rate_limit = 400;
+  cfg.vars.rate_limit = 2000;
 
-  cfg.vars.max_pwm_l = 1024;
-  cfg.vars.max_pwm_r = 1024;
+  cfg.vars.max_pwm_l = 4096;
+  cfg.vars.max_pwm_r = 4096;
   cfg.vars.max_tref_l = 2048;
   cfg.vars.max_tref_r = 2048;
 
   //cfg.vars.kp_iq = 2458; 	// 0.6 * FIXED_ONE;
-  cfg.vars.kp_iq = 1200; 	// 0.6 * FIXED_ONE;
-  cfg.vars.ki_iq = 700; 	// 0.08 * FIXED_ONE;
+  cfg.vars.kp_iq = 1000; 	// 0.6 * FIXED_ONE;
+  cfg.vars.ki_iq = 600; 	// 0.08 * FIXED_ONE;
   //cfg.vars.kp_id = 2458; 	// 0.6 * FIXED_ONE;
-  cfg.vars.kp_id = 800; 	// 0.6 * FIXED_ONE;
+  cfg.vars.kp_id = 600; 	// 0.6 * FIXED_ONE;
   cfg.vars.ki_id = 400; 		// 0.01 * FIXED_ONE;
 //  cfg.vars.kp_id = 400; 	// 0.6 * FIXED_ONE;
 //  cfg.vars.ki_id = 60; 		// 0.01 * FIXED_ONE;
@@ -300,11 +324,16 @@ void CfgRegRead(uint16_t start, uint16_t nr_regs, uint8_t* data)
 
 mb_exception_t CfgRegWrite(uint16_t start, uint16_t nr_regs, uint8_t* data)
 {
+  uint16_t ret = 0;
+
   //before any check, if it is a write to magic value, and data equals magic value
   //store current settings in eeprom
   if(start == 0 && ((uint16_t*)data)[0] == cfg.vars.magic)
   {
-    if(CfgStore(cfg.regs,CFG_NR_REGISTERS) != CFG_NR_REGISTERS)
+    HAL_FLASH_Unlock();
+    ret = CfgStore(cfg.regs, CFG_NR_REGISTERS);
+    HAL_FLASH_Lock();
+    if(ret != CFG_NR_REGISTERS)
       return mb_timeout;
     else
       return mb_ok;
