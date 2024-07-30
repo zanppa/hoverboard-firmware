@@ -169,4 +169,4 @@ typedef struct {
 #define CONTROL_UF			3
 
 // Stalled speed period limit
-#define PERIOD_STOP			0x7F00
+#define PERIOD_STOP			0x0FA0		// Should be about 0.25 s
