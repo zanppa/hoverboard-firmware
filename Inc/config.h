@@ -24,7 +24,7 @@
 #define MOTOR_VOLTS				18.0 //15.0	// Volts (phase) at rated speed (RMS) (10 rounds/sec, ~20V amplitude)
 #define MOTOR_SPEED				600.0	// Nominal speed rpm
 #define MOTOR_POLEPAIRS			15.0	// Polepairs, mechanical speed to electrical speed (15 electrical rounds/1 mechanical round)
-#define MOTOR_CUR				10.0	// [A] at rated load, phase (RMS)
+#define MOTOR_CUR				15.0	// [A] at rated load, phase (RMS)
 #define MOTOR_CIRCUMFERENCE		0.534	// meters, motor outside circumference
 
 #define MOTOR_MIN_VOLTS			0.5		// Volts to apply at zero and low speed, to get the motor started (IR compensation)
@@ -36,13 +36,13 @@
 
 // Left motor
 // What control method to use for which motor
-#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
+//#define LEFT_MOTOR_BLDC		// Use BLDC for left motor
 //#define LEFT_MOTOR_SVM			// Use SVM for left motor
-//#define LEFT_MOTOR_FOC			// Use field oriented control for left motor (requires SVM also)
+#define LEFT_MOTOR_FOC			// Use field oriented control for left motor (requires SVM also)
 
 // Right motor
 //#define RIGHT_MOTOR_BLDC		// BLDC for right motor
-#define RIGHT_MOTOR_SVM			// SVM for right motor
+//#define RIGHT_MOTOR_SVM			// SVM for right motor
 #define RIGHT_MOTOR_FOC			// Use field oriented control for right motor (requires SVM also)
 
 
@@ -64,18 +64,19 @@
 
 // =============================
 // Reference source
-#define REFERENCE_MODBUS			// Use modbus for references
-//#define REFERENCE_ADC				// Use analog inputs for reference
+//#define REFERENCE_MODBUS			// Use modbus for references
+#define REFERENCE_ADC				// Use analog inputs for reference
 //#define REFERENCE_ADC_DIFF		// Differential ADC inputs, requires ADC reference
 //#define REFERENCE_ADC_SINGLE		// Use only single channel ADC ref for both sides
+#define REFERENCE_ADC_EBIKE		// Ebike style analog reference with re-generation
 
 // =============================
 // Limits/warnings/faults
 
-#define OVERVOLTAGE_WARN	29		// Overvoltage warning level in volts
-#define OVERVOLTAGE_TRIP	34		// Overvoltage trip level in volts
-#define UNDERVOLTAGE_WARN	22		// Undervoltage warning level in volts
-#define UNDERVOLTAGE_TRIP	20		// Undervoltage trip level in volts
+#define OVERVOLTAGE_WARN	40		// Overvoltage warning level in volts
+#define OVERVOLTAGE_TRIP	41		// Overvoltage trip level in volts
+#define UNDERVOLTAGE_WARN	32		// Undervoltage warning level in volts
+#define UNDERVOLTAGE_TRIP	30		// Undervoltage trip level in volts
 
 #define OVERVOLTAGE_LIM_OFFSET	(FIXED_ONE)
 //#define OVERVOLTAGE_LIM_GAIN	4	// Gain of braking torque limitation in per-units when voltage > overvoltage warn (TODO: causes SHAKING)
@@ -84,11 +85,11 @@
 //#define UNDERVOLTAGE_LIM_GAIN	4	// Gain of motoring torque limitation in per-units when voltage < undervoltage warn (TODO: causes SHAKING)
 
 
-#define OVERCURRENT_TRIP	(1.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
+#define OVERCURRENT_TRIP	(3.0*FIXED_ONE)		// Overcurrent trip compared to motor nominal current
 
-#define OVERSPEED_TRIP		(1.2*FIXED_ONE)		// Compared to rated rotation speed
+#define OVERSPEED_TRIP		(1.8*FIXED_ONE)		// Compared to rated rotation speed
 
-#define OVERSPEED_LIMIT		(0.8*FIXED_ONE)		// Start limiting torque above this, also speed control max
+#define OVERSPEED_LIMIT		(1.4*FIXED_ONE)		// Start limiting torque above this, also speed control max
 //#define OVERSPEED_LIM_GAIN	4					// Gain of how much torque is removed above the overspeed limit (TODO: causes SHAKING)
 #define OVERSPEED_LIM_OFFSET	(FIXED_ONE)
 
@@ -99,7 +100,7 @@
 
 // Enable this to force config bus to load defaults instead of reading from EEPROM
 // Note: EEPROM (or write to it) does not currently seem to work, so keep this for now!
-#define CFGBUS_FORCE_DEFAULTS
+//#define CFGBUS_FORCE_DEFAULTS
 
 // HALL sensor wiring
 //#define HALL_GBYGBY					// Motor wiring U:Green, V:Blue, W:Yellow, board U:G, V:B, W:Y
@@ -133,15 +134,15 @@
 #define DUAL_ADC_MODE
 
 // Enable this to use DPWMMIN modulation method, i.e. use only lower zero 000, never upper zero 111
-//#define DPWMMIN
+#define DPWMMIN
 
 // Power button pressed threshold
 // The measurement has a gain of about 0.06 until battery voltage is 21 V, then the gain drops
 // gradually to about 0.04.
 // Power button threshold of about 18 V (required for supply to operate properly) is about 1340 in ADC units
-//#define ADC_POWERSW_THRESHOLD	1340
+#define ADC_POWERSW_THRESHOLD	1340
 // Should be higher than undervoltage limit. Scale is roughly V_meas * 0.056 / 3.3 V * 4095 ~= V_meas * 70
-#define ADC_POWERSW_THRESHOLD	((UNDERVOLTAGE_WARN) * 70)
+//#define ADC_POWERSW_THRESHOLD	((UNDERVOLTAGE_WARN) * 70)
 
 // Power switch time that it is allowed to be in off-state before next press (in control timer units)
 #define POWERSW_OFF_TIMER		800
@@ -170,7 +171,7 @@
 #define DATALOGGER_MAX			0xFF		// Size of dataloggger, how many samples times n variables
 #define DATALOGGER_TYPE			uint16_t	// Type of the variables the datalogger can store
 #define DATALOGGER_COUNT_TYPE	uint8_t		// Type of counter variable to hold write offset, must hold DATALOGGER_MAX
-#define DATALOGGER_DIVIDER		3			// Divide PWM rate by this+1 to get datalogger sampling rate
+#define DATALOGGER_DIVIDER		0			// Divide PWM rate by this+1 to get datalogger sampling rate
 #define DATALOGGER_CHANNELS		8			// How many channels to sample
 #define DATALOGGER_TRIG_TRIP				// If defined, datalogger will trigger to (some) trips
 #define DATALOGGER_SAMPLES_AFTER	32		// If defined, datalogger will roll continuously and sample this amount after the trigger
