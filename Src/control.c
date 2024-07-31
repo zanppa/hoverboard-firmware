@@ -562,11 +562,11 @@ void TIM3_IRQHandler(void)
 
     // Only allow regeneration, not reversing
     // Currently enabled only above roughly 5 % of rated motor speed
-    if(speed_l <= 200 && ref_l < 0) {
+    if(speed_l <= SPEED_SLOW && ref_l < 0) {
       ref_l = 0;
       ref_l_ramp = 0;	// Also force the ramped reference immediately to zero, otherwise it may take long to ramp down...
     }
-    if(speed_r <= 200 && ref_r < 0) {
+    if(speed_r <= SPEED_SLOW && ref_r < 0) {
       ref_r = 0;
       ref_r_ramp = 0; // Also force ramped to zero
     }
@@ -747,7 +747,7 @@ void TIM3_IRQHandler(void)
       torque_ref = ABS(torque_ref);
 
       // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
-      if(ABS(speed_l) < 200) angle_advance = ANGLE_120DEG;
+      if(ABS(speed_l) < SPEED_SLOW) angle_advance = ANGLE_120DEG;
       else angle_advance = ANGLE_90DEG;
 
       // Apply the reference
@@ -954,7 +954,7 @@ void TIM3_IRQHandler(void)
       torque_ref = ABS(torque_ref);
 
       // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
-      if(ABS(speed_r) < 200) angle_advance = ANGLE_120DEG;
+      if(ABS(speed_r) < SPEED_SLOW) angle_advance = ANGLE_120DEG;
       else angle_advance = ANGLE_90DEG;
 
       // Apply the reference

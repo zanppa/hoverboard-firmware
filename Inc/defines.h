@@ -170,3 +170,6 @@ typedef struct {
 
 // Stalled speed period limit
 #define PERIOD_STOP			0x0FA0		// Should be about 0.25 s
+
+// "Slow", near-zero, speed limit
+#define SPEED_SLOW			200			// Fixed point, 200 is about 5% of rated speed
