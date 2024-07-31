@@ -23,9 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "bldc.h"
 #include "control.h"
 
-
+#if defined(LEFT_MOTOR_BLDC) || defined(RIGHT_MOTOR_BLDC)
 static const int16_t bldc_min_pulse = BLDC_SHORT_PULSE - (PWM_PERIOD/2);
 static const int16_t bldc_max_pulse = (PWM_PERIOD/2) - BLDC_SHORT_PULSE;
+#endif
 
 static int16_t left_period_tick = 0;
 static int16_t right_period_tick = 0;
@@ -60,7 +61,7 @@ void TIM8_UP_IRQHandler() {
   int16_t ampl_pos, ampl_neg;
   int16_t ampl_zero = 0;
 #if defined(BLDC_FIELD_WEAKENING)
-  uint16_t weak;
+  int16_t weak;
 #endif
 #endif
 
@@ -260,24 +261,24 @@ void TIM8_UP_IRQHandler() {
   // Left motor modulation, if enabled
 #ifdef LEFT_MOTOR_BLDC
   sector = motor_state[STATE_LEFT].act.sector;
-  ampl_pos = fx_mul(motor_state[STATE_LEFT].ctrl.amplitude, PWM_PERIOD);
+  ampl_pos = fx_mul(motor_state[STATE_LEFT].ctrl.amplitude, PWM_PERIOD/2);
   ampl_neg = ampl_pos;
 
 #if defined(BLDC_FIELD_WEAKENING)
   // Field weakening
-  weak = motor_state[STATE_LEFT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
-  // TODO: Clamp weak between 0 and FIXED_ONE?
+  weak = motor_state[STATE_LEFT].ctrl.angle;
+  weak = CLAMP(weak, 0, FIXED_ONE);
   if(weak != 0) {
-    if((sector & 1) && ampl_pos > 0) {
-      // Odd sectors in positive direction or
-      // even sectors in negative direction,
+    if(((sector & 1) && ampl_pos > 0) || (!(sector & 1) && ampl_pos < 0)) {
+      // Even sectors in positive direction or
+      // odd sectors in negative direction,
       // "negative" vector amplitude does not change
-      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
-      ampl_zero = fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to full between 0.5 ... 1
+      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 1
+      ampl_zero = fx_lerp1(ampl_neg, weak);	// "Zero" goes to full between 0 ... 1
     } else {
       // Other way around, "positive" vector does not change
-      ampl_neg = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
-      ampl_zero = -fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to negative full between 0.5 ... 1
+      ampl_neg = fx_lerp0(ampl_pos, weak);	// Positive goes to zero between 0 ... 1
+      ampl_zero = -fx_lerp1(ampl_pos, weak);	// "Zero" goes to negative full between 0 ...1
     }
   }
 #endif // BLDC_FIELD_WEAKENING
@@ -289,32 +290,32 @@ void TIM8_UP_IRQHandler() {
 
   *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl_pos;
   *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl_neg;
-  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
+  *((uint16_t *)(LEFT_TIM_BASE + bldc_mod_pattern[sector][2])) = (PWM_PERIOD/2) - ampl_zero;
 #endif
 
 
   // Right motor modulation, if enabled
 #ifdef RIGHT_MOTOR_BLDC
   sector = motor_state[STATE_RIGHT].act.sector;
-  ampl_pos = fx_mul(motor_state[STATE_RIGHT].ctrl.amplitude, PWM_PERIOD);
+  ampl_pos = fx_mul(motor_state[STATE_RIGHT].ctrl.amplitude, PWM_PERIOD/2);
   ampl_neg = ampl_pos;
   ampl_zero = 0;
 
 #if defined(BLDC_FIELD_WEAKENING)
   // Field weakening
-  weak = motor_state[STATE_RIGHT].ctrl.angle * 2; // Multiply by 2 since we use that in calculations
-  // TODO: Clamp weak between 0 and FIXED_ONE?
+  weak = motor_state[STATE_RIGHT].ctrl.angle ;
+  weak = CLAMP(weak, 0, FIXED_ONE);
   if(weak != 0) {
-    if((sector & 1) && ampl_pos > 0) {
-      // Odd sectors in positive direction or
-      // even sectors in negative direction,
+    if(((sector & 1) && ampl_pos > 0) || (!(sector & 1) && ampl_pos < 0)) {
+      // Even sectors in positive direction or
+      // odd sectors in negative direction,
       // "negative" vector amplitude does not change
-      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
-      ampl_zero = fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to full between 0.5 ... 1
+      ampl_pos = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 1
+      ampl_zero = fx_lerp1(ampl_neg, weak);	// "Zero" goes to full between 0 ... 1
     } else {
       // Other way around, "positive" vector does not change
-      ampl_neg = fx_lerp0(ampl_neg, weak);	// Positive goes to zero between 0 ... 0.5
-      ampl_zero = -fx_lerp1(ampl_neg, weak - FIXED_ONE);	// "Zero" goes to negative full between 0.5 ... 1
+      ampl_neg = fx_lerp0(ampl_pos, weak);	// Positive goes to zero between 0 ... 1
+      ampl_zero = -fx_lerp1(ampl_pos, weak);	// "Zero" goes to negative full between 0 ... 1
     }
   }
 #endif
@@ -326,7 +327,7 @@ void TIM8_UP_IRQHandler() {
 
   *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][0])) = (PWM_PERIOD/2) - ampl_pos;
   *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][1])) = (PWM_PERIOD/2) + ampl_neg;
-  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = PWM_PERIOD/2 - ampl_zero;
+  *((uint16_t *)(RIGHT_TIM_BASE + bldc_mod_pattern[sector][2])) = (PWM_PERIOD/2) - ampl_zero;
 #endif
 
   // DEBUG: LED off

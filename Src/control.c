@@ -329,6 +329,9 @@ void TIM3_IRQHandler(void)
   int16_t torque_lim_volt = INT16_MAX; // Positive --> motoring (speeding up) limit, negative --> generating (braking) limit
   uint8_t ctrl_mode;
   uint16_t v_bat;
+#if defined(BLDC_FIELD_WEAKENING)
+  uint16_t tref_abs;
+#endif
 
 #if defined(LEFT_MOTOR_SVM) || defined(RIGHT_MOTOR_SVM)
   int8_t ref_sign;
@@ -762,26 +765,28 @@ void TIM3_IRQHandler(void)
     // Scale ramped reference according to DC voltage
     torque_ref = fx_mul(torque_ref, voltage_scale);
 
+#if defined(BLDC_FIELD_WEAKENING)
+    // Apply field weakening if necessary
+    tref_abs = ABS(torque_ref);
+    if(tref_abs > cfg.vars.max_pwm_l) {
+      // "Excess" torque reference
+      tref_abs = tref_abs - cfg.vars.max_pwm_l;
+    } else {
+      tref_abs = 0;
+    }
+
+    // Limit the torque reference to one (full modulation amplitude)
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+
+    __disable_irq();
+    // Excess is directly applied as the field weakening ref
+    motor_state[STATE_LEFT].ctrl.angle = tref_abs;
+    motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
+    __enable_irq();
+#else
     // Limit pwm value
     torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
 
-#if defined(BLDC_FIELD_WEAKENING)
-    // Apply field weakening if necessary
-    uint16_t tref_abs = ABS(torque_ref);
-    if(tref_abs > FIXED_ONE) {
-      // "Excess" torque reference
-      tref_abs = tref_abs - FIXED_ONE;
-
-      // Limit the torque reference to one (full modulation amplitude)
-      torque_ref = LIMIT(torque_ref, FIXED_ONE);
-
-      __disable_irq();
-      // Excess is directly applied as the field weakening ref
-      motor_state[STATE_LEFT].ctrl.angle = tref_abs;
-      motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
-      __enable_irq();
-   }
-#else
     // Apply the reference
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
@@ -965,26 +970,29 @@ void TIM3_IRQHandler(void)
     // Scale ramped reference according to DC voltage
     torque_ref = fx_mul(torque_ref, voltage_scale);
 
+#if defined(BLDC_FIELD_WEAKENING)
+    // Apply field weakening if necessary
+    tref_abs = ABS(torque_ref);
+    if(tref_abs > cfg.vars.max_pwm_r) {
+      // "Excess" torque reference
+      tref_abs = tref_abs - cfg.vars.max_pwm_r;
+    } else {
+      tref_abs = 0;
+    }
+
+    // Limit the torque reference to one (full modulation amplitude)
+    torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
+
+    // Excess is directly applied as the field weakening ref
+    __disable_irq();
+    motor_state[STATE_RIGHT].ctrl.angle = tref_abs;
+    motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
+    __enable_irq();
+
+#else
     // Limit pwm reference to maximum limits
     torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
 
-#if defined(BLDC_FIELD_WEAKENING)
-    // Apply field weakening if necessary
-    uint16_t tref_abs = ABS(torque_ref);
-    if(tref_abs > FIXED_ONE) {
-      // "Excess" torque reference
-      tref_abs = tref_abs - FIXED_ONE;
-
-      // Limit the torque reference to one (full modulation amplitude)
-      torque_ref = LIMIT(torque_ref, FIXED_ONE);
-
-      // Excess is directly applied as the field weakening ref
-      __disable_irq();
-      motor_state[STATE_RIGHT].ctrl.angle = tref_abs;
-      motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
-      __enable_irq();
-    }
-#else
     // Apply the reference
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.amplitude = torque_ref;
