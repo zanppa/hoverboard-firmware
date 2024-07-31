@@ -56,7 +56,7 @@
 
 
 // Use field weakening region in BLDC mode
-//#define BLDC_FIELD_WEAKENING
+#define BLDC_FIELD_WEAKENING
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
@@ -110,10 +110,10 @@
 #define PWM_FREQ         16000		// PWM frequency in Hz
 
 #define DEAD_TIME        	32		// PWM deadtime (see STM32F103 datasheet for values)
-#define BLDC_SHORT_PULSE	112		// Shortest pulse length in BLDC, in 1/64 MHz (112 = 1.75 us)
+#define BLDC_SHORT_PULSE	224		// Shortest pulse length in BLDC, in 1/64 MHz (112 = 1.75 us)
 
 #define SVM_SHORT_PULSE		0		// Shortest active pulse length, in 1/64 MHz (64 = 1 us)
-#define SVM_SHORT_ZPULSE	112		// Minimum zero pulse length, in 1/64 MHz (64 = 1 us, 112 = 1.75 us). This should be the time required by rdson current meas
+#define SVM_SHORT_ZPULSE	224		// Minimum zero pulse length, in 1/64 MHz (64 = 1 us, 112 = 1.75 us). This should be the time required by rdson current meas
 #define SVM_DEAD_TIME_COMP	10		// 64 = 1us
 
 
