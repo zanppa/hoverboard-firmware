@@ -216,13 +216,11 @@ int main(void) {
     powersw_off_sequence();
 
     // Check if power button was pressed long for fault reset, but only if faults are active
-#if 0
     if(powersw_fault_reset() && fault_bits) {
       initialize_control_state();
       clear_fault(0x01 | 0x02);		// Reset all faults
       enable_motors(0x01 | 0x02);
     }
-#endif
 
     // If charger is connected on the fly, stop everything and power off
     if(!HAL_GPIO_ReadPin(CHARGER_PORT, CHARGER_PIN)) {
