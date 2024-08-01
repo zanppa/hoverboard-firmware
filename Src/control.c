@@ -694,24 +694,15 @@ void TIM3_IRQHandler(void)
 
 #if defined(LEFT_MOTOR_FOC)
 
-    id_error = id;	// TODO: Add id reference (from field weakening)
+    // Run the PI controllers...
+    // ... for Q axis current which sets the reference amplitude
     iq_error = torque_ref - iq;
 
-    // Run the PI controllers
-    // First for D axis current which sets the angle advance
-    id_error_int_l += id_error / int_divisor;
-    id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
-    angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
-    angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
-
-    // Then for Q axis current which sets the reference amplitude
     iq_error_int_l += iq_error;
     iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
     ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
 
     ref_sign = ISIGN(ref_amplitude);
-    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
-    cfg.vars.l_angle_adv = angle_advance;
 
     // Apply DC voltage scaling
     ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
@@ -719,6 +710,19 @@ void TIM3_IRQHandler(void)
     // Apply limiter
     ref_amplitude = ABS(ref_amplitude);
     ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_l);
+
+
+    // ... for D axis current which sets the angle advance
+    id_error = id;	// TODO: Add id reference (from field weakening)
+    id_error_int_l += id_error / int_divisor;
+    id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
+    angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
+    angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
+
+    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+
+    cfg.vars.l_angle_adv = angle_advance;
+
 
     // Apply references
     __disable_irq();
@@ -908,11 +912,27 @@ void TIM3_IRQHandler(void)
 
 
 #if defined(RIGHT_MOTOR_FOC)
-    id_error = id;    // TODO: Add id reference (from field weakening)
+
+    // Run the PI controllers...
+    // ... for Q axis current which sets the reference amplitude
     iq_error = torque_ref - iq;
 
-    // Run the PI controllers
-    // First for D axis current which sets the angle advance
+    iq_error_int_r += iq_error;
+    iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
+    ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
+
+    ref_sign = ISIGN(ref_amplitude);
+
+    // Apply DC voltage scaling
+    ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
+
+    // Apply limiter
+    ref_amplitude = ABS(ref_amplitude);
+    ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_r);
+
+
+    // ... for D axis current which sets the angle advance
+    id_error = id;    // TODO: Add id reference (from field weakening)
     id_error_int_r += id_error / int_divisor;
     id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
     angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
@@ -922,21 +942,10 @@ void TIM3_IRQHandler(void)
     //if(speed_r < 0) angle_advance = -angle_advance;
     // TODO: Should probably be the reference, not actual...
 
-    // Then for Q axis current which sets the reference amplitude
-    iq_error_int_r += iq_error;
-    iq_error_int_r = LIMIT(iq_error_int_r, idq_int_max);
-    ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_r, ki_iq);
-
-    ref_sign = ISIGN(ref_amplitude);
     angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
+
     cfg.vars.r_angle_adv = angle_advance;
 
-    // Apply DC voltage scaling
-    ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
-
-    // Apply limiter
-    ref_amplitude = ABS(ref_amplitude);
-    ref_amplitude = MIN(ref_amplitude,cfg.vars.max_pwm_r);
 
     // Apply references
     __disable_irq();
