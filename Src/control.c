@@ -599,6 +599,10 @@ void TIM3_IRQHandler(void)
     motor_state[STATE_RIGHT].ref.value = ref_r_ramp;
 
 
+    // Clear field weakening status bit, which is then set if one of
+    // the motors is operating in field weakening region
+    status_bits &= ~STATUS_FIELD_WEAK;
+
 
     // --------------
     // Left motor
@@ -752,6 +756,7 @@ void TIM3_IRQHandler(void)
         tref_abs = CLAMP(tref_abs, 0, FIXED_ONE);
         tref_abs = fx_mul(tref_abs, ANGLE_45DEG);	// Max 45 degrees of advance
         angle_advance += tref_abs;
+        status_bits |= STATUS_FIELD_WEAK;
       }
 #endif
       cfg.vars.l_angle_adv = angle_advance;
@@ -782,6 +787,7 @@ void TIM3_IRQHandler(void)
     if(tref_abs > cfg.vars.max_pwm_l) {
       // "Excess" torque reference
       tref_abs = tref_abs - cfg.vars.max_pwm_l;
+      status_bits |= STATUS_FIELD_WEAK;
     } else {
       tref_abs = 0;
     }
@@ -970,6 +976,7 @@ void TIM3_IRQHandler(void)
         tref_abs = CLAMP(tref_abs, 0, FIXED_ONE);
         tref_abs = fx_mul(tref_abs, ANGLE_45DEG);	// Max 45 degrees of advance
         angle_advance += tref_abs;
+        status_bits |= STATUS_FIELD_WEAK;
       }
 #endif
 
@@ -999,6 +1006,7 @@ void TIM3_IRQHandler(void)
     if(tref_abs > cfg.vars.max_pwm_r) {
       // "Excess" torque reference
       tref_abs = tref_abs - cfg.vars.max_pwm_r;
+      status_bits |= STATUS_FIELD_WEAK;
     } else {
       tref_abs = 0;
     }
