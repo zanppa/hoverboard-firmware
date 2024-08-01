@@ -55,8 +55,9 @@
 #define RIGHT_CURRENT_TFORM
 
 
-// Use field weakening region in BLDC mode
+// Enable use of field weakening region in different control modes
 #define BLDC_FIELD_WEAKENING
+#define SVM_FIELD_WEAKENING
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate

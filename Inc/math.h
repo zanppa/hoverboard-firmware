@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define ANGLE_45DEG		8192
 #define ANGLE_60DEG		10922	// 10922.667
 #define ANGLE_90DEG		16384
+#define ANGLE_100DEG	18204
 #define ANGLE_120DEG	21845
 #define ANGLE_180DEG	32768
 #define ANGLE_240DEG	43690

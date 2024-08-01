@@ -329,7 +329,7 @@ void TIM3_IRQHandler(void)
   int16_t torque_lim_volt = INT16_MAX; // Positive --> motoring (speeding up) limit, negative --> generating (braking) limit
   uint8_t ctrl_mode;
   uint16_t v_bat;
-#if defined(BLDC_FIELD_WEAKENING)
+#if defined(BLDC_FIELD_WEAKENING) || defined (SVM_FIELD_WEAKENING)
   uint16_t tref_abs;
 #endif
 
@@ -741,14 +741,25 @@ void TIM3_IRQHandler(void)
       // Torque or speed control mode with SVM
       // Scale ramped reference according to DC voltage
       torque_ref = fx_mul(torque_ref, voltage_scale);
+
+      // Use 100 degrees phase shift by default which seems to make quiet operation and easy start
+      angle_advance = ANGLE_100DEG;
+
+#if defined(SVM_FIELD_WEAKENING)
+      tref_abs = ABS(torque_ref);
+      if(tref_abs > cfg.vars.max_pwm_l) {
+        tref_abs -= cfg.vars.max_pwm_l; // Excess voltage request is applied as phase advance
+        tref_abs = CLAMP(tref_abs, 0, FIXED_ONE);
+        tref_abs = fx_mul(tref_abs, ANGLE_45DEG);	// Max 45 degrees of advance
+        angle_advance += tref_abs;
+      }
+#endif
+      cfg.vars.l_angle_adv = angle_advance;
+
       // Limit pwm value
       torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
       ref_sign = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
-
-      // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
-      if(ABS(speed_l) < SPEED_SLOW) angle_advance = ANGLE_120DEG;
-      else angle_advance = ANGLE_90DEG;
 
       // Apply the reference
       __disable_irq();
@@ -948,14 +959,26 @@ void TIM3_IRQHandler(void)
       // Torque or speed control mode with SVM
       // Scale ramped reference according to DC voltage
       torque_ref = fx_mul(torque_ref, voltage_scale);
+
+      // Use 100 degrees phase shift by default which seems to make quiet operation and easy start
+      angle_advance = ANGLE_100DEG;
+
+#if defined(SVM_FIELD_WEAKENING)
+      tref_abs = ABS(torque_ref);
+      if(tref_abs > cfg.vars.max_pwm_r) {
+        tref_abs -= cfg.vars.max_pwm_r; // Excess voltage request is applied as phase advance
+        tref_abs = CLAMP(tref_abs, 0, FIXED_ONE);
+        tref_abs = fx_mul(tref_abs, ANGLE_45DEG);	// Max 45 degrees of advance
+        angle_advance += tref_abs;
+      }
+#endif
+
+      cfg.vars.r_angle_adv = angle_advance;
+
       // Limit pwm value
-      torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+      torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_r);
       ref_sign = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
-
-      // Apply 120 deg phase shift to guarantee starting, then 90 degree for smooth operation
-      if(ABS(speed_r) < SPEED_SLOW) angle_advance = ANGLE_120DEG;
-      else angle_advance = ANGLE_90DEG;
 
       // Apply the reference
       __disable_irq();
