@@ -364,23 +364,30 @@ void TIM3_IRQHandler(void)
     reset_ctrl = 0;
   }
 
+  // Clear run status bit which is then set if one of the motor is rotating
+  status_bits &= ~STATUS_RUN;
+
   // Update motor speed from latest period information
   // Left motor
   speed_tick[0] = motor_state[STATE_LEFT].act.period;
-  if(speed_tick[0] != PERIOD_STOP && speed_tick[0] != -PERIOD_STOP)
+  if(speed_tick[0] != PERIOD_STOP && speed_tick[0] != -PERIOD_STOP) {
     speed_new = fx_div(motor_nominal_counts, speed_tick[0]);
-  else
+    status_bits |= STATUS_RUN;
+  } else {
     speed_new = 0;
+  }
   speed_l = FILTER(speed_new, speed_l, speed_filt_gain);
   motor_state[STATE_LEFT].act.speed = speed_l;
   cfg.vars.speed_l = speed_l; // TODO: Debug
 
   // Right motor
   speed_tick[1] = motor_state[STATE_RIGHT].act.period;
-  if(speed_tick[1] != PERIOD_STOP && speed_tick[1] != -PERIOD_STOP)
+  if(speed_tick[1] != PERIOD_STOP && speed_tick[1] != -PERIOD_STOP) {
     speed_new = fx_div(motor_nominal_counts, speed_tick[1]);
-  else
+    status_bits |= STATUS_RUN;
+  } else {
     speed_new = 0;
+  }
   speed_r = FILTER(speed_new, speed_r, speed_filt_gain);
   motor_state[STATE_RIGHT].act.speed = speed_r;
   cfg.vars.speed_r = speed_r; // TODO: Debug
