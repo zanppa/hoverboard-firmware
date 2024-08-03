@@ -164,13 +164,14 @@ void powersw_off_sequence(void) {
     } else if((uint16_t)(control_tick - powersw_timer) > POWERSW_ON_TIMER) {
       // Button was kept pressed long enough
       // Power off if speed is below limit
-      if(ABS(motor_state[STATE_LEFT].act.speed) < POWEROFF_SPEED_LIMIT && ABS(motor_state[STATE_RIGHT].act.speed) < POWEROFF_SPEED_LIMIT) {
-        power_off();
-      } else {
+//      if(ABS(motor_state[STATE_LEFT].act.speed) < POWEROFF_SPEED_LIMIT && ABS(motor_state[STATE_RIGHT].act.speed) < POWEROFF_SPEED_LIMIT) {
+//        power_off();
+//      } else {
         // Speed was too high, cannot turn off while running!
         // TODO: Beep or some other indication of error?
-        powersw_state = 0;
-      }
+//        powersw_state = 0;
+//      }
+      power_off();	// Allow turning of even if running, could help if software goes haywire
     }
 
   } else {
