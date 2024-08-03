@@ -329,7 +329,7 @@ void TIM3_IRQHandler(void)
   int16_t torque_lim_volt = INT16_MAX; // Positive --> motoring (speeding up) limit, negative --> generating (braking) limit
   uint8_t ctrl_mode;
   uint16_t v_bat;
-#if defined(BLDC_FIELD_WEAKENING) || defined (SVM_FIELD_WEAKENING)
+#if defined(BLDC_FIELD_WEAKENING) || defined(SVM_FIELD_WEAKENING) || defined(LEFT_MOTOR_FOC) || defined(RIGHT_MOTOR_FOC)
   uint16_t tref_abs;
 #endif
 
@@ -698,7 +698,7 @@ void TIM3_IRQHandler(void)
     // ... for Q axis current which sets the reference amplitude
     iq_error = torque_ref - iq;
 
-    iq_error_int_l += iq_error;
+    iq_error_int_l += iq_error / int_divisor;	// Slow down integrator rise time
     iq_error_int_l = LIMIT(iq_error_int_l, idq_int_max);
     ref_amplitude = fx_mul(iq_error, kp_iq) + fx_mul(iq_error_int_l, ki_iq);
 
@@ -708,27 +708,34 @@ void TIM3_IRQHandler(void)
     ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
     // Apply limiter
-    ref_amplitude = ABS(ref_amplitude);
-    ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_l);
+    tref_abs = ABS(ref_amplitude);
+    ref_amplitude = MIN(tref_abs, cfg.vars.max_pwm_l);
 
 
     // ... for D axis current which sets the angle advance
-    id_error = id;	// TODO: Add id reference (from field weakening)
+    id_error = id;		// Try to set d axis current to zero
+
+#if defined(FOC_FIELD_WEAKENING)
+    if(tref_abs > cfg.vars.max_pwm_l) {
+      tref_abs -= cfg.vars.max_pwm_l;
+      tref_abs = CLAMP(tref_abs, 0, MOTOR_MAX_ID);
+      id_error = id + tref_abs;		// Excess amplitude request will be directly d axis current
+    }
+#endif
+
     id_error_int_l += id_error / int_divisor;
     id_error_int_l = LIMIT(id_error_int_l, idq_int_max);
     angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_l, ki_id);
     angle_advance *= 8;	// From 12-bit fixed point to 16-bit angle => 1 = 4096 = one full rotation
 
-    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
-
+    cfg.vars.pwm_l = ref_amplitude;
     cfg.vars.l_angle_adv = angle_advance;
 
 
     // Apply references
     __disable_irq();
     motor_state[STATE_LEFT].ctrl.amplitude = (uint16_t)ref_amplitude;
-    motor_state[STATE_LEFT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);	// Start with 120 degree phase shift to guarantee starting
-    // TODO: Angle advance polarity should change depending on speed direction
+    motor_state[STATE_LEFT].ctrl.angle = ref_sign * ((uint16_t)angle_advance + ANGLE_100DEG);	// Start with 100 degree phase shift to guarantee starting
     __enable_irq();
 
     //torque_ref = ref_amplitude; // TODO: For debugging purposes only
@@ -777,6 +784,8 @@ void TIM3_IRQHandler(void)
       ref_sign = ISIGN(torque_ref);
       torque_ref = ABS(torque_ref);
 
+      cfg.vars.pwm_l = torque_ref;
+
       // Apply the reference
       __disable_irq();
       motor_state[STATE_LEFT].ctrl.amplitude = torque_ref;
@@ -805,6 +814,8 @@ void TIM3_IRQHandler(void)
 
     // Limit the torque reference to one (full modulation amplitude)
     torque_ref = LIMIT(torque_ref, cfg.vars.max_pwm_l);
+
+    cfg.vars.pwm_l = torque_ref;
 
     __disable_irq();
     // Excess is directly applied as the field weakening ref
@@ -927,22 +938,25 @@ void TIM3_IRQHandler(void)
     ref_amplitude = fx_mul(ref_amplitude, voltage_scale);
 
     // Apply limiter
-    ref_amplitude = ABS(ref_amplitude);
-    ref_amplitude = MIN(ref_amplitude, cfg.vars.max_pwm_r);
+    tref_abs = ABS(ref_amplitude);
+    ref_amplitude = MIN(tref_abs, cfg.vars.max_pwm_r);
 
 
     // ... for D axis current which sets the angle advance
-    id_error = id;    // TODO: Add id reference (from field weakening)
+    id_error = id;		// Try to set d axis current to zero
+
+#if defined(FOC_FIELD_WEAKENING)
+    if(tref_abs > cfg.vars.max_pwm_r) {
+      tref_abs -= cfg.vars.max_pwm_r;
+      tref_abs = CLAMP(tref_abs, 0, MOTOR_MAX_ID);
+      id_error = id + tref_abs;		// Excess amplitude request will be directly d axis current
+    }
+#endif
+
     id_error_int_r += id_error / int_divisor;
     id_error_int_r = LIMIT(id_error_int_r, idq_int_max);
     angle_advance = fx_mul(id_error, kp_id) + fx_mul(id_error_int_r, ki_id);
     angle_advance *= 8;
-
-    // Invert phase advance if speed is reverse
-    //if(speed_r < 0) angle_advance = -angle_advance;
-    // TODO: Should probably be the reference, not actual...
-
-    angle_advance *= ref_sign;	// Negative should decrease the advance, positive increase
 
     cfg.vars.r_angle_adv = angle_advance;
 
@@ -950,8 +964,7 @@ void TIM3_IRQHandler(void)
     // Apply references
     __disable_irq();
     motor_state[STATE_RIGHT].ctrl.amplitude = (uint16_t)ref_amplitude;
-    motor_state[STATE_RIGHT].ctrl.angle = (uint16_t)angle_advance + (ref_sign * ANGLE_120DEG);
-    // TODO: Angle advance polarity should change depending on speed direction
+    motor_state[STATE_RIGHT].ctrl.angle = ref_sign * ((uint16_t)angle_advance + ANGLE_100DEG);
     __enable_irq();
 
     //torque_ref = ref_amplitude; // TODO: Debug

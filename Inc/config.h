@@ -29,6 +29,7 @@
 
 #define MOTOR_MIN_VOLTS			0.5		// Volts to apply at zero and low speed, to get the motor started (IR compensation)
 
+#define MOTOR_MAX_ID			(FIXED_ONE/2)	// Maximum D-axis current in FOC field weakening, fixed point (FIXED_ONE = nominal current)
 
 
 // =============================
@@ -58,6 +59,7 @@
 // Enable use of field weakening region in different control modes
 #define BLDC_FIELD_WEAKENING
 #define SVM_FIELD_WEAKENING
+#define FOC_FIELD_WEAKENING
 
 // Controller parameters
 #define CONTROL_FREQ	1000		// Controller is run at this rate
